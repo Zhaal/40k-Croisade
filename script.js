@@ -223,6 +223,31 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     //  NOUVELLE LOGIQUE : GÉNÉRATION DE LA GALAXIE (CORRIGÉ)
     //======================================================================
+    /**
+     * Sélectionne un type de planète aléatoire en fonction de poids définis.
+     * @returns {string} Le nom du type de planète.
+     */
+    const getWeightedRandomPlanetType = () => {
+        const types = [
+            { name: "Monde Ruche", weight: 35 },
+            { name: "Agri-monde", weight: 25 },
+            { name: "Monde Sauvage", weight: 15 },
+            { name: "Monde Mort", weight: 10 },
+            { name: "Monde Forge", weight: 10 },
+            { name: "Monde Saint (relique)", weight: 5 }
+        ];
+
+        const totalWeight = types.reduce((sum, type) => sum + type.weight, 0);
+        let random = Math.random() * totalWeight;
+
+        for (const type of types) {
+            if (random < type.weight) {
+                return type.name;
+            }
+            random -= type.weight;
+        }
+    };
+    
     const getUniqueSystemName = (existingNames) => {
         const usedNames = existingNames || new Set();
         const systemNamesList = SYSTEM_NAMES;
@@ -240,14 +265,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const generateRandomNPCSystem = (usedNames) => {
-        const planetTypes = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
         const planetNames = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"];
-        const numPlanets = Math.floor(Math.random() * 4) + 3;
+        const numPlanets = Math.floor(Math.random() * 6) + 3; // 3 à 8 planètes
         const defenseValues = [500, 1000, 1500, 2000];
         const planets = [];
         for (let i = 0; i < numPlanets; i++) {
             planets.push({
-                type: planetTypes[Math.floor(Math.random() * planetTypes.length)],
+                type: getWeightedRandomPlanetType(), // Utilise la nouvelle fonction pondérée
                 name: `${planetNames[i] || `Planète ${i + 1}`}`,
                 owner: "neutral",
                 defense: defenseValues[Math.floor(Math.random() * defenseValues.length)]
@@ -466,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (systemSize === 0) return;
 
         const center = systemSize / 2;
-        const orbitRadiiFactors = [0.18, 0.26, 0.34, 0.42, 0.50, 0.58];
+        const orbitRadiiFactors = [0.18, 0.26, 0.34, 0.42, 0.50, 0.58, 0.66, 0.74];
 
         system.planets.forEach((_, index) => {
             const orbitIndex = Math.min(index, orbitRadiiFactors.length - 1);
@@ -1028,11 +1052,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const playerSystems = [];
             campaignData.players.forEach((player) => {
                 const newSystemId = crypto.randomUUID();
-                const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
-                const newPlanets = Array.from({ length: 5 }, (_, i) => ({
-                    type: i === 0 ? "Monde Sauvage" : PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)],
-                    name: ["Prima", "Secundus", "Tertius", "Quartus", "Quintus"][i],
+                const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
+                const numPlanets = 5; // MODIFICATION: Nombre de planètes fixé à 5
+                const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
+                    type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(), // Le premier est fixe, les autres pondérés
+                    name: planetNames[i] || `Planète ${i + 1}`,
                     owner: i === 0 ? player.id : "neutral",
                     defense: i === 0 ? 0 : DEFENSE_VALUES[Math.floor(Math.random() * DEFENSE_VALUES.length)]
                 }));
@@ -1257,11 +1282,12 @@ document.getElementById('planet-owner-select').addEventListener('change', (e) =>
         } else {
             const newPlayerId = crypto.randomUUID();
             const newSystemId = crypto.randomUUID();
-            const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
             const DEFENSE_VALUES = [500, 1000, 1500, 2000];
-            const newPlanets = Array.from({ length: 5 }, (_, i) => ({
-                type: i === 0 ? "Monde Sauvage" : PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)],
-                name: ["Prima", "Secundus", "Tertius", "Quartus", "Quintus"][i],
+            const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
+            const numPlanets = 5; // MODIFICATION: Nombre de planètes fixé à 5
+            const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
+                type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(), // Le premier est fixe, les autres pondérés
+                name: planetNames[i] || `Planète ${i + 1}`,
                 owner: i === 0 ? newPlayerId : "neutral",
                 defense: i === 0 ? 0 : DEFENSE_VALUES[Math.floor(Math.random() * DEFENSE_VALUES.length)]
             }));
@@ -1352,8 +1378,7 @@ document.getElementById('planet-owner-select').addEventListener('change', (e) =>
 
         if (await showConfirm("Randomiser la planète", "Cette action coûtera <b>2 Points de Réquisition</b>. Continuer ?")) {
             viewingPlayer.requisitionPoints -= 2;
-            const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
-            planet.type = PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)];
+            planet.type = getWeightedRandomPlanetType();
             saveData();
             renderPlanetarySystem(system.id);
             if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
