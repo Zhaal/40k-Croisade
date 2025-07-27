@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Crusade Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Nexus Crusade Tracker</h1>
+            <div class="campaign-controls">
+                <button id="export-btn">Exporter la Campagne (JSON)</button>
+                <button id="import-btn">Importer la Campagne (JSON)</button>
+                <input type="file" id="import-file" accept=".json" style="display: none;">
+            </div>
+            <p class="storage-warning">
+               ⚠️ **Attention :** Toutes les données sont sauvegardées localement dans votre navigateur.
+                Utilisez l'export pour créer des sauvegardes !
+            </p>
+            <button id="reset-campaign-btn" class="btn-danger">Explosion du Warp (Réinitialiser)</button>
+        </header>
+
+        <main id="player-list-view">
+            <h2>Joueurs de la Campagne</h2>
+            <div id="player-list">
+                </div>
+            <button id="add-player-btn" class="btn-primary">Ajouter un Joueur</button>
+        </main>
+
+        <section id="player-detail-view" class="hidden">
+            <div class="roster-header">
+                <h3>Crusade Force Roster</h3>
+                <span>
+                    <button id="back-to-system-btn" class="hidden" style="margin-right: 10px;">&larr; Retour au système</button>
+                    <button id="back-to-list-btn">&larr; Retour à la liste</button>
+                </span>
+            </div>
+            <div class="player-info-grid">
+                <div class="info-box"><strong>Joueur:</strong> <span id="player-name-display"></span></div>
+                <div class="info-box"><strong>Faction:</strong> <span id="player-faction-display"></span></div>
+                <div class="info-box"><strong>Faction de Croisade:</strong> <input type="text" id="crusade-faction" placeholder="Ex: Imperium"></div>
+                <div class="info-box">
+                    <strong>Points de Réquisition:</strong>
+                    <span id="pr-points" class="stat-value"></span> RP
+                    <button class="tally-btn" data-action="decrease-rp">-</button>
+                    <button class="tally-btn" data-action="increase-rp">+</button>
+                </div>
+                <div class="info-box">
+                    <strong>Limite de Ravitaillement:</strong>
+                    <input type="number" id="supply-limit" min="0"> PL
+                </div>
+                <div class="info-box"><strong>Ravitaillement Utilisé:</strong> <span id="supply-used" class="stat-value readonly"></span> PL</div>
+                <div class="info-box">
+                    <strong>Décompte de Batailles:</strong> <span id="battle-tally" class="stat-value">0</span>
+                    (V:<span id="wins">0</span> / E:<span id="draws">0</span> / D:<span id="losses">0</span>)
+                    <div class="battle-tally-controls">
+                        <button class="tally-btn" data-action="increase-win">+V</button>
+                        <button class="tally-btn" data-action="decrease-win" title="Corriger Victoire">-V</button>
+                        <button class="tally-btn" data-action="increase-draw">+E</button>
+                        <button class="tally-btn" data-action="decrease-draw" title="Corriger Égalité">-E</button>
+                        <button class="tally-btn" data-action="increase-loss">+D</button>
+                        <button class="tally-btn" data-action="decrease-loss" title="Corriger Défaite">-D</button>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <h3>Ordre de Bataille</h3>
+            <table id="order-of-battle">
+                <thead>
+                    <tr>
+                        <th>Nom de l'Unité</th>
+                        <th>Rôle</th>
+                        <th>Puissance</th>
+                        <th>Points de Croisade</th>
+                        <th>XP</th>
+                        <th>Rang</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="units-tbody">
+                </tbody>
+            </table>
+            <button id="add-unit-btn" class="btn-primary">Ajouter une Unité</button>
+
+            <hr>
+
+            <h3>Objectifs & Notes</h3>
+            <textarea id="goals-notes" rows="4" placeholder="Notez ici les objectifs de croisade, les agendas ou d'autres notes..."></textarea>
+        </section>
+    </div>
+
+    <div id="player-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="player-modal-title">Ajouter un Joueur</h3>
+            <form id="player-form">
+                <input type="hidden" id="player-id">
+                <label for="player-name-input">Nom du Joueur :</label>
+                <input type="text" id="player-name-input" required>
+                <label for="player-faction-input">Faction Principale :</label>
+                <input type="text" id="player-faction-input">
+                <button type="submit" class="btn-primary">Sauvegarder</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="unit-modal" class="modal hidden">
+        <div class="modal-content large crusade-card">
+            <span class="close-btn">&times;</span>
+            <h3 id="unit-modal-title" class="crusade-card-title">Fiche d'Unité de Croisade</h3>
+            <form id="unit-form">
+                <input type="hidden" id="unit-id">
+                <div class="unit-card-header">
+                     <div class="form-group">
+                        <label for="unit-name">Nom de l'unité :</label>
+                        <input type="text" id="unit-name" required>
+                    </div>
+                </div>
+                <div class="unit-card-body">
+                    <div class="unit-card-column">
+                        <div class="form-group small"><label for="unit-role">Rôle :</label><select id="unit-role"><option value="QG">QG</option><option value="Troupes">Troupes</option><option value="Elite">Elite</option><option value="Attaque Rapide">Attaque Rapide</option><option value="Soutien">Soutien</option><option value="Transport">Transport</option><option value="Aéronef">Aéronef</option><option value="Fortification">Fortification</option></select></div>
+                        <div class="form-group small"><label for="unit-power">Puissance :</label><input type="number" id="unit-power" min="0" required></div>
+                        <div class="form-group small"><label for="unit-xp">XP :</label><input type="number" id="unit-xp" min="0"></div>
+                        <div class="form-group small"><label for="unit-crusade-points">Points de Croisade :</label><input type="number" id="unit-crusade-points" min="0"></div>
+                        <div class="form-group small"><strong>Rang:</strong> <span id="unit-rank-display"></span></div>
+                        <div class="form-group"><label for="unit-equipment">Équipement :</label><textarea id="unit-equipment" rows="5"></textarea></div>
+                        <div class="form-group"><label for="unit-warlord-trait">Trait de Seigneur de Guerre :</label><textarea id="unit-warlord-trait" rows="3"></textarea></div>
+                        <div class="form-group"><label for="unit-relic">Relique :</label><textarea id="unit-relic" rows="3"></textarea></div>
+                    </div>
+                    <div class="unit-card-column">
+                        <div class="form-group"><label for="unit-honours">Honneurs de Bataille :</label><textarea id="unit-honours" rows="5"></textarea></div>
+                        <div class="form-group"><label for="unit-scars">Cicatrices de Bataille :</label><textarea id="unit-scars" rows="5"></textarea></div>
+                        <div class="form-group"><label for="unit-marked-for-glory">Marqué pour la Gloire (unités détruites) :</label><input type="number" id="unit-marked-for-glory" min="0"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Sauvegarder l'Unité</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="world-modal" class="modal hidden">
+        <div class="modal-content x-large">
+            <span class="close-btn">&times;</span>
+            <h3 id="world-modal-title" class="crusade-card-title">Système Planétaire</h3>
+            <button id="show-map-btn" class="btn-secondary" style="margin-bottom: 15px;">Voir la Carte Galactique</button>
+            <button id="edit-crusade-order-btn" class="btn-primary" style="margin-bottom: 15px;">Éditer l'Ordre de Croisade</button>
+            <div id="system-container">
+                <button class="explore-arrow" id="explore-up" title="Explorer vers le Nord">↑</button>
+                <button class="explore-arrow" id="explore-left" title="Explorer vers l'Ouest">←</button>
+                <div id="planetary-system">
+                </div>
+                <button class="explore-arrow" id="explore-right" title="Explorer vers l'Est">→</button>
+                <button class="explore-arrow" id="explore-down" title="Explorer vers le Sud">↓</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="planet-type-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="planet-type-modal-title">Définir le type de la planète</h3>
+            <form id="planet-type-form">
+                <input type="hidden" id="planet-system-id">
+                <input type="hidden" id="planet-index">
+                <div class="form-group">
+                    <label for="planet-name-input">Nom de la planète:</label>
+                    <input type="text" id="planet-name-input">
+                </div>
+                <div class="form-group">
+                    <label for="planet-type-select">Type de Monde :</label>
+                    <select id="planet-type-select">
+                        <option value="Monde Mort">Monde Mort</option>
+                        <option value="Monde Sauvage">Monde Sauvage</option>
+                        <option value="Agri-monde">Agri-monde</option>
+                        <option value="Monde Forge">Monde Forge</option>
+                        <option value="Monde Ruche">Monde Ruche</option>
+                        <option value="Monde Ancien">Monde Ancien</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="planet-owner-select">Propriétaire :</label>
+                    <select id="planet-owner-select">
+                        </select>
+                </div>
+                <div class="form-group" id="planet-defense-container">
+                    <label for="planet-defense-input">Points de Défense (PNJ):</label>
+                    <input type="number" id="planet-defense-input" min="0" step="50">
+                </div>
+                <button type="submit" class="btn-primary">Valider</button>
+                <button type="button" id="randomize-planet-btn" class="btn-secondary">Randomiser Planète (1 RP)</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="map-modal" class="modal hidden">
+        <div class="modal-content large">
+            <span class="close-btn">&times;</span>
+            <h3 class="crusade-card-title">Carte Galactique</h3>
+            <div id="galactic-map-container">
+                </div>
+        </div>
+    </div>
+
+    <script src="systems.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
