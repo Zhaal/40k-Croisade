@@ -1229,9 +1229,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    document.getElementById('planet-owner-select').addEventListener('change', (e) => {
-        document.getElementById('planet-defense-container').classList.toggle('hidden', e.target.value !== 'neutral');
-    });
+document.getElementById('planet-owner-select').addEventListener('change', (e) => {
+    const isNeutral = e.target.value === 'neutral';
+    document.getElementById('planet-defense-container').classList.toggle('hidden', !isNeutral);
+    document.getElementById('planet-defense-input').disabled = !isNeutral;
+});
 
     backToListBtn.addEventListener('click', () => switchView('list'));
 
