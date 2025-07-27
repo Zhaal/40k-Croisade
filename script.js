@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingPlayerIndex = -1;
     let editingUnitIndex = -1;
     let currentlyViewedSystemId = null;
+    let mapViewingPlayerId = null; // MODIFICATION : ID du joueur pour le PdV de la carte, maintenant utilisé de façon centrale
     let currentMapScale = 1;
 
     let isPanning = false;
@@ -190,6 +191,62 @@ document.addEventListener('DOMContentLoaded', () => {
         return { status: 'neutral', text: 'Inconnu' };
     };
 
+    /**
+     * NOUVEAU : Calcule tous les systèmes accessibles depuis un point de départ (Brouillard de Guerre)
+     * @param {string} startSystemId - L'ID du système de départ.
+     * @returns {Set<string>} Un Set contenant les ID de tous les systèmes accessibles.
+     */
+    const getReachableSystems = (startSystemId) => {
+        const reachable = new Set();
+        if (!startSystemId) return reachable;
+
+        const queue = [startSystemId];
+        reachable.add(startSystemId);
+
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            const currentSystem = campaignData.systems.find(s => s.id === currentId);
+            if (currentSystem) {
+                Object.values(currentSystem.connections).forEach(connectedId => {
+                    if (connectedId && !reachable.has(connectedId)) {
+                        reachable.add(connectedId);
+                        queue.push(connectedId);
+                    }
+                });
+            }
+        }
+        return reachable;
+    };
+    
+    /**
+     * NOUVEAU : Vérifie si un joueur est "découvrable" par d'autres joueurs lors de l'exploration.
+     * Pour être découvrable, un joueur doit avoir sécurisé son système de départ ET avoir déjà exploré au moins une fois.
+     * @param {string} playerId - L'ID du joueur à vérifier.
+     * @returns {boolean} - True si le joueur est découvrable, sinon false.
+     */
+    const isPlayerDiscoverable = (playerId) => {
+        const player = campaignData.players.find(p => p.id === playerId);
+        if (!player) return false;
+
+        const homeSystem = campaignData.systems.find(s => s.id === player.systemId);
+        if (!homeSystem) return false;
+
+        // Condition 1: Le joueur doit contrôler toutes les planètes de son système.
+        const controlsHomeSystem = homeSystem.planets.every(p => p.owner === playerId);
+        if (!controlsHomeSystem) {
+            return false; // Pas découvrable s'il n'a pas conquis son propre système.
+        }
+
+        // Condition 2: Le joueur doit avoir au moins une connexion sortante depuis son système.
+        const hasExplored = Object.values(homeSystem.connections).some(connId => connId !== null);
+        if (!hasExplored) {
+            return false; // Pas découvrable s'il n'a jamais quitté son système.
+        }
+
+        // Si les deux conditions sont remplies, le joueur est découvrable.
+        return true;
+    };
+
 
     //======================================================================
     //  LOGIQUE DE RENDU (AFFICHAGE)
@@ -328,6 +385,10 @@ document.addEventListener('DOMContentLoaded', () => {
             planetDiv.dataset.owner = planet.owner;
             planetDiv.dataset.systemId = systemId;
             planetDiv.dataset.planetIndex = index;
+            // AJOUT: Appliquer la classe 'friendly-planet' si la planète appartient au joueur qui regarde
+            if (planet.owner === mapViewingPlayerId) {
+                planetDiv.classList.add('friendly-planet');
+            }
             planetDiv.textContent = planet.name.substring(0, 3).toUpperCase();
 
             const labelDiv = document.createElement('div');
@@ -372,16 +433,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderGalacticMap = () => {
         mapContainer.innerHTML = '';
-        const viewingSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
-        if (!viewingSystem) {
-            mapContainer.innerHTML = '<p style="text-align: center; padding-top: 50px;">Aucun système de départ sélectionné.</p>';
-            return;
-        }
-        
-        // Le "point de vue" est le propriétaire du système depuis lequel la carte est ouverte.
-        const viewingPlayerId = viewingSystem.owner;
+        const playerViewSelect = document.getElementById('map-player-view-select');
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
 
-        const systemsToDisplay = [...campaignData.systems];
+        // Peupler et définir la valeur du sélecteur de joueur
+        playerViewSelect.innerHTML = '';
+        campaignData.players.forEach(player => {
+            const option = document.createElement('option');
+            option.value = player.id;
+            option.textContent = player.name;
+            playerViewSelect.appendChild(option);
+        });
+        
+        if (viewingPlayer) {
+            playerViewSelect.value = mapViewingPlayerId;
+        } else if (campaignData.players.length > 0) {
+            mapViewingPlayerId = campaignData.players[0].id;
+            playerViewSelect.value = mapViewingPlayerId;
+        }
+
+        // NOUVEAU : Logique de Brouillard de Guerre
+        const playerSystemId = viewingPlayer ? viewingPlayer.systemId : null;
+        const visibleSystemIds = getReachableSystems(playerSystemId);
+        const systemsToDisplay = campaignData.systems.filter(s => visibleSystemIds.has(s.id));
+
         if (systemsToDisplay.length === 0) {
             mapContainer.innerHTML = '<p style="text-align: center; padding-top: 50px;">Aucun système découvert.</p>';
             return;
@@ -392,14 +467,13 @@ document.addEventListener('DOMContentLoaded', () => {
         viewport.style.transform = `scale(${currentMapScale})`;
         mapContainer.appendChild(viewport);
         
-        // --- Logique de positionnement (simplifiée pour la démo) ---
+        // --- Logique de positionnement ---
         const systemPositions = new Map();
-        const systemsToPlace = [...systemsToDisplay];
         const placedSystems = new Set();
         const STEP_DISTANCE = 250;
         
         const placeSystem = (system, x, y) => {
-            if (!system || placedSystems.has(system.id)) return;
+            if (!system || placedSystems.has(system.id) || !visibleSystemIds.has(system.id)) return;
             systemPositions.set(system.id, { x, y });
             placedSystems.add(system.id);
             Object.entries(system.connections).forEach(([direction, connectedId]) => {
@@ -415,14 +489,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
-        // On commence le placement à partir du système actuel
-        const startSystem = viewingSystem || systemsToDisplay[0];
+        const startSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId) || systemsToDisplay[0];
         placeSystem(startSystem, viewport.clientWidth / 2, viewport.clientHeight / 2);
         
-        // On place les systèmes restants qui n'auraient pas été connectés
         systemsToDisplay.forEach((sys, i) => {
             if (!placedSystems.has(sys.id)) {
-                placeSystem(sys, viewport.clientWidth / 2 + (i * STEP_DISTANCE), viewport.clientHeight / 2 + (i * 100));
+                 placeSystem(sys, (viewport.clientWidth / 2) + (i % 5) * STEP_DISTANCE, (viewport.clientHeight / 2) + Math.floor(i / 5) * STEP_DISTANCE);
             }
         });
         
@@ -432,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pos1 = systemPositions.get(system.id);
             if (!pos1) return;
             Object.values(system.connections).forEach(connectedId => {
-                if (connectedId) {
+                if (connectedId && visibleSystemIds.has(connectedId)) { // Ne dessine que les connexions visibles
                     const key = [system.id, connectedId].sort().join('-');
                     if (drawnConnections.has(key)) return;
                     const pos2 = systemPositions.get(connectedId);
@@ -461,21 +533,14 @@ document.addEventListener('DOMContentLoaded', () => {
             node.className = 'system-node';
             node.dataset.systemId = system.id;
         
-            // --- NOUVELLE LOGIQUE DE STYLE BASÉE SUR LE POINT DE VUE DU JOUEUR ---
-            const { status, text } = getSystemStatusForPlayer(system, viewingPlayerId);
+            const { status, text } = getSystemStatusForPlayer(system, mapViewingPlayerId);
             const { controlBreakdown } = getSystemControlInfo(system);
         
             node.classList.remove('player-controlled', 'contested', 'fully-neutral');
             switch (status) {
-                case 'friendly':
-                    node.classList.add('player-controlled');
-                    break;
-                case 'hostile':
-                    node.classList.add('contested');
-                    break;
-                case 'neutral':
-                    node.classList.add('fully-neutral');
-                    break;
+                case 'friendly': node.classList.add('player-controlled'); break;
+                case 'hostile': node.classList.add('contested'); break;
+                case 'neutral': node.classList.add('fully-neutral'); break;
             }
             
             let breakdownText = Object.entries(controlBreakdown).map(([ownerId, count]) => {
@@ -504,15 +569,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateExplorationArrows = (currentSystem) => {
         const directions = ['up', 'down', 'left', 'right'];
         const arrowSymbols = { up: '↑', down: '↓', left: '←', right: '→' };
+        const style = getComputedStyle(document.documentElement);
         const colors = {
-            red: getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim(),
-            green: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim(),
-            yellow: getComputedStyle(document.documentElement).getPropertyValue('--warning-color').trim(),
-            default: getComputedStyle(document.documentElement).getPropertyValue('--text-muted-color').trim()
+            red: style.getPropertyValue('--danger-color').trim(),
+            green: style.getPropertyValue('--friendly-color').trim(), // MODIFIÉ: Utilise la nouvelle couleur verte
+            yellow: style.getPropertyValue('--warning-color').trim(),
+            default: style.getPropertyValue('--text-muted-color').trim()
         };
 
-        // Le "point de vue" est le propriétaire du système actuel.
-        const viewingPlayerId = currentSystem.owner;
+        const viewingPlayerId = mapViewingPlayerId;
 
         directions.forEach(dir => {
             const arrow = document.getElementById(`explore-${dir}`);
@@ -526,7 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (connectedSystemId) {
                 const connectedSystem = campaignData.systems.find(s => s.id === connectedSystemId);
                 if (connectedSystem) {
-                    // --- NOUVELLE LOGIQUE DE COULEUR BASÉE SUR LE POINT DE VUE ---
                     const { status, text } = getSystemStatusForPlayer(connectedSystem, viewingPlayerId);
                     let borderColor = colors.default;
                     switch(status) {
@@ -555,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     const getUniqueSystemName = () => {
         const usedNames = new Set(campaignData.systems.map(s => s.name));
-        const systemNamesList = ["Alpha Centauri", "Proxima", "Sirius", "Luyten", "Vega", "Rigel", "Betelgeuse", "Aldebaran", "Antares", "Spica"];
+        const systemNamesList = ["Alpha Centauri", "Proxima", "Sirius", "Luyten", "Vega", "Rigel", "Betelgeuse", "Aldebaran", "Antares", "Spica", "Procyon", "Cygnus", "Deneb", "Altair"];
         const availableNames = systemNamesList.filter(name => !usedNames.has(name));
         if (availableNames.length === 0) {
             return `Système Inconnu ${Math.floor(Math.random() * 1000)}`;
@@ -589,9 +653,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
         if (!currentSystem) return;
 
-        if (currentSystem.owner !== 'npc' && !currentSystem.planets.every(p => p.owner !== 'neutral')) {
-            alert("Vous devez conquérir toutes les planètes de votre système de départ avant de pouvoir explorer !");
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        if (!viewingPlayer) {
+            alert("Erreur : Impossible de trouver le joueur actif pour l'exploration.");
             return;
+        }
+
+        if(viewingPlayer && viewingPlayer.systemId === currentSystem.id) {
+             if (!currentSystem.planets.every(p => p.owner === viewingPlayer.id || p.owner === 'neutral' && p.defense === 0)) {
+                alert("Vous devez conquérir toutes les planètes PNJ de votre système de départ avant de pouvoir explorer !");
+                return;
+            }
         }
 
         if (currentSystem.connections[direction]) {
@@ -600,18 +672,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let discoveredSystem;
-        const unlinkedPlayerSystems = campaignData.players
-            .map(p => campaignData.systems.find(s => s.id === p.systemId))
-            .filter(s => s && s.id !== currentlyViewedSystemId && Object.values(s.connections).every(c => c === null));
+        
+        //--- DÉBUT DE LA MODIFICATION ---
+        const reachableSystems = getReachableSystems(viewingPlayer.systemId);
 
-        if (Math.random() < 0.3 && unlinkedPlayerSystems.length > 0) {
-            discoveredSystem = unlinkedPlayerSystems[Math.floor(Math.random() * unlinkedPlayerSystems.length)];
-            alert(`Vous avez découvert une route vers le système de base : "${discoveredSystem.name}" !`);
+        // 2. Trouver les systèmes de départ des autres joueurs qui ne sont PAS dans l'ensemble des systèmes accessibles ET qui sont "découvrables".
+        const unreachablePlayerSystems = campaignData.players
+            .map(p => campaignData.systems.find(s => s.id === p.systemId))
+            .filter(system => {
+                // Filtrage de base : le système doit exister, ne pas être celui du joueur actif, et ne pas être déjà accessible.
+                if (!system || system.id === viewingPlayer.systemId || reachableSystems.has(system.id)) {
+                    return false;
+                }
+                // NOUVELLE CONDITION : Le propriétaire du système doit être découvrable.
+                // L'owner d'un système de départ est l'ID du joueur.
+                return isPlayerDiscoverable(system.owner);
+            });
+
+        // 3. Avoir une chance de découvrir l'un de ces systèmes inaccessibles pour créer un pont.
+        if (unreachablePlayerSystems.length > 0 && Math.random() < 0.25) { // 25% de chance de trouver un autre amas de joueurs
+            discoveredSystem = unreachablePlayerSystems[Math.floor(Math.random() * unreachablePlayerSystems.length)];
+            alert(`✨ Contact majeur ! ✨\nVous avez établi une route vers le système "${discoveredSystem.name}", qui appartient à un autre groupe de la croisade !`);
         } else {
+            // 4. Sinon, générer un système PNJ normal.
             discoveredSystem = generateRandomNPCSystem();
             campaignData.systems.push(discoveredSystem);
             alert(`Nouveau contact ! Vous avez découvert le système PNJ "${discoveredSystem.name}".`);
         }
+        //--- FIN DE LA MODIFICATION ---
+
 
         const oppositeDirection = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
         currentSystem.connections[direction] = discoveredSystem.id;
@@ -671,12 +760,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     resetCampaignBtn.addEventListener('click', () => {
-        if (confirm("Êtes-vous sûr de vouloir déclencher une Explosion du Warp ? Toutes les données de la campagne seront perdues de manière irréversible !")) {
-            campaignData = { players: [], systems: [] };
+        if (confirm("Êtes-vous sûr de vouloir déclencher une Explosion du Warp ? Toutes les connexions et systèmes PNJ seront détruits, et les systèmes des joueurs seront réinitialisés. Les fiches de joueur resteront intactes.")) {
+            campaignData.systems = []; // Vider les systèmes
+
+            const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Ancien"];
+            
+            // Recréer un système de départ pour chaque joueur
+            campaignData.players.forEach(player => {
+                const newSystemId = crypto.randomUUID();
+                const newPlanets = Array.from({ length: 5 }, (_, i) => ({
+                    type: i === 0 ? "Monde Sauvage" : PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)],
+                    name: ["Prima", "Secundus", "Tertius", "Quartus", "Quintus"][i],
+                    owner: i === 0 ? player.id : "neutral",
+                    defense: i === 0 ? 0 : 500 + (Math.floor(Math.random() * 31)) * 50
+                }));
+
+                const newSystem = {
+                    id: newSystemId,
+                    name: `${player.name}'s Home System`,
+                    owner: player.id,
+                    planets: newPlanets,
+                    connections: { up: null, down: null, left: null, right: null }
+                };
+                
+                campaignData.systems.push(newSystem);
+                player.systemId = newSystemId; // Relier le joueur à son nouveau système
+            });
+
             saveData();
             switchView('list');
             renderPlayerList();
-            alert("Le Warp a tout consumé. La campagne a été réinitialisée.");
+            alert("Le Warp a tout consumé. Les systèmes ont été réinitialisés.");
         }
     });
 
@@ -700,6 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const player = campaignData.players[playerIndex];
             if (player.systemId) {
                 activePlayerIndex = playerIndex;
+                mapViewingPlayerId = player.id; 
                 openModal(worldModal);
                 setTimeout(() => renderPlanetarySystem(player.systemId), 50);
             } else { alert("Erreur : ce joueur n'a pas de système assigné."); }
@@ -831,11 +946,17 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => renderPlanetarySystem(systemNode.dataset.systemId), 50);
         }
     });
+    
+    document.getElementById('map-player-view-select').addEventListener('change', (e) => {
+        mapViewingPlayerId = e.target.value;
+        renderGalacticMap();
+    });
 
     systemContainer.addEventListener('click', (e) => {
         const arrow = e.target.closest('.explore-arrow');
         if (arrow) handleExploration(arrow.id.replace('explore-', ''));
     });
+
 
     document.getElementById('planet-owner-select').addEventListener('change', (e) => {
         document.getElementById('planet-defense-container').classList.toggle('hidden', e.target.value !== 'neutral');
@@ -907,11 +1028,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const player = campaignData.players[activePlayerIndex];
         if (editingUnitIndex > -1) {
-            // Conserver l'ID existant de l'unité lors de la modification
             const existingUnit = player.units[editingUnitIndex];
             player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
         } else {
-            // Attribuer un ID unique à la nouvelle unité
             unitData.id = crypto.randomUUID();
             player.units.push(unitData);
         }
