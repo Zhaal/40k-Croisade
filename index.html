@@ -198,7 +198,8 @@
                     <input type="number" id="planet-defense-input" min="0" step="50">
                 </div>
                 <button type="submit" class="btn-primary">Valider</button>
-                <button type="button" id="randomize-planet-btn" class="btn-secondary">Randomiser Planète (1 RP)</button>
+                <button type="button" id="randomize-planet-btn" class="btn-secondary">Randomiser Planète (2 RP)</button>
+                <button type="button" id="halve-defense-btn" class="btn-secondary hidden">Saboter Défenses (1 RP)</button>
             </form>
         </div>
     </div>
@@ -222,7 +223,7 @@
             <h3 class="info-title">Règles de la Croisade Nexus</h3>
             <div class="info-body">
                 <h4>Début de Campagne & Nouveaux Joueurs</h4>
-                <p>Chaque joueur commence avec son propre système de départ, contenant une planète de départ sécurisée et plusieurs planètes neutres (PNJ) à conquérir. Votre première tâche est de sécuriser entièrement votre système natal.</p>
+                <p>Chaque joueur commence avec son propre système de départ, contenant une planète sécurisée et plusieurs planètes neutres (PNJ) à conquérir. Votre première tâche est de sécuriser entièrement votre système natal.</p>
                 
                 <h4>Immunité du Nouveau Joueur</h4>
                 <p>Un nouveau joueur est considéré comme "non découvrable" et bénéficie d'une immunité relative tant que deux conditions ne sont pas remplies :</p>
@@ -230,13 +231,18 @@
                     <li><b>1. Contrôle total :</b> Le joueur doit avoir conquis toutes les planètes de son système de départ.</li>
                     <li><b>2. Première Exploration :</b> Le joueur doit avoir établi au moins une connexion (exploré) vers un autre système depuis son système de départ.</li>
                 </ul>
-                <p>Tant que ces deux conditions ne sont pas réunies, le système d'un joueur ne pourra pas être découvert par un autre joueur via l'exploration. Cela lui laisse le temps de se préparer avant d'entrer en contact avec les autres forces de la croisade.</p>
+                <p>Tant que ces deux conditions ne sont pas réunies, le système d'un joueur ne pourra pas être découvert par un autre joueur via l'exploration.</p>
 
                 <h4>Exploration & Découverte</h4>
-                <p>L'exploration depuis un système vous connecte à de nouveaux systèmes. Il y a une chance de découvrir un système appartenant à un autre joueur "découvrable", créant ainsi un pont entre les territoires des joueurs. Le plus souvent, vous découvrirez des systèmes PNJ inexplorés.</p>
-                
+                <p>Pour explorer, vous pouvez effectuer un "saut à l'aveugle" ou "envoyer une sonde" (1 RP).</p>
+                <ul>
+                    <li><b>Systèmes PNJ :</b> Une sonde révèlera le nom et les détails du système PNJ, vous laissant le choix de créer la connexion ou de garder l'information pour plus tard. Un saut à l'aveugle crée la connexion immédiatement.</li>
+                    <li><b>Systèmes de Joueur :</b> Une sonde ne révèlera qu'une "présence de croisade majeure", sans nommer le joueur ou son système. Pour établir une route, <b>les deux joueurs doivent se sonder mutuellement</b>. Une fois le contact mutuel établi, l'un des deux joueurs peut confirmer pour créer le lien permanent.</li>
+                </ul>
+                <p>Un joueur qui a été sondé n'est pas au courant. Il doit lui-même sonder dans la bonne direction pour permettre la création d'une route.</p>
+
                 <h4>Explosion du Warp</h4>
-                <p>Le bouton "Explosion du Warp" réinitialise complètement la carte galactique. Tous les systèmes PNJ et toutes les connexions sont détruits. Chaque joueur se voit attribuer un tout nouveau système de départ. Les fiches de joueur (unités, points, etc.) restent intactes, mais la conquête de la galaxie doit recommencer !</p>
+                <p>Le bouton "Explosion du Warp" réinitialise complètement la carte galactique. Tous les systèmes PNJ et toutes les connexions sont détruits. Chaque joueur se voit attribuer un tout nouveau système de départ. Les fiches de joueur (unités, points, etc.) restent intactes.</p>
             </div>
         </div>
     </div>
