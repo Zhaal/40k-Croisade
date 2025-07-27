@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapModal = document.getElementById('map-modal');
     const mapContainer = document.getElementById('galactic-map-container');
 
+    const campaignInfoBtn = document.getElementById('campaign-info-btn');
+    const infoModal = document.getElementById('info-modal');
+
 
     //======================================================================
     //  ÉTAT DE L'APPLICATION (STATE)
@@ -740,6 +743,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) { closeModal(e.target); }
+    });
+
+    campaignInfoBtn.addEventListener('click', () => {
+        openModal(infoModal);
     });
 
     addPlayerBtn.addEventListener('click', () => {

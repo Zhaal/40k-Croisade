@@ -63,6 +63,14 @@ header {
     margin: 15px auto 0 auto;
 }
 
+.management-controls {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
 /* --- Boutons et Formulaires --- */
 button, .btn-primary {
     background-color: var(--primary-color);
@@ -317,6 +325,64 @@ label {
     font-weight: bold;
     color: white;
 }
+
+/* --- Style pour la modale d'information --- */
+.modal-content.info-panel {
+    background: url('https://wow.zamimg.com/images/textures/parchment/parchment-noise.png') #fcf5e5;
+    background-size: cover;
+    color: #3a2e1c;
+    border: 10px solid transparent;
+    border-image: url('https://wow.zamimg.com/images/border-art/simple-brown/simple-brown-border.png') 30 round;
+    box-shadow: 0 0 25px rgba(0,0,0,0.8);
+    max-width: 700px;
+}
+
+.info-panel .info-title {
+    font-family: 'Cinzel', serif;
+    color: #5a2a0a; /* Brun foncé */
+    text-align: center;
+    font-size: 1.8em;
+    text-shadow: 1px 1px 1px #e4d1b1;
+    margin-bottom: 20px;
+}
+
+.info-panel .info-body h4 {
+    font-family: 'Cinzel', serif;
+    color: #7a3a1a;
+    border-bottom: 2px solid #c8b79a;
+    padding-bottom: 5px;
+    margin-top: 20px;
+    font-size: 1.2em;
+}
+
+.info-panel .info-body p, .info-panel .info-body li {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    line-height: 1.6;
+    text-shadow: 1px 1px 1px #fff;
+}
+
+.info-panel .info-body ul {
+    list-style-type: square;
+    margin-left: 20px;
+    padding-left: 10px;
+}
+
+.info-panel .info-body b {
+    color: #5a2a0a;
+}
+
+.info-panel .close-btn {
+    color: #7a3a1a;
+    font-size: 35px;
+    text-shadow: 0 0 5px white;
+    top: 5px;
+    right: 20px;
+}
+
+.info-panel .close-btn:hover {
+    color: #5a2a0a;
+}
+
 
 /* --- Style Système Planétaire --- */
 #system-container {

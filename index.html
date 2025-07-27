@@ -23,7 +23,10 @@
                ⚠️ **Attention :** Toutes les données sont sauvegardées localement dans votre navigateur.
                 Utilisez l'export pour créer des sauvegardes !
             </p>
-            <button id="reset-campaign-btn" class="btn-danger">Explosion du Warp (Réinitialiser)</button>
+            <div class="management-controls">
+                <button id="reset-campaign-btn" class="btn-danger">Explosion du Warp (Réinitialiser)</button>
+                <button id="campaign-info-btn" class="btn-secondary">Informations de la campagne</button>
+            </div>
         </header>
 
         <main id="player-list-view">
@@ -209,6 +212,31 @@
                 <select id="map-player-view-select"></select>
             </div>
             <div id="galactic-map-container">
+            </div>
+        </div>
+    </div>
+
+    <div id="info-modal" class="modal hidden">
+        <div class="modal-content info-panel">
+            <span class="close-btn">&times;</span>
+            <h3 class="info-title">Règles de la Croisade Nexus</h3>
+            <div class="info-body">
+                <h4>Début de Campagne & Nouveaux Joueurs</h4>
+                <p>Chaque joueur commence avec son propre système de départ, contenant une planète de départ sécurisée et plusieurs planètes neutres (PNJ) à conquérir. Votre première tâche est de sécuriser entièrement votre système natal.</p>
+                
+                <h4>Immunité du Nouveau Joueur</h4>
+                <p>Un nouveau joueur est considéré comme "non découvrable" et bénéficie d'une immunité relative tant que deux conditions ne sont pas remplies :</p>
+                <ul>
+                    <li><b>1. Contrôle total :</b> Le joueur doit avoir conquis toutes les planètes de son système de départ.</li>
+                    <li><b>2. Première Exploration :</b> Le joueur doit avoir établi au moins une connexion (exploré) vers un autre système depuis son système de départ.</li>
+                </ul>
+                <p>Tant que ces deux conditions ne sont pas réunies, le système d'un joueur ne pourra pas être découvert par un autre joueur via l'exploration. Cela lui laisse le temps de se préparer avant d'entrer en contact avec les autres forces de la croisade.</p>
+
+                <h4>Exploration & Découverte</h4>
+                <p>L'exploration depuis un système vous connecte à de nouveaux systèmes. Il y a une chance de découvrir un système appartenant à un autre joueur "découvrable", créant ainsi un pont entre les territoires des joueurs. Le plus souvent, vous découvrirez des systèmes PNJ inexplorés.</p>
+                
+                <h4>Explosion du Warp</h4>
+                <p>Le bouton "Explosion du Warp" réinitialise complètement la carte galactique. Tous les systèmes PNJ et toutes les connexions sont détruits. Chaque joueur se voit attribuer un tout nouveau système de départ. Les fiches de joueur (unités, points, etc.) restent intactes, mais la conquête de la galaxie doit recommencer !</p>
             </div>
         </div>
     </div>
