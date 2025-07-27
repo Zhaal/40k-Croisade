@@ -972,33 +972,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPlanetarySystem(currentSystem.id);
             }
         } else {
-            // LOGIQUE DU SAUT À L'AVEUGLE
-            const hasEnemyInTarget = discoveredSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
-            if (hasEnemyInTarget) {
-                const confirmHostile = await showConfirm("Découverte hostile !", "Le système adjacent est contrôlé par un autre joueur. Voulez-vous établir une connexion et y voyager ?<br><br><b>Attention :</b> une fois sur place, un blocus vous empêchera de continuer l'exploration. Votre arrivée sera immédiatement détectée.");
-                if (confirmHostile) {
-                    currentSystem.connections[direction] = discoveredSystem.id;
-                    discoveredSystem.connections[oppositeDirection] = currentSystem.id;
+            // ==================================================================
+            // == DEBUT DE LA CORRECTION : LOGIQUE DU SAUT À L'AVEUGLE (SANS CONFIRMATION) ==
+            // ==================================================================
+            showNotification("Saut à l'aveugle initié...", 'info', 3000);
 
-                    const discoveredPlayer = campaignData.players.find(p => p.id === discoveredSystem.owner);
-                    if (discoveredPlayer && !discoveredPlayer.discoveredSystemIds.includes(currentSystem.id)) {
-                        if (!discoveredPlayer.discoveredSystemIds) discoveredPlayer.discoveredSystemIds = [];
-                        discoveredPlayer.discoveredSystemIds.push(currentSystem.id);
-                    }
-                } else {
-                    return;
-                }
-            } else {
-                 showNotification(`Saut à l'aveugle réussi ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'success', 8000);
-                 currentSystem.connections[direction] = discoveredSystem.id;
-                 discoveredSystem.connections[oppositeDirection] = currentSystem.id;
-            }
-            
+            // La connexion est établie immédiatement
+            currentSystem.connections[direction] = discoveredSystem.id;
+            discoveredSystem.connections[oppositeDirection] = currentSystem.id;
+
+            // Le joueur découvre le nouveau système
             if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
                 viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
             }
+
+            const hasEnemyInTarget = discoveredSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
+
+            if (hasEnemyInTarget) {
+                // Le système de destination est hostile
+                showNotification(`<b>Contact hostile !</b> Le saut à l'aveugle vous a mené dans le système <b>${discoveredSystem.name}</b>. Votre arrivée a été détectée !`, 'error', 8000);
+                
+                // Alerter le(s) joueur(s) dans le système de destination
+                const enemyPlayerIds = new Set(discoveredSystem.planets.map(p => p.owner).filter(o => o !== 'neutral' && o !== viewingPlayer.id));
+                enemyPlayerIds.forEach(enemyId => {
+                    const enemyPlayer = campaignData.players.find(p => p.id === enemyId);
+                    if (enemyPlayer && !enemyPlayer.discoveredSystemIds.includes(currentSystem.id)) {
+                         if (!enemyPlayer.discoveredSystemIds) enemyPlayer.discoveredSystemIds = [];
+                         enemyPlayer.discoveredSystemIds.push(currentSystem.id);
+                         console.log(`Player ${enemyPlayer.name} has been alerted to system ${currentSystem.name}`);
+                    }
+                });
+
+            } else {
+                // Le système de destination est neutre (PNJ)
+                showNotification(`Saut à l'aveugle réussi ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'success', 8000);
+            }
+            
             saveData();
             renderPlanetarySystem(discoveredSystem.id);
+             // ==================================================================
+            // == FIN DE LA CORRECTION ==
+            // ==================================================================
         }
     };
 
