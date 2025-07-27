@@ -695,6 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>Explorer</small>`;
             arrow.style.borderColor = colors.default;
             arrow.style.color = colors.default;
+            arrow.style.cursor = 'pointer'; // Reset cursor
             arrow.title = `Explorer vers ${dir}`;
 
             if (connectedSystemId) {
@@ -713,10 +714,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>${connectedSystem.name}<br>${text}</small>`;
                     arrow.title = `Voyager vers ${connectedSystem.name} (${text})`;
                 } else {
-                    label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>???</small>`;
-                    arrow.title = `Route vers un système inconnu`;
-                    currentSystem.connections[dir] = null;
-                    saveData();
+                    // MODIFICATION START: Replaced destructive logic with non-destructive feedback.
+                    // This prevents the application from deleting a valid return path.
+                    label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>LIEN BRISÉ</small>`;
+                    arrow.style.borderColor = colors.red;
+                    arrow.style.color = colors.red;
+                    arrow.style.cursor = 'not-allowed';
+                    arrow.title = `Erreur: La connexion vers le système ${connectedSystemId} est rompue.`;
+                    console.error(`Broken connection detected: System ${currentSystem.name} (${currentSystem.id}) has a connection to a non-existent system ID: ${connectedSystemId}. The connection was NOT deleted.`);
+                    // The original code deleted the connection here, which caused the bug.
+                    // currentSystem.connections[dir] = null;
+                    // saveData();
+                    // MODIFICATION END
                 }
             } else if (probedInfo) {
                 arrow.style.borderColor = colors.blue;
@@ -742,8 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     arrow.style.color = '#555';
                     arrow.style.cursor = 'not-allowed';
                     arrow.title = 'Bord de la galaxie connue';
-                } else {
-                    arrow.style.cursor = 'pointer';
                 }
             }
             arrow.innerHTML = label;
