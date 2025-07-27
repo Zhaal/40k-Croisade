@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const APP_VERSION = "1.2.1"; // Version a été mise à jour
+    const APP_VERSION = "1.2.2"; // Version a été mise à jour
 
     //======================================================================
     //  ÉLÉMENTS DU DOM
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let startY, scrollTopStart;
 
     const STEP_DISTANCE = 250;
-    const GALAXY_SIZE = 8;
+    const GALAXY_SIZE = 3;
 
     //======================================================================
     //  GESTION DES DONNÉES (LOCALSTORAGE & JSON)
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastVersion !== APP_VERSION) {
             setTimeout(() => {
                 showNotification(
-                    `<b>Mise à jour v${APP_VERSION} !</b> Le saut à l'aveugle en territoire ennemi est désormais instantané, sans demande de confirmation.`, // NOUVEAU MESSAGE
+                    `<b>Mise à jour v${APP_VERSION} !</b> Map 3*3`, // NOUVEAU MESSAGE
                     'info',
                     10000 // 10 secondes
                 );
