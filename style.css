@@ -9,6 +9,7 @@
     --border-color: #444;
     --danger-color: #b33a3a;
     --warning-color: #ffcc00; /* Jaune pour les systèmes neutres */
+    --probed-color: #3498db; /* NOUVEAU: Bleu pour les systèmes sondés */
 }
 
 body {

@@ -73,6 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let dataWasMigrated = false;
         if (campaignData.systems) {
             campaignData.systems.forEach(system => {
+                // NOUVEAU: Assure l'existence de probedConnections pour la rétrocompatibilité
+                if (!system.probedConnections) {
+                    system.probedConnections = { up: null, down: null, left: null, right: null };
+                    dataWasMigrated = true;
+                }
                 if (!system.connections) {
                     system.connections = { up: null, down: null, left: null, right: null };
                     dataWasMigrated = true;
@@ -89,7 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: `${player.name}'s Home System`,
                         owner: player.id || index,
                         planets: player.planets,
-                        connections: { up: null, down: null, left: null, right: null }
+                        connections: { up: null, down: null, left: null, right: null },
+                        probedConnections: { up: null, down: null, left: null, right: null } // NOUVEAU
                     };
                     campaignData.systems.push(newSystem);
                     player.systemId = newSystemId;
@@ -126,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (importedData && Array.isArray(importedData.players)) {
                     if (confirm("Importer ce fichier écrasera les données actuelles. Continuer ?")) {
                         campaignData = importedData;
-                        loadData();
+                        loadData(); // On s'assure que les nouvelles structures de données sont appliquées
                         saveData();
                         renderPlayerList();
                         switchView('list');
@@ -575,8 +581,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = getComputedStyle(document.documentElement);
         const colors = {
             red: style.getPropertyValue('--danger-color').trim(),
-            green: style.getPropertyValue('--friendly-color').trim(), // MODIFIÉ: Utilise la nouvelle couleur verte
+            green: style.getPropertyValue('--friendly-color').trim(),
             yellow: style.getPropertyValue('--warning-color').trim(),
+            blue: style.getPropertyValue('--probed-color').trim(), // NOUVEAU
             default: style.getPropertyValue('--text-muted-color').trim()
         };
 
@@ -585,6 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
         directions.forEach(dir => {
             const arrow = document.getElementById(`explore-${dir}`);
             const connectedSystemId = currentSystem.connections[dir];
+            const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[dir] : null; // MODIFIÉ
 
             let label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>Explorer</small>`;
             arrow.style.borderColor = colors.default;
@@ -592,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arrow.title = `Explorer vers ${dir}`;
 
             if (connectedSystemId) {
+                // Comportement si une connexion existe déjà
                 const connectedSystem = campaignData.systems.find(s => s.id === connectedSystemId);
                 if (connectedSystem) {
                     const { status, text } = getSystemStatusForPlayer(connectedSystem, viewingPlayerId);
@@ -612,7 +621,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>???</small>`;
                     arrow.title = `Route vers un système inconnu`;
                 }
+            } else if (probedInfo) {
+                // NOUVEAU: Comportement si une connexion a été sondée mais pas créée
+                arrow.style.borderColor = colors.blue;
+                arrow.style.color = colors.blue;
+                label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>SONDÉ<br>${probedInfo.name}</small>`;
+                arrow.title = `Route sondée vers ${probedInfo.name}. Cliquez pour établir la connexion.`;
             }
+
             arrow.innerHTML = label;
         });
     };
@@ -632,8 +648,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const generateRandomNPCSystem = () => {
         const planetTypes = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Ancien"];
-        const planetNames = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"];
-        const numPlanets = Math.floor(Math.random() * 4) + 2;
+        const planetNames = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"];
+        const numPlanets = Math.floor(Math.random() * 6) + 3; // 3 to 8 planets
         const planets = [];
         for (let i = 0; i < numPlanets; i++) {
             planets.push({
@@ -648,86 +664,124 @@ document.addEventListener('DOMContentLoaded', () => {
             name: getUniqueSystemName(),
             owner: 'npc',
             planets: planets,
-            connections: { up: null, down: null, left: null, right: null }
+            connections: { up: null, down: null, left: null, right: null },
+            probedConnections: { up: null, down: null, left: null, right: null } // NOUVEAU
         };
     };
 
     const handleExploration = (direction) => {
         const currentSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
         if (!currentSystem) return;
-
+        
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (!viewingPlayer) {
             alert("Erreur : Impossible de trouver le joueur actif pour l'exploration.");
             return;
         }
 
-        if(viewingPlayer && viewingPlayer.systemId === currentSystem.id) {
-             if (!currentSystem.planets.every(p => p.owner === viewingPlayer.id || p.owner === 'neutral' && p.defense === 0)) {
-                alert("Vous devez conquérir toutes les planètes PNJ de votre système de départ avant de pouvoir explorer !");
-                return;
+        const oppositeDirection = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
+
+        // --- NOUVEAU: Gérer le clic sur une flèche déjà sondée ---
+        const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[direction] : null;
+        if (probedInfo) {
+            if (confirm(`Vous avez déjà sondé le système "${probedInfo.name}".\nVoulez-vous établir une connexion permanente maintenant ?`)) {
+                const discoveredSystem = campaignData.systems.find(s => s.id === probedInfo.id);
+                if (discoveredSystem) {
+                    // Créer le lien
+                    currentSystem.connections[direction] = discoveredSystem.id;
+                    discoveredSystem.connections[oppositeDirection] = currentSystem.id;
+                    
+                    // Effacer l'info de sonde
+                    currentSystem.probedConnections[direction] = null;
+                    
+                    saveData();
+                    // Voyager vers le système
+                    renderPlanetarySystem(discoveredSystem.id);
+                } else {
+                    alert("Erreur: Le système sondé n'a pas été retrouvé dans la base de données.");
+                }
             }
+            return; // Arrêter l'exécution ici, que le joueur accepte ou non.
         }
 
+        // Travel to an already discovered system (connexion existante)
         if (currentSystem.connections[direction]) {
             renderPlanetarySystem(currentSystem.connections[direction]);
             return;
         }
 
-        let discoveredSystem;
-        
-        //--- DÉBUT DE LA MODIFICATION ---
-        const reachableSystems = getReachableSystems(viewingPlayer.systemId);
+        // Check if the player can explore from their home system
+        if (viewingPlayer.systemId === currentSystem.id) {
+            if (!currentSystem.planets.every(p => p.owner === viewingPlayer.id || (p.owner === 'neutral' && p.defense === 0))) {
+                alert("Vous devez conquérir toutes les planètes PNJ de votre système de départ avant de pouvoir explorer !");
+                return;
+            }
+        }
 
-        // 2. Trouver les systèmes de départ des autres joueurs qui ne sont PAS dans l'ensemble des systèmes accessibles ET qui sont "découvrables".
+        // --- LOGIQUE D'EXPLORATION MODIFIÉE ---
+        let useProbe = confirm("Envoyer une sonde (1 RP) pour révéler la nature du système avant le saut ?\n(Annuler pour un saut à l'aveugle standard)");
+        if (useProbe) {
+            if (viewingPlayer.requisitionPoints < 1) {
+                alert("Points de Réquisition insuffisants ! Le saut s'effectuera à l'aveugle.");
+                useProbe = false;
+            } else {
+                viewingPlayer.requisitionPoints--;
+                // Mise à jour de l'affichage si le joueur est sur sa fiche
+                if(activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')){
+                    renderPlayerDetail();
+                }
+            }
+        }
+
+        // Déterminer le système à découvrir
+        let discoveredSystem;
+        let discoveryMessage;
+        const reachableSystems = getReachableSystems(viewingPlayer.systemId);
         const unreachablePlayerSystems = campaignData.players
             .map(p => campaignData.systems.find(s => s.id === p.systemId))
             .filter(system => {
-                // Filtrage de base : le système doit exister, ne pas être celui du joueur actif, et ne pas être déjà accessible.
-                if (!system || system.id === viewingPlayer.systemId || reachableSystems.has(system.id)) {
-                    return false;
-                }
-                // NOUVELLE CONDITION : Le propriétaire du système doit être découvrable.
-                // L'owner d'un système de départ est l'ID du joueur.
+                if (!system || system.id === viewingPlayer.systemId || reachableSystems.has(system.id)) return false;
                 return isPlayerDiscoverable(system.owner);
             });
 
-        // 3. Avoir une chance de découvrir l'un de ces systèmes inaccessibles pour créer un pont.
-        if (unreachablePlayerSystems.length > 0 && Math.random() < 0.25) { // 25% de chance de trouver un autre amas de joueurs
+        if (unreachablePlayerSystems.length > 0 && Math.random() < 0.25) {
             discoveredSystem = unreachablePlayerSystems[Math.floor(Math.random() * unreachablePlayerSystems.length)];
-            alert(`✨ Contact majeur ! ✨\nVous avez établi une route vers le système "${discoveredSystem.name}", qui appartient à un autre groupe de la croisade !`);
+            discoveryMessage = `✨ Contact majeur ! ✨\nVous avez établi une route vers le système "${discoveredSystem.name}", qui appartient à un autre groupe de la croisade !`;
         } else {
-            // 4. Sinon, générer un système PNJ normal.
             discoveredSystem = generateRandomNPCSystem();
             campaignData.systems.push(discoveredSystem);
-            alert(`Nouveau contact ! Vous avez découvert le système PNJ "${discoveredSystem.name}".`);
+            discoveryMessage = `Nouveau contact ! Vous avez découvert le système PNJ "${discoveredSystem.name}".`;
         }
-        //--- FIN DE LA MODIFICATION ---
-
-
-        const oppositeDirection = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
-        currentSystem.connections[direction] = discoveredSystem.id;
-        discoveredSystem.connections[oppositeDirection] = currentSystem.id;
-
-        // Auto-connect neighbors
-        Object.keys(currentSystem.connections).forEach(linkDir => {
-            if (linkDir === direction || linkDir === oppositeDirection) return;
-            const intermediateSystemId = currentSystem.connections[linkDir];
-            if (intermediateSystemId) {
-                const intermediateSystem = campaignData.systems.find(s => s.id === intermediateSystemId);
-                if (intermediateSystem && intermediateSystem.connections[direction]) {
-                    const targetNeighbor = campaignData.systems.find(s => s.id === intermediateSystem.connections[direction]);
-                    const oppositeLinkDir = { up: 'down', down: 'up', left: 'right', right: 'left' }[linkDir];
-                    if (targetNeighbor && !discoveredSystem.connections[linkDir]) {
-                        discoveredSystem.connections[linkDir] = targetNeighbor.id;
-                        targetNeighbor.connections[oppositeLinkDir] = discoveredSystem.id;
-                    }
-                }
+        
+        // Gérer le choix du joueur après la découverte
+        if (useProbe) {
+            alert("Résultat de la sonde :\n\n" + discoveryMessage);
+            
+            if (confirm("Établir une connexion permanente vers ce système ?\n(Annuler sauvegardera l'information sans créer de lien)")) {
+                 // Le joueur veut se connecter
+                currentSystem.connections[direction] = discoveredSystem.id;
+                discoveredSystem.connections[oppositeDirection] = currentSystem.id;
+                saveData();
+                renderPlanetarySystem(discoveredSystem.id); // Voyager
+            } else {
+                // Le joueur refuse la connexion mais garde l'info
+                currentSystem.probedConnections[direction] = { 
+                    id: discoveredSystem.id, 
+                    name: discoveredSystem.name 
+                };
+                saveData();
+                renderPlanetarySystem(currentSystem.id); // Rester et mettre à jour les flèches
+                alert("Information de la sonde enregistrée. Vous pourrez établir la connexion plus tard depuis cette direction.");
             }
-        });
 
-        saveData();
-        renderPlanetarySystem(discoveredSystem.id);
+        } else {
+            // Saut à l'aveugle, connexion automatique
+            alert(discoveryMessage);
+            currentSystem.connections[direction] = discoveredSystem.id;
+            discoveredSystem.connections[oppositeDirection] = currentSystem.id;
+            saveData();
+            renderPlanetarySystem(discoveredSystem.id);
+        }
     };
 
 
@@ -787,7 +841,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: `${player.name}'s Home System`,
                     owner: player.id,
                     planets: newPlanets,
-                    connections: { up: null, down: null, left: null, right: null }
+                    connections: { up: null, down: null, left: null, right: null },
+                    probedConnections: { up: null, down: null, left: null, right: null } // NOUVEAU
                 };
                 
                 campaignData.systems.push(newSystem);
@@ -1000,7 +1055,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
             campaignData.systems.push({
                 id: newSystemId, name: `${name}'s Home System`, owner: newPlayerId, planets: newPlanets,
-                connections: { up: null, down: null, left: null, right: null }
+                connections: { up: null, down: null, left: null, right: null },
+                probedConnections: { up: null, down: null, left: null, right: null } // NOUVEAU
             });
             campaignData.players.push({
                 id: newPlayerId, systemId: newSystemId, name: name,
