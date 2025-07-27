@@ -28,6 +28,10 @@ h1, h2, h3 {
     text-shadow: 1px 1px 2px black;
 }
 
+h4 {
+     font-family: 'Cinzel', serif;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -517,12 +521,12 @@ label {
 
 
 /* Types de planètes */
-.planet[data-type="Monde Mort"] { background: radial-gradient(circle, #8c8c8c, #3b3b3b); }
-.planet[data-type="Monde Sauvage"] { background: radial-gradient(circle, #5ca469, #1e6f33); }
-.planet[data-type="Agri-monde"] { background: radial-gradient(circle, #c4a484, #8b5a2b); }
-.planet[data-type="Monde Forge"] { background: radial-gradient(circle, #d95d39, #9a2b0c); box-shadow: 0 0 10px #d95d39; }
-.planet[data-type="Monde Ruche"] { background: radial-gradient(circle, #f0e68c, #eac100); color: #111; }
-.planet[data-type="Monde Ancien"] { background: radial-gradient(circle, #9370db, #4b0082); }
+.planet[data-type="Monde Mort"], .legend-color[data-type="Monde Mort"] { background: radial-gradient(circle, #8c8c8c, #3b3b3b); }
+.planet[data-type="Monde Sauvage"], .legend-color[data-type="Monde Sauvage"] { background: radial-gradient(circle, #5ca469, #1e6f33); }
+.planet[data-type="Agri-monde"], .legend-color[data-type="Agri-monde"] { background: radial-gradient(circle, #c4a484, #8b5a2b); }
+.planet[data-type="Monde Forge"], .legend-color[data-type="Monde Forge"] { background: radial-gradient(circle, #d95d39, #9a2b0c); }
+.planet[data-type="Monde Ruche"], .legend-color[data-type="Monde Ruche"] { background: radial-gradient(circle, #f0e68c, #eac100); color: #111; }
+.planet[data-type="Monde Saint (relique)"], .legend-color[data-type="Monde Saint (relique)"] { background: radial-gradient(circle, #9370db, #4b0082); }
 
 
 /* --- Style pour les flèches d'exploration --- */
@@ -651,6 +655,43 @@ label {
     transform-origin: 0 0;
     z-index: 5;
     box-shadow: 0 0 5px #000;
+}
+
+/* --- Légende Planètes --- */
+#planet-legend {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+#planet-legend h4 {
+    margin-bottom: 10px;
+    color: var(--text-muted-color);
+}
+
+/* NEW: Style for colonization percentage */
+#colonization-percentage {
+    font-weight: normal;
+    color: var(--text-color);
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 10px 5px 10px;
+    font-size: 0.9em;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid #555;
 }
 
 

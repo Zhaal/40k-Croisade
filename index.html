@@ -55,18 +55,22 @@
                     <button class="tally-btn" data-action="increase-rp">+</button>
                 </div>
                 <div class="info-box">
+                    <strong>Éclats de Sombreroche:</strong>
+                    <span id="sombreroche-points" class="stat-value"></span>
+                    <button class="tally-btn" data-action="decrease-sombreroche">-</button>
+                    <button class="tally-btn" data-action="increase-sombreroche">+</button>
+                </div>
+                <div class="info-box">
                     <strong>Limite de Ravitaillement:</strong>
                     <input type="number" id="supply-limit" min="0"> PL
                 </div>
                 <div class="info-box"><strong>Ravitaillement Utilisé:</strong> <span id="supply-used" class="stat-value readonly"></span> PL</div>
                 <div class="info-box">
                     <strong>Décompte de Batailles:</strong> <span id="battle-tally" class="stat-value">0</span>
-                    (V:<span id="wins">0</span> / E:<span id="draws">0</span> / D:<span id="losses">0</span>)
+                    (V:<span id="wins">0</span> / D:<span id="losses">0</span>)
                     <div class="battle-tally-controls">
                         <button class="tally-btn" data-action="increase-win">+V</button>
                         <button class="tally-btn" data-action="decrease-win" title="Corriger Victoire">-V</button>
-                        <button class="tally-btn" data-action="increase-draw">+E</button>
-                        <button class="tally-btn" data-action="decrease-draw" title="Corriger Égalité">-E</button>
                         <button class="tally-btn" data-action="increase-loss">+D</button>
                         <button class="tally-btn" data-action="decrease-loss" title="Corriger Défaite">-D</button>
                     </div>
@@ -129,7 +133,25 @@
                 </div>
                 <div class="unit-card-body">
                     <div class="unit-card-column">
-                        <div class="form-group small"><label for="unit-role">Rôle :</label><select id="unit-role"><option value="QG">QG</option><option value="Troupes">Troupes</option><option value="Elite">Elite</option><option value="Attaque Rapide">Attaque Rapide</option><option value="Soutien">Soutien</option><option value="Transport">Transport</option><option value="Aéronef">Aéronef</option><option value="Fortification">Fortification</option></select></div>
+                        <div class="form-group small">
+                            <label for="unit-role">Rôle :</label>
+                            <select id="unit-role">
+                                <option value="Hero Epique">Hero Epique</option>
+                                <option value="Personnage">Personnage</option>
+                                <option value="Monstre">Monstre</option>
+                                <option value="Infantrie">Infantrie</option>
+                                <option value="Véhicule">Véhicule</option>
+                                <option value="Bête">Bête</option>
+                                <option value="Fortification">Fortification</option>
+                                <option value="Cavalerie">Cavalerie</option>
+                                <option value="Aéronef">Aéronef</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Marcheur">Marcheur</option>
+                                <option value="Titanesque">Titanesque</option>
+                                <option value="Nuée">Nuée</option>
+                                <option value="Artillerie">Artillerie</option>
+                            </select>
+                        </div>
                         <div class="form-group small"><label for="unit-power">Puissance :</label><input type="number" id="unit-power" min="0" required></div>
                         <div class="form-group small"><label for="unit-xp">XP :</label><input type="number" id="unit-xp" min="0"></div>
                         <div class="form-group small"><label for="unit-crusade-points">Points de Croisade :</label><input type="number" id="unit-crusade-points" min="0"></div>
@@ -163,6 +185,15 @@
                 <button class="explore-arrow" id="explore-right" title="Explorer vers l'Est">→</button>
                 <button class="explore-arrow" id="explore-down" title="Explorer vers le Sud">↓</button>
             </div>
+            <div id="planet-legend">
+                <h4>Légende des Planètes <span id="colonization-percentage"></span></h4>
+                <div class="legend-item"><span class="legend-color" data-type="Monde Mort"></span> Monde Mort</div>
+                <div class="legend-item"><span class="legend-color" data-type="Monde Sauvage"></span> Monde Sauvage</div>
+                <div class="legend-item"><span class="legend-color" data-type="Agri-monde"></span> Agri-monde</div>
+                <div class="legend-item"><span class="legend-color" data-type="Monde Forge"></span> Monde Forge</div>
+                <div class="legend-item"><span class="legend-color" data-type="Monde Ruche"></span> Monde Ruche</div>
+                <div class="legend-item"><span class="legend-color" data-type="Monde Saint (relique)"></span> Monde Saint (relique)</div>
+            </div>
         </div>
     </div>
 
@@ -185,7 +216,7 @@
                         <option value="Agri-monde">Agri-monde</option>
                         <option value="Monde Forge">Monde Forge</option>
                         <option value="Monde Ruche">Monde Ruche</option>
-                        <option value="Monde Ancien">Monde Ancien</option>
+                        <option value="Monde Saint (relique)">Monde Saint (relique)</option>
                     </select>
                 </div>
                  <div class="form-group">
@@ -224,9 +255,9 @@
             <div class="info-body">
                 <h4>Début de Campagne & Nouveaux Joueurs</h4>
                 <p>Chaque joueur commence avec son propre système de départ, contenant une planète sécurisée et plusieurs planètes neutres (PNJ) à conquérir. Votre première tâche est de sécuriser entièrement votre système natal.</p>
-                
+
                 <h4>Immunité du Nouveau Joueur</h4>
-                <p>Un nouveau joueur est considéré comme "non découvrable" et bénéficie d'une immunité relative tant que deux conditions ne sont pas remplies :</p>
+                 <p>Un nouveau joueur est considéré comme "non découvrable" et bénéficie d'une immunité relative tant que deux conditions ne sont pas remplies :</p>
                 <ul>
                     <li><b>1. Contrôle total :</b> Le joueur doit avoir conquis toutes les planètes de son système de départ.</li>
                     <li><b>2. Première Exploration :</b> Le joueur doit avoir établi au moins une connexion (exploré) vers un autre système depuis son système de départ.</li>
@@ -238,8 +269,15 @@
                 <ul>
                     <li><b>Systèmes PNJ :</b> Une sonde révèlera le nom et les détails du système PNJ, vous laissant le choix de créer la connexion ou de garder l'information pour plus tard. Un saut à l'aveugle crée la connexion immédiatement.</li>
                     <li><b>Systèmes de Joueur :</b> Une sonde ne révèlera qu'une "présence de croisade majeure", sans nommer le joueur ou son système. Pour établir une route, <b>les deux joueurs doivent se sonder mutuellement</b>. Une fois le contact mutuel établi, l'un des deux joueurs peut confirmer pour créer le lien permanent.</li>
+                    <li><b>NOUVEAU - Systèmes Hostiles :</b> Si vous découvrez un système (par sonde ou saut à l'aveugle) où un autre joueur possède au moins une planète, la connexion peut être établie immédiatement après confirmation, sans nécessiter de sondage mutuel.</li>
                 </ul>
-                <p>Un joueur qui a été sondé n'est pas au courant. Il doit lui-même sonder dans la bonne direction pour permettre la création d'une route.</p>
+
+                <h4>NOUVEAU - Blocus et Conditions d'Exploration</h4>
+                <ul>
+                    <li>Vous ne pouvez pas explorer <b>DEPUIS</b> un système où un autre joueur possède une ou plusieurs planètes (Blocus).</li>
+                    <li>Vous devez contrôler au moins une planète dans un système pour pouvoir explorer <b>DEPUIS</b> celui-ci (sauf pour votre système de départ).</li>
+                </ul>
+
 
                 <h4>Explosion du Warp</h4>
                 <p>Le bouton "Explosion du Warp" réinitialise complètement la carte galactique. Tous les systèmes PNJ et toutes les connexions sont détruits. Chaque joueur se voit attribuer un tout nouveau système de départ. Les fiches de joueur (unités, points, etc.) restent intactes.</p>
@@ -247,6 +285,7 @@
         </div>
     </div>
 
+    <script src="systems.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
