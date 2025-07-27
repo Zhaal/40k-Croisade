@@ -35,6 +35,78 @@ document.addEventListener('DOMContentLoaded', () => {
     const campaignInfoBtn = document.getElementById('campaign-info-btn');
     const infoModal = document.getElementById('info-modal');
 
+    // NOUVEAUX ÉLÉMENTS POUR NOTIFICATIONS / CONFIRMATIONS
+    const notificationContainer = document.getElementById('notification-container');
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmModalTitle = document.getElementById('confirm-modal-title');
+    const confirmModalText = document.getElementById('confirm-modal-text');
+    const confirmModalOkBtn = document.getElementById('confirm-modal-ok-btn');
+    const confirmModalCancelBtn = document.getElementById('confirm-modal-cancel-btn');
+
+
+    //======================================================================
+    //  SYSTÈME DE NOTIFICATION ET DE CONFIRMATION
+    //======================================================================
+
+    /**
+     * Affiche une notification stylisée à l'écran.
+     * @param {string} message Le message à afficher.
+     * @param {string} [type='info'] Le type de notif (info, success, warning, error).
+     * @param {number} [duration=5000] La durée en ms.
+     */
+    function showNotification(message, type = 'info', duration = 5000) {
+        const notif = document.createElement('div');
+        notif.className = `notification ${type}`;
+        notif.innerHTML = message;
+
+        notificationContainer.appendChild(notif);
+
+        requestAnimationFrame(() => {
+            notif.classList.add('show');
+        });
+
+        const hideNotif = () => {
+            notif.classList.remove('show');
+            notif.classList.add('hide');
+            setTimeout(() => {
+                notif.remove();
+            }, 500);
+        };
+
+        const timer = setTimeout(hideNotif, duration);
+
+        notif.addEventListener('click', () => {
+            clearTimeout(timer);
+            hideNotif();
+        });
+    }
+
+    /**
+     * Affiche une modale de confirmation et retourne une promesse.
+     * @param {string} title Le titre de la modale.
+     * @param {string} text Le message de confirmation.
+     * @returns {Promise<boolean>} Résout à `true` si confirmé, `false` sinon.
+     */
+    function showConfirm(title, text) {
+        return new Promise(resolve => {
+            confirmModalTitle.textContent = title;
+            confirmModalText.innerHTML = text;
+            openModal(confirmModal);
+
+            const closeAndResolve = (value) => {
+                closeModal(confirmModal);
+                resolve(value);
+            };
+
+            const okListener = () => closeAndResolve(true);
+            const cancelListener = () => closeAndResolve(false);
+            const closeBtnListener = () => closeAndResolve(false);
+
+            confirmModalOkBtn.addEventListener('click', okListener, { once: true });
+            confirmModalCancelBtn.addEventListener('click', cancelListener, { once: true });
+            confirmModal.querySelector('.close-btn').addEventListener('click', closeBtnListener, { once: true });
+        });
+    }
 
     //======================================================================
     //  ÉTAT DE L'APPLICATION (STATE)
@@ -42,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let campaignData = {
         players: [],
         systems: [],
-        isGalaxyGenerated: false // NEW: Flag to check if the main galaxy exists
+        isGalaxyGenerated: false
     };
 
     let activePlayerIndex = -1;
@@ -57,8 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let startX, scrollLeftStart;
     let startY, scrollTopStart;
 
-    const STEP_DISTANCE = 250; // Constante pour l'espacement des systèmes
-    const GALAXY_SIZE = 8; // NEW: Defines the size of the pre-generated galaxy (8x8 grid)
+    const STEP_DISTANCE = 250;
+    const GALAXY_SIZE = 8;
 
     //======================================================================
     //  GESTION DES DONNÉES (LOCALSTORAGE & JSON)
@@ -73,15 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignData = JSON.parse(data);
         }
 
-        // --- MIGRATION & INITIALIZATION LOGIC ---
         let dataWasModified = false;
         if (!campaignData.players) campaignData.players = [];
         if (!campaignData.systems) campaignData.systems = [];
 
-        // If campaign is old or empty, ensure galaxy generation flag is present
         if (campaignData.isGalaxyGenerated === undefined) {
-            // An old campaign is considered to not have a pre-generated galaxy.
-            // This logic assumes new campaigns will start fresh.
             campaignData.isGalaxyGenerated = false;
             dataWasModified = true;
         }
@@ -111,9 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     exportBtn.addEventListener('click', () => {
         const dataStr = JSON.stringify(campaignData, null, 2);
-        const dataBlob = new Blob([dataStr], {
-            type: 'application/json'
-        });
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -122,31 +188,32 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        showNotification("Exportation de la campagne initiée.", 'success');
     });
 
     importBtn.addEventListener('click', () => importFile.click());
-    importFile.addEventListener('change', (event) => {
+    importFile.addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
                 if (importedData && Array.isArray(importedData.players)) {
-                    if (confirm("Importer ce fichier écrasera les données actuelles. Continuer ?")) {
+                    if (await showConfirm("Confirmation d'importation", "Importer ce fichier écrasera les données actuelles de la campagne. Êtes-vous sûr de vouloir continuer ?")) {
                         campaignData = importedData;
-                        loadData(); // Applique les migrations/initialisations nécessaires
+                        loadData();
                         saveData();
                         renderPlayerList();
                         switchView('list');
-                        alert("Importation réussie !");
+                        showNotification("Importation réussie !", 'success');
                     }
                 } else {
-                    alert("Fichier JSON invalide.");
+                    showNotification("Le fichier sélectionné n'est pas un fichier de campagne valide.", 'error');
                 }
             } catch (error) {
-                alert("Erreur lors de la lecture du fichier : " + error.message);
+                showNotification("Erreur lors de la lecture du fichier : " + error.message, 'error');
             }
         };
         reader.readAsText(file);
@@ -156,19 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     //  NOUVELLE LOGIQUE : GÉNÉRATION DE LA GALAXIE (CORRIGÉ)
     //======================================================================
-
-    /**
-     * Generates a unique name for a system from a predefined list.
-     */
-    const getUniqueSystemName = (existingNames) => { // MODIFIÉ : accepte un paramètre
+    const getUniqueSystemName = (existingNames) => {
         const usedNames = existingNames || new Set();
-        
-        // MODIFICATION ICI: Utilise la variable globale SYSTEM_NAMES de systems.js
         const systemNamesList = SYSTEM_NAMES;
-        
         const availableNames = systemNamesList.filter(name => !usedNames.has(name));
         if (availableNames.length === 0) {
-            // Génère un nom de secours unique au cas où la liste est épuisée
             let fallbackName;
             let attempts = 0;
             do {
@@ -180,13 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return availableNames[Math.floor(Math.random() * availableNames.length)];
     };
 
-    /**
-     * Creates a single random NPC system.
-     */
-    const generateRandomNPCSystem = (usedNames) => { // MODIFIÉ : accepte usedNames
+    const generateRandomNPCSystem = (usedNames) => {
         const planetTypes = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
         const planetNames = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"];
-        const numPlanets = Math.floor(Math.random() * 4) + 3; // 3 to 6 planets
+        const numPlanets = Math.floor(Math.random() * 4) + 3;
         const defenseValues = [500, 1000, 1500, 2000];
         const planets = [];
         for (let i = 0; i < numPlanets; i++) {
@@ -199,41 +255,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return {
             id: crypto.randomUUID(),
-            name: getUniqueSystemName(usedNames), // MODIFIÉ : passe usedNames
+            name: getUniqueSystemName(usedNames),
             owner: 'npc',
             planets: planets,
             connections: { up: null, down: null, left: null, right: null },
             probedConnections: { up: null, down: null, left: null, right: null },
-            position: { x: 0, y: 0 } // Position will be set during generation
+            position: { x: 0, y: 0 }
         };
     };
 
-    /**
-     * Creates a grid of interconnected NPC systems to form the galactic map.
-     */
     const generateGalaxy = () => {
-        console.log("Génération d'une nouvelle galaxie...");
+        showNotification("Génération d'une nouvelle galaxie...", 'info');
         const newSystems = [];
-        // NOUVEAU : On crée un ensemble pour suivre les noms utilisés PENDANT la génération.
         const usedNamesInGeneration = new Set();
 
         for (let y = 0; y < GALAXY_SIZE; y++) {
             for (let x = 0; x < GALAXY_SIZE; x++) {
-                // On passe l'ensemble des noms déjà utilisés à la fonction.
                 const system = generateRandomNPCSystem(usedNamesInGeneration);
                 system.position = {
                     x: x * STEP_DISTANCE + (STEP_DISTANCE / 2),
                     y: y * STEP_DISTANCE + (STEP_DISTANCE / 2)
                 };
                 newSystems.push(system);
-                // NOUVEAU : On ajoute le nom du système qu'on vient de créer à notre ensemble de suivi.
                 usedNamesInGeneration.add(system.name);
             }
         }
         
         campaignData.systems = newSystems;
         campaignData.isGalaxyGenerated = true;
-        console.log(`Galaxie de ${newSystems.length} systèmes PNJ non-connectés créée.`);
+        showNotification(`Galaxie de <b>${newSystems.length}</b> systèmes PNJ créée.`, 'success');
     };
 
 
@@ -243,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const getSystemControlInfo = (system) => {
         const controlBreakdown = {};
         const controllingPlayerIds = new Set();
-
         system.planets.forEach(planet => {
             const ownerId = planet.owner;
             if (ownerId !== 'neutral') {
@@ -251,66 +300,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             controlBreakdown[ownerId] = (controlBreakdown[ownerId] || 0) + 1;
         });
-
-        return {
-            controlBreakdown,
-            controllingPlayerIds,
-        };
+        return { controlBreakdown, controllingPlayerIds };
     };
 
     const getSystemStatusForPlayer = (system, viewingPlayerId) => {
-        const {
-            controllingPlayerIds
-        } = getSystemControlInfo(system);
-
+        const { controllingPlayerIds } = getSystemControlInfo(system);
         const otherPlayersInSystem = new Set(controllingPlayerIds);
         otherPlayersInSystem.delete(viewingPlayerId);
 
-        if (otherPlayersInSystem.size > 0) {
-            return {
-                status: 'hostile',
-                text: 'Présence Ennemie'
-            };
-        }
-
-        if (controllingPlayerIds.has(viewingPlayerId)) {
-            return {
-                status: 'friendly',
-                text: 'Contrôlé par vous'
-            };
-        }
-
-        if (controllingPlayerIds.size === 0) {
-            return {
-                status: 'neutral',
-                text: 'Neutre'
-            };
-        }
-
-        // This case handles systems owned by another player, but not the viewer
-        return {
-            status: 'hostile',
-            text: 'Contrôlé par Ennemi'
-        };
+        if (otherPlayersInSystem.size > 0) return { status: 'hostile', text: 'Présence Ennemie' };
+        if (controllingPlayerIds.has(viewingPlayerId)) return { status: 'friendly', text: 'Contrôlé par vous' };
+        if (controllingPlayerIds.size === 0) return { status: 'neutral', text: 'Neutre' };
+        return { status: 'hostile', text: 'Contrôlé par Ennemi' };
     };
 
-    const getReachableSystems = (startSystemId, viewingPlayerId) => {
+    const getReachableSystems = (startSystemId) => {
         const reachable = new Set();
         const playerSystem = campaignData.systems.find(s => s.id === startSystemId);
-
-        // If the player's system isn't on the map yet, they can only see their own system.
         if (!playerSystem || !playerSystem.position) {
             if (startSystemId) reachable.add(startSystemId);
             return reachable;
         }
-
         const queue = [startSystemId];
         reachable.add(startSystemId);
-
         while (queue.length > 0) {
             const currentId = queue.shift();
             const currentSystem = campaignData.systems.find(s => s.id === currentId);
-
             if (currentSystem) {
                 Object.values(currentSystem.connections).forEach(connectedId => {
                     if (connectedId && !reachable.has(connectedId)) {
@@ -326,9 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isPlayerDiscoverable = (playerId) => {
         const player = campaignData.players.find(p => p.id === playerId);
         if (!player) return false;
-
         const homeSystem = campaignData.systems.find(s => s.id === player.systemId);
-        // A player is discoverable if their system is on the main map
         return homeSystem && !!homeSystem.position;
     };
 
@@ -336,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     //  LOGIQUE DE RENDU (AFFICHAGE)
     //======================================================================
+    // ... (toutes les fonctions de rendu restent identiques)
     const switchView = (view) => {
         if (view === 'detail') {
             playerListView.classList.add('hidden');
@@ -521,7 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
         planetElements.forEach(p => planetarySystemDiv.appendChild(p));
         document.getElementById('world-modal-title').textContent = `Système : ${system.name}`;
 
-        // NEW: Calculate and display colonization percentage
         const colonizationSpan = document.getElementById('colonization-percentage');
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (viewingPlayer && system.planets.length > 0) {
@@ -557,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const playerSystemId = viewingPlayer ? viewingPlayer.systemId : null;
-        const visibleSystemIds = getReachableSystems(playerSystemId, mapViewingPlayerId);
+        const visibleSystemIds = getReachableSystems(playerSystemId);
         const systemsToDisplay = campaignData.systems.filter(s => visibleSystemIds.has(s.id) && s.position);
 
         if (systemsToDisplay.length === 0) {
@@ -567,7 +580,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const viewport = document.createElement('div');
         viewport.className = 'map-viewport';
-        // Adjust viewport size based on galaxy content
         const allX = systemsToDisplay.map(s => s.position.x);
         const allY = systemsToDisplay.map(s => s.position.y);
         viewport.style.width = `${Math.max(...allX) + STEP_DISTANCE}px`;
@@ -617,25 +629,14 @@ document.addEventListener('DOMContentLoaded', () => {
             node.className = 'system-node';
             node.dataset.systemId = system.id;
 
-            const {
-                status,
-                text
-            } = getSystemStatusForPlayer(system, mapViewingPlayerId);
-            const {
-                controlBreakdown
-            } = getSystemControlInfo(system);
+            const { status, text } = getSystemStatusForPlayer(system, mapViewingPlayerId);
+            const { controlBreakdown } = getSystemControlInfo(system);
 
             node.classList.remove('player-controlled', 'contested', 'fully-neutral');
             switch (status) {
-                case 'friendly':
-                    node.classList.add('player-controlled');
-                    break;
-                case 'hostile':
-                    node.classList.add('contested');
-                    break;
-                case 'neutral':
-                    node.classList.add('fully-neutral');
-                    break;
+                case 'friendly': node.classList.add('player-controlled'); break;
+                case 'hostile': node.classList.add('contested'); break;
+                case 'neutral': node.classList.add('fully-neutral'); break;
             }
 
             let breakdownText = Object.entries(controlBreakdown).map(([ownerId, count]) => {
@@ -661,7 +662,8 @@ document.addEventListener('DOMContentLoaded', () => {
             mapContainer.scrollTop = centerSystem.position.y * currentMapScale - mapContainer.clientHeight / 2;
         }
     };
-
+    
+    // ... (le reste des fonctions de rendu est identique)
     const updateExplorationArrows = (currentSystem) => {
         const directions = ['up', 'down', 'left', 'right'];
         const arrowSymbols = {
@@ -684,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         directions.forEach(dir => {
             const arrow = document.getElementById(`explore-${dir}`);
-            arrow.classList.toggle('hidden', isOffMap); // Hide arrows if system is not on map
+            arrow.classList.toggle('hidden', isOffMap);
             if (isOffMap) return;
 
             const connectedSystemId = currentSystem.connections[dir];
@@ -713,7 +715,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>???</small>`;
                     arrow.title = `Route vers un système inconnu`;
-                    // This route is broken, should be cleaned up eventually
                     currentSystem.connections[dir] = null;
                     saveData();
                 }
@@ -728,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     arrow.title = `Route sondée vers ${probedInfo.name}. Cliquez pour établir la connexion.`;
                 }
             } else {
-                // If there's no connection, check if a system exists at the location to be explored
                 const parentPos = currentSystem.position || { x: 0, y: 0 };
                 const targetPos = { x: parentPos.x, y: parentPos.y };
                 if (dir === 'up') targetPos.y -= STEP_DISTANCE;
@@ -750,48 +750,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-
     //======================================================================
-    //  LOGIQUE D'EXPLORATION (MODIFIÉE)
+    //  LOGIQUE D'EXPLORATION (MODIFIÉE AVEC NOTIFICATIONS)
     //======================================================================
-    const handleExploration = (direction) => {
-        // 1. Initial Setup
+    const handleExploration = async (direction) => {
         const currentSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
         if (!currentSystem) return;
         
         const oppositeDirection = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
 
-        // 2. ALWAYS allow travel through an existing connection first.
         if (currentSystem.connections[direction]) {
             renderPlanetarySystem(currentSystem.connections[direction]);
-            return; // Exit immediately, bypassing all other checks.
+            return;
         }
         
-        // 3. If not traveling, THEN check if exploration is allowed from the current system.
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (!viewingPlayer) {
-            alert("Erreur : Impossible de trouver le joueur actif pour l'exploration.");
+            showNotification("Erreur : Impossible de trouver le joueur actif pour l'exploration.", 'error');
             return;
         }
 
         if (!currentSystem.position) {
-            alert("Vous devez d'abord conquérir toutes les planètes de votre système de départ pour le connecter à la carte galactique et commencer l'exploration.");
+            showNotification("Vous devez d'abord conquérir votre système natal pour rejoindre la carte galactique.", 'warning', 6000);
             return;
         }
 
         const hasEnemyPlanetInCurrent = currentSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
         if (hasEnemyPlanetInCurrent) {
-            alert("Blocus ennemi ! Vous ne pouvez pas explorer depuis ce système tant qu'une planète ennemie est présente.");
+            showNotification("<b>Blocus ennemi !</b> Vous ne pouvez pas explorer depuis ce système tant qu'une planète ennemie est présente.", 'error');
             return;
         }
         
         const hasFriendlyPlanetInCurrent = currentSystem.planets.some(p => p.owner === viewingPlayer.id);
         if (!hasFriendlyPlanetInCurrent && currentSystem.owner !== viewingPlayer.id) {
-            alert("Vous devez contrôler au moins une planète dans ce système pour pouvoir explorer plus loin.");
+            showNotification("Vous devez contrôler au moins une planète dans ce système pour pouvoir explorer plus loin.", 'warning');
             return;
         }
 
-        // 4. Find the target system for new exploration
         const parentPos = currentSystem.position;
         const targetPos = { x: parentPos.x, y: parentPos.y };
         if (direction === 'up') targetPos.y -= STEP_DISTANCE;
@@ -802,14 +797,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const discoveredSystem = campaignData.systems.find(s => s.position && s.position.x === targetPos.x && s.position.y === targetPos.y);
 
         if (!discoveredSystem) {
-            alert("Vous avez atteint le bord de l'espace connu. Aucun signal n'est détecté dans cette direction.");
+            showNotification("Vous avez atteint le bord de l'espace connu.", 'info');
             return;
         }
 
-        // 5. Is the target system hostile? If so, bypass normal probe/jump rules.
         const hasEnemyInTarget = discoveredSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
         if (hasEnemyInTarget) {
-            if (confirm("DÉCOUVERTE HOSTILE ! Le système adjacent est contrôlé par un autre joueur. Voulez-vous établir une connexion et y voyager ?\n\nAttention : une fois sur place, un blocus vous empêchera de continuer l'exploration depuis ce système tant qu'une planète ennemie y sera présente.")) {
+            const confirmHostile = await showConfirm("Découverte hostile !", "Le système adjacent est contrôlé par un autre joueur. Voulez-vous établir une connexion et y voyager ?<br><br><b>Attention :</b> une fois sur place, un blocus vous empêchera de continuer l'exploration depuis ce système.");
+            if (confirmHostile) {
                 currentSystem.connections[direction] = discoveredSystem.id;
                 discoveredSystem.connections[oppositeDirection] = currentSystem.id;
                 if (currentSystem.probedConnections) currentSystem.probedConnections[direction] = null;
@@ -820,22 +815,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 6. Handle existing probes to non-hostile systems
         const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[direction] : null;
         if (probedInfo) {
             const probedSystem = campaignData.systems.find(s => s.id === probedInfo.id);
             if (!probedSystem) {
-                alert("Erreur: Le système sondé n'a pas été retrouvé.");
+                showNotification("Erreur: Le système sondé n'a pas été retrouvé.", 'error');
                 currentSystem.probedConnections[direction] = null;
                 saveData();
                 renderPlanetarySystem(currentSystem.id);
                 return;
             }
 
-            if (probedInfo.status === 'player_contact') { // Probed an empty player system
+            if (probedInfo.status === 'player_contact') {
                 const mutualProbe = probedSystem.probedConnections[oppositeDirection]?.id === currentSystem.id;
                 if (mutualProbe) {
-                    if (confirm("CONTACT MUTUEL ÉTABLI ! Voulez-vous établir une connexion permanente ? (Irréversible)")) {
+                    if (await showConfirm("Contact Mutuel Établi !", "Voulez-vous établir une connexion permanente ? (Irréversible)")) {
                         currentSystem.connections[direction] = probedSystem.id;
                         probedSystem.connections[oppositeDirection] = currentSystem.id;
                         currentSystem.probedConnections[direction] = null;
@@ -844,10 +838,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderPlanetarySystem(probedSystem.id);
                     }
                 } else {
-                    alert("Route sondée. Le contact doit être initié depuis le système voisin pour établir un lien.");
+                    showNotification("Route sondée. Le contact doit être initié depuis le système voisin pour établir un lien.", 'info');
                 }
-            } else { // Probed an NPC system
-                if (confirm(`Vous avez déjà sondé le système PNJ "${probedInfo.name}".\nVoulez-vous établir une connexion permanente ?`)) {
+            } else { 
+                if (await showConfirm("Connexion PNJ", `Vous avez déjà sondé le système PNJ "<b>${probedInfo.name}</b>".<br>Voulez-vous établir une connexion permanente ?`)) {
                     currentSystem.connections[direction] = probedSystem.id;
                     probedSystem.connections[oppositeDirection] = currentSystem.id;
                     currentSystem.probedConnections[direction] = null;
@@ -858,11 +852,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 7. New exploration (probe/blind jump) to non-hostile system
-        let useProbe = confirm("Envoyer une sonde (1 RP) ?\n(Annuler pour un saut à l'aveugle standard)");
+        const useProbe = await showConfirm("Méthode d'Exploration", "Envoyer une sonde (coût: 1 RP) ?<br><small>(Annuler pour un saut à l'aveugle standard, gratuit mais plus risqué)</small>");
         if (useProbe) {
             if (viewingPlayer.requisitionPoints < 1) {
-                alert("Points de Réquisition insuffisants !");
+                showNotification("Points de Réquisition insuffisants !", 'warning');
                 return;
             }
         }
@@ -874,40 +867,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isPlayerSystem = discoveredSystem.owner !== 'npc';
         const isDiscoverable = isPlayerSystem ? isPlayerDiscoverable(discoveredSystem.owner) : true;
-        let discoveryMessage = "";
-
+        
         if (isPlayerSystem && !isDiscoverable) {
-            alert("Des lectures d'énergie étranges émanent de cette région, mais les augures ne parviennent pas à obtenir une position stable. Impossible d'établir un contact pour le moment.");
-            if (useProbe) viewingPlayer.requisitionPoints++; // Refund RP
+            showNotification("Des lectures d'énergie étranges émanent de cette région, mais les augures sont incapables d'obtenir une position stable.", 'warning', 7000);
+            if (useProbe) viewingPlayer.requisitionPoints++;
             return;
         }
 
-        if (isPlayerSystem) {
-            discoveryMessage = `✨ Contact majeur détecté ! Présence d'une autre force de croisade ! ✨`;
-        } else {
-            discoveryMessage = `Nouveau contact ! Vous avez découvert le système PNJ "${discoveredSystem.name}".`;
-        }
+        let discoveryMessage = isPlayerSystem ? `✨ <b>Contact majeur détecté !</b> Présence d'une autre force de croisade ! ✨` : `Nouveau contact ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`;
 
         if (useProbe) {
-            alert("Résultat de la sonde :\n\n" + discoveryMessage);
+            showNotification(`<b>Résultat de la sonde :</b><br>${discoveryMessage}`, 'info', 8000);
             if (isPlayerSystem) {
-                currentSystem.probedConnections[direction] = {
-                    id: discoveredSystem.id,
-                    status: 'player_contact'
-                };
-                alert("Information de la sonde enregistrée. Le système voisin devra sonder en retour pour établir le contact.");
+                currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact' };
+                showNotification("Information de sonde enregistrée. Le système voisin devra sonder en retour pour établir un contact.", 'info', 8000);
             } else {
-                currentSystem.probedConnections[direction] = {
-                    id: discoveredSystem.id,
-                    name: discoveredSystem.name
-                };
-                alert("Information de la sonde enregistrée. Cliquez à nouveau sur la flèche pour confirmer la connexion.");
+                currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name };
+                showNotification("Information de sonde enregistrée. Cliquez à nouveau sur la flèche pour confirmer la connexion.", 'info', 8000);
             }
-        } else { // Blind jump
-            alert(discoveryMessage);
+        } else {
+            showNotification(discoveryMessage, 'success', 8000);
             if (isPlayerSystem) {
-                alert("Un saut à l'aveugle vers un système joueur non-hostile est trop dangereux. Envoyez d'abord une sonde.");
-                if (useProbe) viewingPlayer.requisitionPoints++; // Refund RP
+                showNotification("Un saut à l'aveugle vers un système joueur non-hostile est trop dangereux. Envoyez d'abord une sonde.", 'warning');
+                if (useProbe) viewingPlayer.requisitionPoints++;
                 return;
             }
             currentSystem.connections[direction] = discoveredSystem.id;
@@ -921,67 +903,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     //======================================================================
-    // NOUVELLE LOGIQUE : PLACEMENT DU SYSTÈME DU JOUEUR SUR LA CARTE
+    // PLACEMENT DU SYSTÈME DU JOUEUR SUR LA CARTE (AVEC NOTIFICATIONS)
     //======================================================================
-
-    /**
-     * Finds a random, un-discovered NPC system that can be overwritten by a new player.
-     * An un-discovered system is one that is not reachable by any existing player on the map.
-     */
     const findUndiscoveredNpcSystem = () => {
         const allReachableIdsByPlayers = new Set();
         campaignData.players.forEach(player => {
             const playerSystem = campaignData.systems.find(s => s.id === player.systemId);
-            // Only consider players already on the map
             if (playerSystem && playerSystem.position) {
-                const reachable = getReachableSystems(player.systemId, player.id);
+                const reachable = getReachableSystems(player.systemId);
                 reachable.forEach(id => allReachableIdsByPlayers.add(id));
             }
         });
-
-        // Find an NPC system that is NOT in any player's set of reachable systems
         const candidates = campaignData.systems.filter(system =>
             system.owner === 'npc' && !allReachableIdsByPlayers.has(system.id)
         );
-
-        if (candidates.length === 0) return null; // No available spot
-        // Pick a random one from the list of candidates
+        if (candidates.length === 0) return null;
         return candidates[Math.floor(Math.random() * candidates.length)];
     };
-
-    /**
-     * Checks if a player has met the conditions to be placed on the main map,
-     * and if so, initiates the placement process.
-     * @param {string} playerId The ID of the player to check.
-     */
-    const placePlayerSystemOnMap = (playerId) => {
+    
+    const placePlayerSystemOnMap = async (playerId) => {
         const player = campaignData.players.find(p => p.id === playerId);
         if (!player) return;
 
         const playerSystem = campaignData.systems.find(s => s.id === player.systemId);
-        // Condition 1: Player system exists and is currently OFF the map (no position)
         if (!playerSystem || playerSystem.position) return;
 
-        // Condition 2: Player controls all planets in their home system
         const allPlanetsControlled = playerSystem.planets.every(p => p.owner === playerId);
         if (!allPlanetsControlled) return;
-
-        // All conditions met, prompt the player to join the galaxy
-        if (!confirm(`Félicitations, ${player.name} ! Vous avez unifié votre système natal. Voulez-vous maintenant rejoindre la carte galactique principale ?`)) {
-            return;
-        }
+        
+        const joinMap = await showConfirm(`Félicitations, ${player.name} !`, "Vous avez unifié votre système natal. Voulez-vous maintenant rejoindre la carte galactique principale ?");
+        if (!joinMap) return;
 
         const targetNpcSystem = findUndiscoveredNpcSystem();
         if (!targetNpcSystem) {
-            alert("Impossible de trouver un système PNJ non découvert pour établir une tête de pont. La galaxie est peut-être trop encombrée.");
+            showNotification("Impossible de trouver un système PNJ non découvert pour établir une tête de pont. La galaxie est peut-être trop encombrée.", 'error', 8000);
             return;
         }
 
-        // Preserve connections and position from the NPC system that will be replaced
         const oldConnections = { ...targetNpcSystem.connections };
         const oldPosition = { ...targetNpcSystem.position };
 
-        // Update neighboring systems to connect to the player's system instead of the old NPC one
         for (const dir in oldConnections) {
             const neighborId = oldConnections[dir];
             if (neighborId) {
@@ -994,35 +955,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-
-        // Apply the inherited position and connections to the player's system
+        
         playerSystem.position = oldPosition;
         playerSystem.connections = oldConnections;
-        playerSystem.name = `${player.name}'s Bastion`; // Rename the system on placement
+        playerSystem.name = `${player.name}'s Bastion`;
 
-        // Remove the old NPC system from the campaign data
         const npcSystemIndex = campaignData.systems.findIndex(s => s.id === targetNpcSystem.id);
         if (npcSystemIndex > -1) {
             campaignData.systems.splice(npcSystemIndex, 1);
         }
 
-        alert(`Tête de pont établie ! Votre système est intégré dans la carte galactique. Vous pouvez maintenant explorer.`);
-
+        showNotification("<b>Tête de pont établie !</b> Votre système est maintenant connecté à la carte galactique. Vous pouvez explorer !", 'success', 8000);
         saveData();
         renderPlayerList();
-        // Refresh map if it's open
-        if (!mapModal.classList.contains('hidden')) {
-            renderGalacticMap();
-        }
-        // Refresh the system view if it's open
-        if (!worldModal.classList.contains('hidden') && currentlyViewedSystemId === playerSystem.id) {
-            renderPlanetarySystem(playerSystem.id);
-        }
+        if (!mapModal.classList.contains('hidden')) renderGalacticMap();
+        if (!worldModal.classList.contains('hidden') && currentlyViewedSystemId === playerSystem.id) renderPlanetarySystem(playerSystem.id);
     };
 
 
     //======================================================================
-    //  GESTION DES MODALES ET ÉVÉNEMENTS
+    //  GESTION DES MODALES ET ÉVÉNEMENTS (AVEC NOTIFICATIONS)
     //======================================================================
     const openModal = (modal) => modal.classList.remove('hidden');
     const closeModal = (modal) => modal.classList.add('hidden');
@@ -1032,18 +984,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
-            closeModal(e.target);
-        }
+        if (e.target.classList.contains('modal')) closeModal(e.target);
     });
 
-    campaignInfoBtn.addEventListener('click', () => {
-        openModal(infoModal);
-    });
+    campaignInfoBtn.addEventListener('click', () => openModal(infoModal));
 
     addPlayerBtn.addEventListener('click', () => {
         if (!campaignData.isGalaxyGenerated) {
-            alert("Veuillez d'abord générer une galaxie avec le bouton 'Explosion du Warp' avant d'ajouter des joueurs.");
+            showNotification("Veuillez d'abord générer une galaxie avec le bouton 'Explosion du Warp'.", 'warning');
             return;
         }
         editingPlayerIndex = -1;
@@ -1063,51 +1011,42 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(unitModal);
     });
 
-    resetCampaignBtn.addEventListener('click', () => {
-        if (confirm("Êtes-vous sûr ? Cette action va générer une nouvelle carte galactique et réinitialiser la position de TOUS les joueurs. Leurs fiches de personnage (unités, etc.) seront conservées.")) {
-            // Step 1: Generate the new NPC galaxy map
+    resetCampaignBtn.addEventListener('click', async () => {
+        const confirmReset = await showConfirm(
+            "Réinitialiser la Campagne ?",
+            "Êtes-vous sûr ? Cette action va générer une <b>nouvelle carte galactique</b> et réinitialiser la position de TOUS les joueurs. Leurs fiches de personnage (unités, points, etc.) seront conservées."
+        );
+        if (confirmReset) {
             generateGalaxy();
-
-            // Step 2: For each player, create a new, isolated home system (off-map)
             const playerSystems = [];
             campaignData.players.forEach((player) => {
                 const newSystemId = crypto.randomUUID();
                 const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
-                const newPlanets = Array.from({
-                    length: 5
-                }, (_, i) => ({
+                const newPlanets = Array.from({ length: 5 }, (_, i) => ({
                     type: i === 0 ? "Monde Sauvage" : PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)],
                     name: ["Prima", "Secundus", "Tertius", "Quartus", "Quintus"][i],
                     owner: i === 0 ? player.id : "neutral",
                     defense: i === 0 ? 0 : DEFENSE_VALUES[Math.floor(Math.random() * DEFENSE_VALUES.length)]
                 }));
-
                 const newSystem = {
-                    id: newSystemId,
-                    name: `Système Natal de ${player.name}`,
-                    owner: player.id,
-                    planets: newPlanets,
+                    id: newSystemId, name: `Système Natal de ${player.name}`, owner: player.id, planets: newPlanets,
                     connections: { up: null, down: null, left: null, right: null },
                     probedConnections: { up: null, down: null, left: null, right: null },
-                    position: null // IMPORTANT: No position means it's off-map
+                    position: null
                 };
-
                 playerSystems.push(newSystem);
                 player.systemId = newSystemId;
             });
-
-            // Step 3: Add the new player home systems to the list of systems
             campaignData.systems.push(...playerSystems);
-
             saveData();
             switchView('list');
             renderPlayerList();
-            alert("Le Warp a tout consumé ! Une nouvelle galaxie a été générée et les joueurs ont été réinitialisés dans de nouveaux systèmes de départ.");
+            showNotification("Le Warp a tout consumé ! Une nouvelle galaxie a été générée.", 'success', 8000);
         }
     });
 
-    playerListDiv.addEventListener('click', (e) => {
+    playerListDiv.addEventListener('click', async (e) => {
         const target = e.target;
         if (target.matches('.edit-player-btn')) {
             editingPlayerIndex = parseInt(target.dataset.index);
@@ -1131,26 +1070,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal(worldModal);
                 setTimeout(() => renderPlanetarySystem(player.systemId), 50);
             } else {
-                alert("Erreur : ce joueur n'a pas de système assigné.");
+                showNotification("Erreur : ce joueur n'a pas de système assigné.", 'error');
             }
         } else if (target.matches('.delete-player-btn')) {
             const index = parseInt(target.dataset.index);
             const playerToDelete = campaignData.players[index];
-            if (confirm(`Êtes-vous sûr de vouloir supprimer "${playerToDelete.name}" ? Cette action est irréversible.`)) {
-                // Remove player system
+            if (await showConfirm("Supprimer le Joueur", `Êtes-vous sûr de vouloir supprimer "<b>${playerToDelete.name}</b>" ? Cette action est irréversible.`)) {
                 const systemIndex = campaignData.systems.findIndex(s => s.id === playerToDelete.systemId);
-                if (systemIndex > -1) {
-                    campaignData.systems.splice(systemIndex, 1);
-                }
-                // Remove player
+                if (systemIndex > -1) campaignData.systems.splice(systemIndex, 1);
                 campaignData.players.splice(index, 1);
                 saveData();
                 renderPlayerList();
+                showNotification(`Le joueur <b>${playerToDelete.name}</b> a été supprimé.`, 'info');
             }
         }
     });
 
-    document.getElementById('units-tbody').addEventListener('click', (e) => {
+    document.getElementById('units-tbody').addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target) return;
 
@@ -1161,30 +1097,30 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(unit).forEach(key => {
                 const elementId = `unit-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
                 const element = document.getElementById(elementId);
-                if (element) {
-                    element.value = unit[key];
-                }
+                if (element) element.value = unit[key];
             });
             document.getElementById('unit-id').value = editingUnitIndex;
             document.getElementById('unit-rank-display').textContent = getRankFromXp(unit.xp || 0, unit.role);
             openModal(unitModal);
         } else if (target.classList.contains('delete-unit-btn')) {
             const index = parseInt(target.dataset.index);
-            if (confirm(`Supprimer l'unité "${campaignData.players[activePlayerIndex].units[index].name}" ?`)) {
+            const unitName = campaignData.players[activePlayerIndex].units[index].name;
+            if (await showConfirm("Supprimer l'unité", `Supprimer l'unité "<b>${unitName}</b>" de l'ordre de bataille ?`)) {
                 campaignData.players[activePlayerIndex].units.splice(index, 1);
                 saveData();
                 renderOrderOfBattle();
+                showNotification(`Unité <b>${unitName}</b> supprimée.`, 'info');
             }
         }
     });
 
+    // ... (le reste des gestionnaires d'événements qui n'utilisent pas alert/confirm reste identique)
+    
+    // ... (ici, les gestionnaires d'événements pour les modales, etc.)
     planetarySystemDiv.addEventListener('click', (e) => {
         const planetElement = e.target.closest('.planet');
         if (planetElement) {
-            const {
-                systemId,
-                planetIndex
-            } = planetElement.dataset;
+            const { systemId, planetIndex } = planetElement.dataset;
             const system = campaignData.systems.find(s => s.id === systemId);
             const planet = system.planets[planetIndex];
 
@@ -1310,47 +1246,31 @@ document.addEventListener('DOMContentLoaded', () => {
             player.name = name;
             player.faction = document.getElementById('player-faction-input').value.trim();
         } else {
-            // Create a new player with an isolated, off-map home system
             const newPlayerId = crypto.randomUUID();
             const newSystemId = crypto.randomUUID();
             const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
             const DEFENSE_VALUES = [500, 1000, 1500, 2000];
-            const newPlanets = Array.from({
-                length: 5
-            }, (_, i) => ({
+            const newPlanets = Array.from({ length: 5 }, (_, i) => ({
                 type: i === 0 ? "Monde Sauvage" : PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)],
                 name: ["Prima", "Secundus", "Tertius", "Quartus", "Quintus"][i],
                 owner: i === 0 ? newPlayerId : "neutral",
                 defense: i === 0 ? 0 : DEFENSE_VALUES[Math.floor(Math.random() * DEFENSE_VALUES.length)]
             }));
 
-            // Create the system object but do NOT assign a position
             const newSystem = {
-                id: newSystemId,
-                name: `Système Natal de ${name}`,
-                owner: newPlayerId,
-                planets: newPlanets,
+                id: newSystemId, name: `Système Natal de ${name}`, owner: newPlayerId, planets: newPlanets,
                 connections: { up: null, down: null, left: null, right: null },
                 probedConnections: { up: null, down: null, left: null, right: null },
-                position: null // No position = off-map
+                position: null
             };
             campaignData.systems.push(newSystem);
 
             campaignData.players.push({
-                id: newPlayerId,
-                systemId: newSystemId,
-                name: name,
+                id: newPlayerId, systemId: newSystemId, name: name,
                 faction: document.getElementById('player-faction-input').value.trim(),
-                crusadeFaction: '',
-                requisitionPoints: 5,
-                sombrerochePoints: 0,
-                supplyLimit: 50,
-                battles: {
-                    wins: 0,
-                    losses: 0
-                },
-                goalsNotes: '',
-                units: []
+                crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
+                supplyLimit: 50, battles: { wins: 0, losses: 0 },
+                goalsNotes: '', units: []
             });
         }
         saveData();
@@ -1364,8 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!name) return;
 
         const unitData = {
-            name: name,
-            role: document.getElementById('unit-role').value,
+            name: name, role: document.getElementById('unit-role').value,
             powerRating: parseInt(document.getElementById('unit-power').value) || 0,
             xp: parseInt(document.getElementById('unit-xp').value) || 0,
             crusadePoints: parseInt(document.getElementById('unit-crusade-points').value) || 0,
@@ -1392,12 +1311,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     planetTypeForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const {
-            value: systemId
-        } = document.getElementById('planet-system-id');
-        const {
-            value: planetIndex
-        } = document.getElementById('planet-index');
+        const { value: systemId } = document.getElementById('planet-system-id');
+        const { value: planetIndex } = document.getElementById('planet-index');
         const system = campaignData.systems.find(s => s.id === systemId);
         const planet = system.planets[planetIndex];
 
@@ -1411,29 +1326,22 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPlanetarySystem(systemId);
         closeModal(planetTypeModal);
 
-        // NEW: After changing ownership, check if the player can be placed on the map
         if (newOwner !== 'neutral') {
             placePlayerSystemOnMap(newOwner);
         }
     });
 
-    document.getElementById('randomize-planet-btn').addEventListener('click', () => {
+    document.getElementById('randomize-planet-btn').addEventListener('click', async () => {
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
-        if (!viewingPlayer) {
-            alert("Erreur : Joueur actif introuvable.");
-            return;
-        }
-        if (viewingPlayer.requisitionPoints < 2) {
-            alert("Pas assez de Points de Réquisition (2 RP requis).");
-            return;
-        }
+        if (!viewingPlayer) { showNotification("Erreur : Joueur actif introuvable.", 'error'); return; }
+        if (viewingPlayer.requisitionPoints < 2) { showNotification("Pas assez de Points de Réquisition (2 RP requis).", 'warning'); return; }
 
         const systemId = document.getElementById('planet-system-id').value;
         const planetIndex = document.getElementById('planet-index').value;
         const system = campaignData.systems.find(s => s.id === systemId);
         const planet = system.planets[planetIndex];
 
-        if (confirm(`Cette action coûtera 2 Points de Réquisition. Continuer ?`)) {
+        if (await showConfirm("Randomiser la planète", "Cette action coûtera <b>2 Points de Réquisition</b>. Continuer ?")) {
             viewingPlayer.requisitionPoints -= 2;
             const PLANET_TYPES = ["Monde Mort", "Monde Sauvage", "Agri-monde", "Monde Forge", "Monde Ruche", "Monde Saint (relique)"];
             planet.type = PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)];
@@ -1441,20 +1349,14 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPlanetarySystem(system.id);
             if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
             closeModal(planetTypeModal);
-            alert(`Planète randomisée ! Type actuel : ${planet.type}.`);
+            showNotification(`Planète randomisée ! Nouveau type : <b>${planet.type}</b>.`, 'success');
         }
     });
 
-    document.getElementById('halve-defense-btn').addEventListener('click', () => {
+    document.getElementById('halve-defense-btn').addEventListener('click', async () => {
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
-        if (!viewingPlayer) {
-            alert("Erreur : Joueur actif introuvable.");
-            return;
-        }
-        if (viewingPlayer.requisitionPoints < 1) {
-            alert("Pas assez de Points de Réquisition (1 RP requis).");
-            return;
-        }
+        if (!viewingPlayer) { showNotification("Erreur : Joueur actif introuvable.", 'error'); return; }
+        if (viewingPlayer.requisitionPoints < 1) { showNotification("Pas assez de Points de Réquisition (1 RP requis).", 'warning'); return; }
 
         const systemId = document.getElementById('planet-system-id').value;
         const planetIndex = document.getElementById('planet-index').value;
@@ -1463,14 +1365,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const oldDefense = planet.defense;
         const newDefense = Math.floor(oldDefense / 2);
 
-        if (confirm(`Cette action coûtera 1 Point de Réquisition. La défense passera de ${oldDefense} à ${newDefense}. Continuer ?`)) {
+        if (await showConfirm("Saboter les défenses", `Cette action coûtera <b>1 Point de Réquisition</b>. La défense passera de <b>${oldDefense}</b> à <b>${newDefense}</b>. Continuer ?`)) {
             viewingPlayer.requisitionPoints--;
             planet.defense = newDefense;
             saveData();
             renderPlanetarySystem(system.id);
             if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
             closeModal(planetTypeModal);
-            alert(`Sabotage réussi ! Défenses réduites à ${newDefense}.`);
+            showNotification(`Sabotage réussi ! Défenses réduites à <b>${newDefense}</b>.`, 'success');
         }
     });
 
@@ -1516,10 +1418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (change < 0 && (player.battles[battleStat] || 0) === 0) return;
 
-            if (!player.battles) player.battles = {
-                wins: 0,
-                losses: 0
-            };
+            if (!player.battles) player.battles = { wins: 0, losses: 0 };
             player.battles[battleStat] = Math.max(0, (player.battles[battleStat] || 0) + change);
 
             if (change > 0) {

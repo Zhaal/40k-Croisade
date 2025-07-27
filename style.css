@@ -490,7 +490,6 @@ label {
     100% { box-shadow: 0 0 12px rgba(238, 238, 238, 0.7); }
 }
 
-/* NOUVEAU: Animation pour les planètes du joueur actif (vert) */
 @keyframes pulse-player-friendly {
     0% { box-shadow: 0 0 10px var(--friendly-color); }
     50% { box-shadow: 0 0 22px var(--friendly-color), 0 0 10px #fff; }
@@ -499,14 +498,11 @@ label {
 
 
 /* --- Statut des Planètes --- */
-/* Style par défaut pour une planète possédée (couleur Or/Bronze) */
 .planet[data-owner]:not([data-owner="neutral"]) {
     border: 3px solid var(--primary-color);
     box-shadow: 0 0 12px var(--primary-color);
 }
 
-/* NOUVEAU : Style pour une planète possédée par le joueur qui regarde (vert).
-   Cette classe est ajoutée dynamiquement par script.js et surcharge la règle ci-dessus. */
 .planet.friendly-planet {
     border-color: var(--friendly-color);
     box-shadow: 0 0 12px var(--friendly-color);
@@ -580,7 +576,6 @@ label {
 
 .map-viewport { position: relative; width: 2000px; height: 2000px; }
 
-/* NOUVEAU */
 .map-controls {
     margin-bottom: 15px;
     display: flex;
@@ -628,9 +623,9 @@ label {
 
 /* Statut des systèmes sur la carte */
 .system-node.player-controlled {
-    border-color: var(--friendly-color); /* MODIFIÉ: Couleur pour système contrôlé par le joueur */
+    border-color: var(--friendly-color);
     box-shadow: 0 0 20px var(--friendly-color);
-    background: radial-gradient(circle, #5fbf8f, #2e8b57); /* MODIFIÉ: Gradient vert */
+    background: radial-gradient(circle, #5fbf8f, #2e8b57);
 }
 
 .system-node.contested {
@@ -670,7 +665,6 @@ label {
     color: var(--text-muted-color);
 }
 
-/* NEW: Style for colonization percentage */
 #colonization-percentage {
     font-weight: normal;
     color: var(--text-color);
@@ -694,6 +688,63 @@ label {
     border: 1px solid #555;
 }
 
+/* --- NOUVEAU : Modale de Confirmation --- */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* --- NOUVEAU : Notifications Stylisées --- */
+#notification-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    pointer-events: none; /* Permet de cliquer "à travers" le conteneur */
+}
+
+.notification {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    padding: 15px 20px;
+    border-radius: 5px;
+    border-left: 5px solid var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    max-width: 380px;
+    font-size: 0.95em;
+    cursor: pointer;
+    pointer-events: auto; /* Rend les notifications cliquables */
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.hide {
+    opacity: 0;
+    transform: translateX(100%);
+    margin-top: -10px; /* Petit effet de glissement vers le haut en partant */
+}
+
+/* Types de notification */
+.notification.info { border-left-color: var(--probed-color); }
+.notification.success { border-left-color: var(--friendly-color); }
+.notification.warning { border-left-color: var(--warning-color); }
+.notification.error { border-left-color: var(--danger-color); }
+
+.notification b, .notification strong {
+    color: var(--primary-color);
+}
 
 /* --- Responsivité --- */
 @media (max-width: 900px) {
@@ -706,4 +757,16 @@ label {
 @media (max-width: 480px) {
     h1 { font-size: 1.5em; }
     .campaign-controls { display: flex; flex-direction: column; }
+    #notification-container {
+        width: 100%;
+        bottom: 0;
+        right: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        align-items: center;
+    }
+    .notification {
+        width: 100%;
+        max-width: 100%;
+    }
 }
