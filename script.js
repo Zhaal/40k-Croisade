@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const APP_VERSION = "1.2.2"; // Version a été mise à jour
+    const APP_VERSION = "1.2.4"; // Version mise à jour pour refléter la correction
 
     //======================================================================
     //  ÉLÉMENTS DU DOM
@@ -210,17 +210,13 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData();
         }
 
-        // === NOUVEAU : VÉRIFICATION DE LA VERSION ===
-// script.js, dans la fonction loadData()
-
-        // === NOUVEAU : VÉRIFICATION DE LA VERSION ===
         const lastVersion = localStorage.getItem('nexusCrusadeVersion');
         if (lastVersion !== APP_VERSION) {
             setTimeout(() => {
                 showNotification(
-                    `<b>Mise à jour v${APP_VERSION} !</b> Map 3*3`, // NOUVEAU MESSAGE
+                    `<b>Mise à jour v${APP_VERSION} !</b> Voisin ennemi en rouge.`,
                     'info',
-                    10000 // 10 secondes
+                    10000
                 );
             }, 500);
             localStorage.setItem('nexusCrusadeVersion', APP_VERSION);
@@ -271,12 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     //======================================================================
-    //  NOUVELLE LOGIQUE : GÉNÉRATION DE LA GALAXIE (CORRIGÉ)
+    //  GÉNÉRATION DE LA GALAXIE
     //======================================================================
-    /**
-     * Sélectionne un type de planète aléatoire en fonction de poids définis.
-     * @returns {string} Le nom du type de planète.
-     */
     const getWeightedRandomPlanetType = () => {
         const types = [
             { name: "Monde Ruche", weight: 35 },
@@ -321,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const planets = [];
         for (let i = 0; i < numPlanets; i++) {
             planets.push({
-                type: getWeightedRandomPlanetType(), // Utilise la nouvelle fonction pondérée
+                type: getWeightedRandomPlanetType(),
                 name: `${planetNames[i] || `Planète ${i + 1}`}`,
                 owner: "neutral",
                 defense: defenseValues[Math.floor(Math.random() * defenseValues.length)]
@@ -388,20 +380,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return { status: 'hostile', text: 'Contrôlé par Ennemi' };
     };
     
-    /**
-     * MODIFIÉ : Retourne les IDs des systèmes découverts par un joueur spécifique.
-     * @param {string} playerId L'ID du joueur.
-     * @returns {Set<string>} Un Set contenant les IDs des systèmes visibles par le joueur.
-     */
     const getReachableSystemsForPlayer = (playerId) => {
         const player = campaignData.players.find(p => p.id === playerId);
         if (!player) {
-            return new Set(); // Retourne un ensemble vide si le joueur n'est pas trouvé
+            return new Set();
         }
         
-        // Pour la rétrocompatibilité avec les anciennes sauvegardes
         if (!player.discoveredSystemIds) {
-            // Si la liste n'existe pas, on la crée avec le système de départ
             player.discoveredSystemIds = [player.systemId];
         }
 
@@ -794,14 +779,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     arrow.style.cursor = 'not-allowed';
                     arrow.title = `Erreur: La connexion est rompue.`;
                 }
-            // CAS 2 : Le joueur a une information de SONDAGE
+            // === MODIFICATION : LOGIQUE DE SONDAGE CORRIGÉE ===
             } else if (probedInfo) {
-                arrow.style.borderColor = colors.blue;
-                arrow.style.color = colors.blue;
-                 if (probedInfo.status === 'player_contact') {
-                    label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>Joueur Hostile détecté</small>`;
-                    arrow.title = `Route sondée vers une présence de croisade. Le contact doit être mutuel pour établir un lien.`;
+                // CAS 2.1 : Contact hostile sondé
+                if (probedInfo.status === 'player_contact') {
+                    arrow.style.borderColor = colors.red;
+                    arrow.style.color = colors.red;
+                    label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>JOUEUR<br>HOSTILE</small>`;
+                    arrow.title = `Sonde a détecté une présence hostile ! Cliquez pour tenter d'établir une connexion.`;
                 } else {
+                // CAS 2.2 : Contact PNJ sondé
+                    arrow.style.borderColor = colors.blue;
+                    arrow.style.color = colors.blue;
                     label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>SONDÉ<br>${probedInfo.name}</small>`;
                     arrow.title = `Route sondée vers ${probedInfo.name}. Cliquez pour établir la connexion.`;
                 }
@@ -823,7 +812,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     arrow.title = 'Bord de la galaxie connue';
                     label = `<span class="arrow-symbol" style="opacity: 0.5;">${arrowSymbols[dir]}</span>`; // Flèche grisée
                 }
-                // Si un système cible existe, le label par défaut "Explorer" est déjà correct
             }
             arrow.innerHTML = label;
         });
@@ -846,13 +834,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const connectedSystemId = currentSystem.connections[direction];
         const oppositeDirection = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
 
-        // --- 1. LOGIQUE DE VOYAGE ---
+        // --- 1. LOGIQUE DE VOYAGE (si déjà connecté et découvert) ---
         if (connectedSystemId && viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) {
             renderPlanetarySystem(connectedSystemId);
             return;
         }
 
-        // --- Conditions de blocus ---
+        // --- 2. Conditions de blocus ---
         if (!currentSystem.position) {
             showNotification("Vous devez d'abord conquérir votre système natal pour rejoindre la carte galactique.", 'warning', 6000);
             return;
@@ -867,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification("Vous devez contrôler au moins une planète dans ce système pour pouvoir explorer plus loin.", 'warning');
             return;
         }
-
+        
         const parentPos = currentSystem.position;
         const targetPos = { x: parentPos.x, y: parentPos.y };
         if (direction === 'up') targetPos.y -= STEP_DISTANCE;
@@ -882,30 +870,51 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (connectedSystemId) { 
-            const confirmDiscovery = await showConfirm(
-                "Découverte de Route",
-                `Vos scanners indiquent une route de saut stable mais non cartographiée vers le système <b>${discoveredSystem.name}</b>. Voulez-vous suivre ce chemin et l'ajouter à vos cartes ?`
-            );
-            if (confirmDiscovery) {
-                if (!viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) {
-                    viewingPlayer.discoveredSystemIds.push(connectedSystemId);
-                }
-                saveData();
-                renderPlanetarySystem(connectedSystemId);
-                showNotification(`Nouvelle route cartographiée vers le système <b>${discoveredSystem.name}</b>.`, 'success');
-            }
-            return;
-        }
-        
         const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[direction] : null;
-        if (probedInfo && probedInfo.status !== 'player_contact') { // On ignore le vieux statut 'player_contact'
+
+        // === MODIFICATION : LOGIQUE DE CONTACT CORRIGÉE ===
+
+        // --- 3. AGIR SUR UN SONDAGE EXISTANT ---
+        // 3.1 Agir sur un contact JOUEUR sondé
+        if (probedInfo && probedInfo.status === 'player_contact') {
+            const confirmed = await showConfirm(
+                "Établir un Contact Hostile",
+                `Vos sondes confirment la présence d'un autre joueur. Voulez-vous établir une connexion permanente ?<br><br><b>Attention :</b> Cette action est irréversible et révèlera immédiatement votre position à cet adversaire.`
+            );
+
+            if (confirmed) {
+                currentSystem.connections[direction] = discoveredSystem.id;
+                discoveredSystem.connections[oppositeDirection] = currentSystem.id;
+                currentSystem.probedConnections[direction] = null; // Nettoyer l'info de sondage
+
+                if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
+                    viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
+                }
+
+                const discoveredPlayer = campaignData.players.find(p => p.id === discoveredSystem.owner);
+                if (discoveredPlayer) {
+                    if (!discoveredPlayer.discoveredSystemIds) discoveredPlayer.discoveredSystemIds = [];
+                    if (!discoveredPlayer.discoveredSystemIds.includes(currentSystem.id)) {
+                        discoveredPlayer.discoveredSystemIds.push(currentSystem.id);
+                        showNotification(`Le joueur <b>${discoveredPlayer.name}</b> a été alerté de votre présence.`, 'warning');
+                    }
+                }
+                
+                saveData();
+                showNotification(`Connexion établie vers le système hostile !`, 'success');
+                renderPlanetarySystem(discoveredSystem.id);
+            }
+            return; // Fin de l'action
+        }
+
+        // 3.2 Agir sur un contact PNJ sondé
+        if (probedInfo) {
             const probedSystem = campaignData.systems.find(s => s.id === probedInfo.id);
             if (!probedSystem) {
                 showNotification("Erreur: Le système sondé n'a pas été retrouvé.", 'error');
                 currentSystem.probedConnections[direction] = null;
                 saveData();
-                renderPlanetarySystem(currentSystem.id);
+                updateExplorationArrows(currentSystem);
                 return;
             }
             
@@ -920,6 +929,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 saveData();
                 renderPlanetarySystem(probedSystem.id);
+                showNotification(`Connexion établie avec ${probedSystem.name}`, 'success');
+            }
+            return; // Fin de l'action
+        }
+
+        // --- 4. SI PAS DE SONDAGE : EXPLORATION INITIALE (SAUT OU SONDE) ---
+        if (connectedSystemId && !viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) { 
+            const confirmDiscovery = await showConfirm(
+                "Découverte de Route",
+                `Vos scanners indiquent une route de saut stable mais non cartographiée vers le système <b>${discoveredSystem.name}</b>. Voulez-vous suivre ce chemin et l'ajouter à vos cartes ?`
+            );
+            if (confirmDiscovery) {
+                viewingPlayer.discoveredSystemIds.push(connectedSystemId);
+                saveData();
+                renderPlanetarySystem(connectedSystemId);
+                showNotification(`Nouvelle route cartographiée vers le système <b>${discoveredSystem.name}</b>.`, 'success');
             }
             return;
         }
@@ -927,64 +952,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const useProbe = await showConfirm("Méthode d'Exploration", "Envoyer une sonde (coût: 1 RP) ?<br><small>(Annuler pour un saut à l'aveugle standard, gratuit mais plus risqué)</small>");
         
         if (useProbe) {
+            // --- 4.1. LOGIQUE DE LA SONDE (CORRIGÉE) ---
             if (viewingPlayer.requisitionPoints < 1) {
                 showNotification("Points de Réquisition insuffisants !", 'warning');
                 return;
             }
             viewingPlayer.requisitionPoints--;
             
-            const isPlayerSystem = discoveredSystem.owner !== 'npc';
-            if (isPlayerSystem) {
-                // MODIFICATION : NOUVELLE LOGIQUE POUR LE CONTACT AVEC UN JOUEUR
-                showNotification(`✨ <b>Contact majeur détecté !</b> La sonde rapporte la présence d'une autre force de croisade ! ✨`, 'warning', 8000);
+            // CORRECTIF : Vérifier la présence d'une planète ennemie, pas le propriétaire du système.
+            const hasEnemyPlanetInTarget = discoveredSystem.planets.some(
+                p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id
+            );
 
-                const confirmed = await showConfirm(
-                    "Contact Hostile Détecté",
-                    `Vos sondes confirment la présence d'un autre joueur dans le système adjacent. Voulez-vous établir une connexion permanente ?<br><br><b>Attention :</b> Cette action est irréversible et révèlera immédiatement votre position à cet adversaire.`
-                );
+            if (hasEnemyPlanetInTarget) {
+                // SONDER UN SYSTÈME CONTENANT UN ENNEMI
+                showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
+                currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact' };
 
-                if (confirmed) {
-                    currentSystem.connections[direction] = discoveredSystem.id;
-                    discoveredSystem.connections[oppositeDirection] = currentSystem.id;
-
-                    if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
-                        viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
-                    }
-
-                    const discoveredPlayer = campaignData.players.find(p => p.id === discoveredSystem.owner);
-                    if (discoveredPlayer && !discoveredPlayer.discoveredSystemIds.includes(currentSystem.id)) {
-                        if (!discoveredPlayer.discoveredSystemIds) discoveredPlayer.discoveredSystemIds = [];
-                        discoveredPlayer.discoveredSystemIds.push(currentSystem.id);
-                        showNotification(`Le joueur <b>${discoveredPlayer.name}</b> a été alerté de votre présence.`, 'info');
-                    }
-                    
-                    saveData();
-                    showNotification(`Connexion établie vers le système hostile !`, 'success');
-                    renderPlanetarySystem(discoveredSystem.id);
-                } else {
-                    showNotification("Sonde retirée. Aucune connexion n'a été établie.", 'info');
-                    saveData(); // Sauvegarde la dépense de RP
-                    if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
-                }
             } else { 
-                // LOGIQUE EXISTANTE POUR LE CONTACT PNJ
+                // SONDER UN SYSTÈME PNJ ou VIDE
                 showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'info', 8000);
-                currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name };
-                showNotification("Information de sonde enregistrée. Cliquez à nouveau sur la flèche pour confirmer la connexion.", 'info', 8000);
-                saveData();
-                renderPlanetarySystem(currentSystem.id);
+                currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact' };
             }
+
+            showNotification("Information enregistrée. Cliquez à nouveau sur la flèche pour agir.", 'info', 8000);
+            saveData();
+            if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
+            updateExplorationArrows(currentSystem); // Juste mettre à jour les flèches
+
         } else {
-            // ==================================================================
-            // == DEBUT DE LA CORRECTION : LOGIQUE DU SAUT À L'AVEUGLE (SANS CONFIRMATION) ==
-            // ==================================================================
+            // --- 4.2. LOGIQUE DU SAUT À L'AVEUGLE ---
             showNotification("Saut à l'aveugle initié...", 'info', 3000);
 
-            // La connexion est établie immédiatement
             currentSystem.connections[direction] = discoveredSystem.id;
             discoveredSystem.connections[oppositeDirection] = currentSystem.id;
 
-            // Le joueur découvre le nouveau système
             if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
                 viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
             }
@@ -992,10 +994,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasEnemyInTarget = discoveredSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
 
             if (hasEnemyInTarget) {
-                // Le système de destination est hostile
                 showNotification(`<b>Contact hostile !</b> Le saut à l'aveugle vous a mené dans le système <b>${discoveredSystem.name}</b>. Votre arrivée a été détectée !`, 'error', 8000);
                 
-                // Alerter le(s) joueur(s) dans le système de destination
                 const enemyPlayerIds = new Set(discoveredSystem.planets.map(p => p.owner).filter(o => o !== 'neutral' && o !== viewingPlayer.id));
                 enemyPlayerIds.forEach(enemyId => {
                     const enemyPlayer = campaignData.players.find(p => p.id === enemyId);
@@ -1007,28 +1007,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
             } else {
-                // Le système de destination est neutre (PNJ)
                 showNotification(`Saut à l'aveugle réussi ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'success', 8000);
             }
             
             saveData();
             renderPlanetarySystem(discoveredSystem.id);
-             // ==================================================================
-            // == FIN DE LA CORRECTION ==
-            // ==================================================================
         }
     };
 
 
     //======================================================================
-    // PLACEMENT DU SYSTÈME DU JOUEUR SUR LA CARTE (AVEC NOTIFICATIONS)
+    // PLACEMENT DU SYSTÈME DU JOUEUR SUR LA CARTE
     //======================================================================
     const findUndiscoveredNpcSystem = () => {
         const allDiscoveredIdsByPlayers = new Set();
         campaignData.players.forEach(player => {
             if (player.discoveredSystemIds) {
                 player.discoveredSystemIds.forEach(id => allDiscoveredIdsByPlayers.add(id));
-            } else if (player.systemId) { // Fallback pour les très anciennes données
+            } else if (player.systemId) {
                 allDiscoveredIdsByPlayers.add(player.systemId);
             }
         });
@@ -1071,7 +1067,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (neighborSystem.connections) {
                        neighborSystem.connections[oppositeDir] = playerSystem.id;
                     }
-                     // Le joueur voisin découvre aussi le nouveau système du joueur
                     const neighborOwner = campaignData.players.find(p => p.discoveredSystemIds && p.discoveredSystemIds.includes(neighborId));
                     if(neighborOwner && !neighborOwner.discoveredSystemIds.includes(playerSystem.id)) {
                         neighborOwner.discoveredSystemIds.push(playerSystem.id);
@@ -1084,7 +1079,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playerSystem.connections = oldConnections;
         playerSystem.name = `${player.name}'s Bastion`;
         
-        // Le joueur découvre tous les systèmes adjacents
         Object.values(oldConnections).forEach(id => {
             if(id && !player.discoveredSystemIds.includes(id)) {
                 player.discoveredSystemIds.push(id);
@@ -1105,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     //======================================================================
-    //  GESTION DES MODALES ET ÉVÉNEMENTS (AVEC NOTIFICATIONS)
+    //  GESTION DES MODALES ET ÉVÉNEMENTS
     //======================================================================
     const openModal = (modal) => modal.classList.remove('hidden');
     const closeModal = (modal) => modal.classList.add('hidden');
@@ -1154,9 +1148,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newSystemId = crypto.randomUUID();
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
                 const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
-                const numPlanets = 5; // MODIFICATION: Nombre de planètes fixé à 5
+                const numPlanets = 5;
                 const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
-                    type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(), // Le premier est fixe, les autres pondérés
+                    type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(),
                     name: planetNames[i] || `Planète ${i + 1}`,
                     owner: i === 0 ? player.id : "neutral",
                     defense: i === 0 ? 0 : DEFENSE_VALUES[Math.floor(Math.random() * DEFENSE_VALUES.length)]
@@ -1169,7 +1163,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 playerSystems.push(newSystem);
                 player.systemId = newSystemId;
-                // On réinitialise aussi les systèmes découverts au seul système natal
                 player.discoveredSystemIds = [newSystemId]; 
             });
             campaignData.systems.push(...playerSystems);
@@ -1399,14 +1392,13 @@ document.getElementById('planet-owner-select').addEventListener('change', (e) =>
             };
             campaignData.systems.push(newSystem);
 
-            // MODIFICATION : Ajout de la nouvelle propriété discoveredSystemIds
             campaignData.players.push({
                 id: newPlayerId, systemId: newSystemId, name: name,
                 faction: document.getElementById('player-faction-input').value.trim(),
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
                 supplyLimit: 50, battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
-                discoveredSystemIds: [newSystemId] // Le joueur ne connait que son système de départ
+                discoveredSystemIds: [newSystemId]
             });
         }
         saveData();
