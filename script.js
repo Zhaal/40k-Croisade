@@ -893,15 +893,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification("Information de sonde enregistrée. Cliquez à nouveau sur la flèche pour confirmer la connexion.", 'info', 8000);
             }
         } else {
+            // ***MODIFICATION START***
+            // The previous logic incorrectly blocked a blind jump to a non-hostile player system.
+            // The `hasEnemyInTarget` check at the start of the function already covers hostile jumps.
+            // Therefore, if we reach this `else` block, the blind jump is permitted.
             showNotification(discoveryMessage, 'success', 8000);
-            if (isPlayerSystem) {
-                showNotification("Un saut à l'aveugle vers un système joueur non-hostile est trop dangereux. Envoyez d'abord une sonde.", 'warning');
-                if (useProbe) viewingPlayer.requisitionPoints++;
-                return;
-            }
             currentSystem.connections[direction] = discoveredSystem.id;
             discoveredSystem.connections[oppositeDirection] = currentSystem.id;
             renderPlanetarySystem(discoveredSystem.id);
+            // ***MODIFICATION END***
         }
 
         saveData();
