@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const APP_VERSION = "1.2.0"; // Version a été mise à jour
+    const APP_VERSION = "1.2.1"; // Version a été mise à jour
 
     //======================================================================
     //  ÉLÉMENTS DU DOM
@@ -211,11 +211,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // === NOUVEAU : VÉRIFICATION DE LA VERSION ===
+// script.js, dans la fonction loadData()
+
+        // === NOUVEAU : VÉRIFICATION DE LA VERSION ===
         const lastVersion = localStorage.getItem('nexusCrusadeVersion');
         if (lastVersion !== APP_VERSION) {
             setTimeout(() => {
                 showNotification(
-                    `<b>Mise à jour v${APP_VERSION} !</b> Les règles d'exploration des systèmes joueurs ont été simplifiées.`,
+                    `<b>Mise à jour v${APP_VERSION} !</b> Le saut à l'aveugle en territoire ennemi est désormais instantané, sans demande de confirmation.`, // NOUVEAU MESSAGE
                     'info',
                     10000 // 10 secondes
                 );
