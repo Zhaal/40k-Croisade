@@ -1642,13 +1642,13 @@ document.addEventListener('DOMContentLoaded', () => {
         battleTraitSelect.innerHTML = '<option value="">Choisir un trait...</option>';
         const traits = crusadeRules.battleTraits[unitRole] || [];
         traits.forEach(trait => {
-            battleTraitSelect.innerHTML += `<option value="${trait.name}" title="${trait.desc}">${trait.name}</option>`;
+            battleTraitSelect.innerHTML += `<option value="${trait.name}">${trait.name}</option>`;
         });
 
         const weaponModSelect = document.getElementById('weapon-mod-select');
         weaponModSelect.innerHTML = '<option value="">Choisir une modification...</option>';
         crusadeRules.weaponMods.forEach(mod => {
-            weaponModSelect.innerHTML += `<option value="${mod.name}" title="${mod.desc}">${mod.name}</option>`;
+            weaponModSelect.innerHTML += `<option value="${mod.name}">${mod.name}</option>`;
         });
 
         const relicSelect = document.getElementById('relic-select');
@@ -1658,7 +1658,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const optgroup = document.createElement('optgroup');
                 optgroup.label = `${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
                 relics.forEach(relic => {
-                    optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="relics.${type}" title="${relic.desc}">${relic.name}</option>`;
+                    optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="relics.${type}">${relic.name}</option>`;
                 });
                 relicSelect.appendChild(optgroup);
             });
@@ -1668,14 +1668,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const battleScarSelect = document.getElementById('battle-scar-select');
         battleScarSelect.innerHTML = '<option value="">Choisir une cicatrice...</option>';
         crusadeRules.battleScars.forEach(scar => {
-            battleScarSelect.innerHTML += `<option value="${scar.name}" title="${scar.desc}">${scar.name}</option>`;
+            battleScarSelect.innerHTML += `<option value="${scar.name}">${scar.name}</option>`;
         });
 
         const sombrerocheHonourSelect = document.getElementById('sombreroche-honour-select');
         sombrerocheHonourSelect.innerHTML = '<option value="">Choisir un honneur...</option>';
         if (isCharacter) {
             crusadeRules.sombrerocheHonours.forEach(honour => {
-                sombrerocheHonourSelect.innerHTML += `<option value="${honour.name}" data-cost="${honour.cost}" title="${honour.desc}">${honour.name} (${honour.cost} Éclats)</option>`;
+                sombrerocheHonourSelect.innerHTML += `<option value="${honour.name}" data-cost="${honour.cost}">${honour.name} (${honour.cost} Éclats)</option>`;
             });
         }
         sombrerocheHonourSelect.disabled = !isCharacter;
@@ -1684,7 +1684,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sombrerocheRelicSelect.innerHTML = '<option value="">Choisir une relique...</option>';
         if (isCharacter) {
             crusadeRules.sombrerocheRelics.forEach(relic => {
-                sombrerocheRelicSelect.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" title="${relic.desc}">${relic.name} (${relic.cost} Éclats)</option>`;
+                sombrerocheRelicSelect.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}">${relic.name} (${relic.cost} Éclats)</option>`;
             });
         }
         sombrerocheRelicSelect.disabled = !isCharacter;
@@ -1714,66 +1714,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-document.getElementById('add-battle-trait-btn').addEventListener('click', async () => {
+    document.getElementById('add-battle-trait-btn').addEventListener('click', () => {
         const select = document.getElementById('battle-trait-select');
         const traitName = select.value;
         if (!traitName) return;
 
-        const crusadePointsInput = document.getElementById('unit-crusade-points');
-        const currentPc = parseInt(crusadePointsInput.value) || 0;
-        const pcCost = 1; // Le coût de l'amélioration
-
-        if (currentPc < pcCost) {
-            showNotification(`Points de Croisade insuffisants. L'unité doit avoir au moins ${pcCost} PC.`, 'error');
-            return;
-        }
-
         const unitRole = document.getElementById('unit-role').value;
         const trait = crusadeRules.battleTraits[unitRole].find(t => t.name === traitName);
         if (!trait) return;
-
-        const confirmText = `Voulez-vous dépenser <b>${pcCost} PC</b> pour acquérir ce trait ?<br><br>PC actuels de l'unité : ${currentPc}<br>PC après achat : <b>${currentPc - pcCost}</b>`;
-        if (await showConfirm("Confirmer Dépense de PC", confirmText)) {
-            // Déduit le coût du total de PC de l'unité
-            crusadePointsInput.value = currentPc - pcCost;
-            
-            // Ajoute le trait à la fiche
+        
+        handleRpPurchase(`Trait: ${trait.name}`, 1, () => {
             addUpgradeToTextarea('unit-honours', trait.name, trait.desc);
+            const crusadePointsInput = document.getElementById('unit-crusade-points');
+            crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + 1;
             select.value = '';
-            showNotification(`Trait de bataille ajouté. Le coût a été déduit.`, 'success');
-        }
+        });
     });
 
-document.getElementById('add-weapon-mod-btn').addEventListener('click', async () => {
+    document.getElementById('add-weapon-mod-btn').addEventListener('click', () => {
         const select = document.getElementById('weapon-mod-select');
         const modName = select.value;
         if (!modName) return;
 
-        const crusadePointsInput = document.getElementById('unit-crusade-points');
-        const currentPc = parseInt(crusadePointsInput.value) || 0;
-        const pcCost = 1;
-
-        if (currentPc < pcCost) {
-            showNotification(`Points de Croisade insuffisants. L'unité doit avoir au moins ${pcCost} PC.`, 'error');
-            return;
-        }
-
         const mod = crusadeRules.weaponMods.find(m => m.name === modName);
         if (!mod) return;
-        
-        const confirmText = `Voulez-vous dépenser <b>${pcCost} PC</b> pour cette modification ?<br><br>PC actuels de l'unité : ${currentPc}<br>PC après achat : <b>${currentPc - pcCost}</b>`;
-        if (await showConfirm("Confirmer Dépense de PC", confirmText)) {
-            // Déduit le coût du total de PC de l'unité
-            crusadePointsInput.value = currentPc - pcCost;
 
-            // Ajoute la modification à la fiche
+        handleRpPurchase(`Mod. d'Arme: ${mod.name}`, 1, () => {
             addUpgradeToTextarea('unit-honours', `Mod. d'Arme: ${mod.name}`, mod.desc);
+            const crusadePointsInput = document.getElementById('unit-crusade-points');
+            crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + 1;
             select.value = '';
-            showNotification(`Modification d'arme ajoutée. Le coût a été déduit.`, 'success');
-        }
+        });
     });
 
-document.getElementById('add-relic-btn').addEventListener('click', async () => {
+    document.getElementById('add-relic-btn').addEventListener('click', () => {
         const select = document.getElementById('relic-select');
         const selectedOption = select.options[select.selectedIndex];
         if (!selectedOption.dataset.type) return;
@@ -1781,26 +1755,13 @@ document.getElementById('add-relic-btn').addEventListener('click', async () => {
         const [category, type] = selectedOption.dataset.type.split('.');
         const relic = crusadeRules[category][type].find(r => r.name === selectedOption.value);
         if (!relic) return;
-
-        const crusadePointsInput = document.getElementById('unit-crusade-points');
-        const currentPc = parseInt(crusadePointsInput.value) || 0;
-        const pcCost = relic.cost; // Le coût est variable
-
-        if (currentPc < pcCost) {
-            showNotification(`Points de Croisade insuffisants. L'unité doit avoir au moins ${pcCost} PC.`, 'error');
-            return;
-        }
-
-        const confirmText = `Voulez-vous dépenser <b>${pcCost} PC</b> pour cette relique ?<br><br>PC actuels de l'unité : ${currentPc}<br>PC après achat : <b>${currentPc - pcCost}</b>`;
-        if (await showConfirm("Confirmer Dépense de PC", confirmText)) {
-            // Déduit le coût du total de PC de l'unité
-            crusadePointsInput.value = currentPc - pcCost;
-
-            // Ajoute la relique à la fiche
+        
+        handleRpPurchase(`Relique: ${relic.name}`, 1, () => {
             addUpgradeToTextarea('unit-relic', relic.name, relic.desc);
+            const crusadePointsInput = document.getElementById('unit-crusade-points');
+            crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + relic.cost;
             select.value = '';
-            showNotification(`Relique ajoutée. Le coût a été déduit.`, 'success');
-        }
+        });
     });
     
     document.getElementById('add-battle-scar-btn').addEventListener('click', () => {
