@@ -20,7 +20,7 @@
                 <input type="file" id="import-file" accept=".json" style="display: none;">
             </div>
             <p class="storage-warning">
-               ⚠️ **Attention :** Toutes les données sont sauvegardées localement dans votre navigateur.
+              ⚠️ **Attention :** Toutes les données sont sauvegardées localement dans votre navigateur.
                 Utilisez l'export pour créer des sauvegardes !
             </p>
             <div class="management-controls">
@@ -76,8 +76,7 @@
                     </div>
                 </div>
                 <div class="info-box">
-                    <strong>Coût Optimisations:</strong>
-                    <input type="number" id="upgrade-supply-cost" min="0"> PL
+                    <strong>Coût Optimisations:</strong> <span id="upgrade-supply-cost" class="stat-value">0</span> pts
                 </div>
                 <div class="info-box">
                     <strong>Ravitaillement Utilisé:</strong> <span id="supply-used" class="stat-value readonly"></span> PL
@@ -220,7 +219,7 @@
                     </optgroup>
                     <optgroup label="Xenos">
                         <option value="Aeldari">Aeldari</option>
-                        <option value: "Drukhari">Drukhari</option>
+                        <option value="Drukhari">Drukhari</option>
                         <option value="Genestealer Cults">Genestealer Cults</option>
                         <option value="Leagues of Votann">Leagues of Votann</option>
                         <option value="Necrons">Necrons</option>
@@ -276,6 +275,14 @@
                                 <button type="button" class="btn-secondary" id="add-relic-btn">Ajouter</button>
                             </div>
                         </div>
+                        
+                        <div id="detachment-upgrade-section" class="upgrade-control-group">
+                            <label for="detachment-upgrade-select" title="Coût en Points de Réquisition. Le coût en points d'armée est ajouté automatiquement à votre total.">Optimisation de Détachement (1 PR)</label>
+                            <div class="input-group">
+                                <select id="detachment-upgrade-select"><option value="">Choisir une optimisation...</option></select>
+                                <button type="button" class="btn-secondary" id="add-detachment-upgrade-btn">Ajouter</button>
+                            </div>
+                        </div>
 
                         <div class="upgrade-control-group">
                             <label for="battle-scar-select">Cicatrice de Bataille</label>
@@ -317,6 +324,14 @@
                             </div>
                         </div>
 
+                        <div id="legion-of-shadow-section" class="upgrade-control-group hidden">
+                            <label for="legion-of-shadow-select">Optimisation de l'Ombre (+1 PR)</label>
+                            <div class="input-group">
+                                <select id="legion-of-shadow-select"><option>Choisir une optimisation...</option></select>
+                                <button type="button" class="btn-secondary" id="add-legion-of-shadow-btn">Ajouter</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -337,7 +352,11 @@
                                 <option value="Nuée">Nuée</option>
                             </select>
                         </div>
-                        <div class="form-group small"><label for="unit-power">Coût en Points :</label><input type="number" id="unit-power" min="0" required></div>
+                        <div class="form-group small">
+                            <label for="unit-power">Coût en Points :</label>
+                            <input type="number" id="unit-power" min="0" required>
+                            <button type="button" id="double-unit-cost-btn" class="tally-btn" title="Doubler le coût et la taille de l'unité">x2</button>
+                        </div>
                         <div class="form-group small"><label for="unit-xp">XP :</label><input type="number" id="unit-xp" min="0"></div>
                         <div class="form-group small"><label for="unit-crusade-points">Points de Croisade :</label><input type="number" id="unit-crusade-points" min="0"></div>
                         <div class="form-group small"><strong>Rang:</strong> <span id="unit-rank-display"></span></div>
@@ -414,6 +433,13 @@
                     <label for="planet-defense-input">Points de Défense (PNJ):</label>
                     <input type="number" id="planet-defense-input" min="0" step="50">
                 </div>
+                
+                <div class="form-group hidden" id="dead-world-link-container">
+                    <label for="dead-world-link-select">Créer un portail vers un autre Monde Mort :</label>
+                    <select id="dead-world-link-select"></select>
+                    <button type="button" id="link-dead-world-btn" class="btn-primary" style="margin-top: 10px;">Activer le Portail</button>
+                </div>
+
                 <button type="submit" class="btn-primary">Valider</button>
                 <button type="button" id="randomize-planet-btn" class="btn-secondary">Randomiser Planète (2 RP)</button>
                 <button type="button" id="halve-defense-btn" class="btn-secondary hidden">Saboter Défenses (1 RP)</button>

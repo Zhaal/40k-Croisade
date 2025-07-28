@@ -10,6 +10,7 @@
     --danger-color: #b33a3a;
     --warning-color: #ffcc00; /* Jaune pour les systèmes neutres */
     --probed-color: #3498db; /* NOUVEAU: Bleu pour les systèmes sondés */
+    --gateway-color: #ff8c00; /* NOUVEAU: Orange pour les portails */
 }
 
 body {
@@ -237,6 +238,7 @@ label {
     padding: 12px;
     border: 1px solid var(--border-color);
     text-align: left;
+    vertical-align: middle; /* Améliore l'alignement vertical dans les cellules */
 }
 
 #order-of-battle th {
@@ -248,6 +250,22 @@ label {
     background-color: #272727;
 }
 #order-of-battle td button { font-size: 0.8em; padding: 5px; }
+
+/* Style pour l'indicateur d'unité doublée */
+.doubled-indicator {
+    display: inline-block;
+    background-color: var(--probed-color); /* Bleu */
+    color: var(--warning-color); /* Jaune */
+    padding: 3px 7px;
+    margin-left: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.85em;
+    line-height: 1;
+    vertical-align: middle;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+    border: 1px solid #2475a7;
+}
 
 #goals-notes {
     width: 100%;
@@ -693,6 +711,16 @@ label {
     transform-origin: 0 0;
     z-index: 5;
     box-shadow: 0 0 5px #000;
+}
+
+.gateway-line {
+    position: absolute;
+    height: 3px;
+    transform-origin: 0 0;
+    z-index: 12; /* Au-dessus des lignes ET des noeuds (10/11) */
+    background-image: repeating-linear-gradient(to right, var(--gateway-color) 0, var(--gateway-color) 8px, transparent 8px, transparent 14px);
+    background-color: transparent;
+    border: none;
 }
 
 /* --- Légende Planètes --- */

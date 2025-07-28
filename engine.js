@@ -10,14 +10,15 @@ const APP_VERSION = "0.1.1"; // Version avec correction de la logique d'amélior
 let campaignData = {
     players: [],
     systems: [],
-    isGalaxyGenerated: false
+    isGalaxyGenerated: false,
+    gatewayLinks: [] 
 };
 
 let mapModal;
 let worldModal;
 let playerListView;
 let playerDetailView;
-let plagueManagementModal; // Ajouter une référence pour la nouvelle modale
+let plagueManagementModal; 
 
 let activePlayerIndex = -1;
 let editingPlayerIndex = -1;
@@ -93,7 +94,7 @@ function showConfirm(title, text) {
     });
 }
 
-// *** DÉBUT DE LA MODIFICATION ***
+
 function showExplorationChoice(title, text) {
     return new Promise(resolve => {
         const choiceModal = document.getElementById('exploration-choice-modal');
@@ -109,7 +110,6 @@ function showExplorationChoice(title, text) {
 
         const closeAndResolve = (value) => {
             closeModal(choiceModal);
-            // Retire les écouteurs d'événements pour éviter les fuites de mémoire
             cancelBtn.removeEventListener('click', cancelListener);
             blindJumpBtn.removeEventListener('click', blindJumpListener);
             probeBtn.removeEventListener('click', probeListener);
@@ -121,14 +121,12 @@ function showExplorationChoice(title, text) {
         const blindJumpListener = () => closeAndResolve('blind_jump');
         const probeListener = () => closeAndResolve('probe');
 
-        // Ajoute les écouteurs d'événements
         cancelBtn.addEventListener('click', cancelListener);
         blindJumpBtn.addEventListener('click', blindJumpListener);
         probeBtn.addEventListener('click', probeListener);
         choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener);
     });
 }
-// *** FIN DE LA MODIFICATION ***
 
 const openModal = (modal) => modal.classList.remove('hidden');
 const closeModal = (modal) => modal.classList.add('hidden');
@@ -231,6 +229,22 @@ const getRankFromXp = (xp) => {
     if (xp >= 6) return 'Éprouvé';
     return 'Paré au Combat';
 };
+
+// NOUVELLE FONCTION : Calcule le coût total des optimisations de détachement pour un joueur
+const calculateDetachmentUpgradeCost = (player) => {
+    if (!player || !player.units) {
+        return 0;
+    }
+    // Itère sur toutes les unités du joueur
+    return (player.units || []).reduce((total, unit) => {
+        // Pour chaque unité, itère sur ses optimisations et additionne leurs coûts
+        const unitUpgradesCost = (unit.detachmentUpgrades || []).reduce((subTotal, upgrade) => {
+            return subTotal + (upgrade.cost || 0);
+        }, 0);
+        return total + unitUpgradesCost;
+    }, 0);
+};
+
 
 const findUndiscoveredNpcSystem = () => {
     const allDiscoveredIdsByPlayers = new Set();
@@ -341,12 +355,16 @@ const loadData = () => {
     if (!campaignData.players) campaignData.players = [];
     if (!campaignData.systems) campaignData.systems = [];
 
+    if (!campaignData.gatewayLinks) {
+        campaignData.gatewayLinks = [];
+        dataWasModified = true;
+    }
+
     if (campaignData.isGalaxyGenerated === undefined) {
         campaignData.isGalaxyGenerated = false;
         dataWasModified = true;
     }
     
-    // Fonction de migration pour les anciens systèmes de découverte
     const oldGetReachableSystems = (startSystemId) => {
         const reachable = new Set();
         if (!startSystemId) return reachable;
@@ -374,6 +392,15 @@ const loadData = () => {
     };
 
     campaignData.players.forEach(player => {
+        // Migration pour les unités de chaque joueur
+        (player.units || []).forEach(unit => {
+            // NOUVELLE MIGRATION : Ajoute la propriété pour les optimisations de détachement si elle n'existe pas
+            if (unit.detachmentUpgrades === undefined) {
+                unit.detachmentUpgrades = [];
+                dataWasModified = true;
+            }
+        });
+
         if (player.discoveredSystemIds === undefined) {
             const visibleSystems = oldGetReachableSystems(player.systemId);
             player.discoveredSystemIds = Array.from(visibleSystems);
@@ -388,34 +415,30 @@ const loadData = () => {
             player.upgradeSupplyCost = 0;
             dataWasModified = true;
         }
-        // NOUVEAU : Migration pour les points de Biomasse
         if (player.faction === 'Tyranids' && player.biomassPoints === undefined) {
             player.biomassPoints = 0;
             dataWasModified = true;
             console.log(`Migration: Ajout de biomassPoints pour le joueur Tyranide ${player.name}`);
         }
         
-        // MODIFIÉ : Migration complète pour la Death Guard
         if (player.faction === 'Death Guard') {
             if (typeof player.deathGuardData === 'undefined') {
                 console.log(`Migration: Ajout de deathGuardData pour le joueur ${player.name}`);
                 player.deathGuardData = {
                     contagionPoints: player.contagionPoints || 0,
-                    pathogenPower: 1, // Puissance du Pathogène de base
-                    corruptedPlanetIds: [], // Planètes actuellement infectées
-                    // Caractéristiques de la Peste du joueur
+                    pathogenPower: 1,
+                    corruptedPlanetIds: [], 
                     plagueStats: {
                         reproduction: 1,
                         survival: 1,
                         adaptability: 1
                     }
                 };
-                delete player.contagionPoints; // Supprimer l'ancienne clé
+                delete player.contagionPoints;
                 dataWasModified = true;
             }
         }
 
-        // NOUVEAU : Migration pour les données de Sainteté des Adepta Sororitas
         if (player.faction === 'Adepta Sororitas' && player.sainthood === undefined) {
             player.sainthood = {
                 potentiaUnitId: null,
@@ -449,7 +472,6 @@ const loadData = () => {
         saveData();
     }
 
-    // --- Notification de mise à jour ---
     const lastVersion = localStorage.getItem('nexusCrusadeVersion');
     if (lastVersion !== APP_VERSION) {
         setTimeout(() => {
@@ -488,7 +510,7 @@ const handleImport = (event) => {
             if (importedData && Array.isArray(importedData.players)) {
                 if (await showConfirm("Confirmation d'importation", "Importer ce fichier écrasera les données actuelles de la campagne. Êtes-vous sûr de vouloir continuer ?")) {
                     campaignData = importedData;
-                    loadData(); // Relance loadData pour appliquer les migrations si besoin
+                    loadData(); 
                     saveData();
                     renderPlayerList();
                     switchView('list');
@@ -502,5 +524,5 @@ const handleImport = (event) => {
         }
     };
     reader.readAsText(file);
-    event.target.value = null; // Permet de réimporter le même fichier
+    event.target.value = null;
 };

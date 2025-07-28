@@ -56,6 +56,11 @@ const renderPlayerDetail = () => {
     if (activePlayerIndex === -1) return;
     const player = campaignData.players[activePlayerIndex];
 
+    // NOUVELLE LOGIQUE : Calcul et mise à jour du coût des optimisations de détachement
+    const totalUpgradeCost = calculateDetachmentUpgradeCost(player);
+    player.upgradeSupplyCost = totalUpgradeCost;
+    // La sauvegarde sera effectuée lors des interactions utilisateur qui modifient les unités
+
     document.getElementById('player-name-display').textContent = player.name;
     document.getElementById('player-faction-display').textContent = player.faction;
     document.getElementById('crusade-faction').value = player.crusadeFaction || '';
@@ -90,7 +95,9 @@ const renderPlayerDetail = () => {
     }
 
     document.getElementById('supply-limit').value = player.supplyLimit;
-    document.getElementById('upgrade-supply-cost').value = player.upgradeSupplyCost || 0;
+    
+    // MODIFICATION : Mise à jour du textContent au lieu de la value
+    document.getElementById('upgrade-supply-cost').textContent = player.upgradeSupplyCost || 0;
 
     const battleTally = (player.battles.wins || 0) + (player.battles.losses || 0);
     document.getElementById('battle-tally').textContent = battleTally;
@@ -107,6 +114,7 @@ const updateSupplyDisplay = () => {
     const player = campaignData.players[activePlayerIndex];
 
     const supplyFromUnits = (player.units || []).reduce((total, unit) => total + (unit.power || 0), 0);
+    // MODIFICATION : Utilise la valeur calculée et stockée sur l'objet joueur
     const supplyFromUpgrades = player.upgradeSupplyCost || 0;
     const totalUsed = supplyFromUnits + supplyFromUpgrades;
     const remainingSupply = (player.supplyLimit || 0) - totalUsed;
@@ -123,8 +131,14 @@ const renderOrderOfBattle = () => {
     (player.units || []).forEach((unit, index) => {
         const rank = getRankFromXp(unit.xp);
         const row = document.createElement('tr');
+
+        const isDoubled = unit.equipment && unit.equipment.includes("- Effectif doublé.");
+        const displayName = isDoubled 
+            ? `${unit.name} <span class="doubled-indicator">x2</span>`
+            : unit.name;
+
         row.innerHTML = `
-            <td>${unit.name}</td>
+            <td>${displayName}</td>
             <td>${unit.role}</td>
             <td>${unit.power || 0}</td>
             <td>${unit.crusadePoints || 0}</td>
@@ -140,6 +154,7 @@ const renderOrderOfBattle = () => {
 
     updateSupplyDisplay();
 };
+
 
 const renderPlanetarySystem = (systemId) => {
     const system = campaignData.systems.find(s => s.id === systemId);
@@ -185,7 +200,6 @@ const renderPlanetarySystem = (systemId) => {
         planetDiv.dataset.systemId = systemId;
         planetDiv.dataset.planetIndex = index;
         
-        // NOUVEAU : Ajout de l'effet visuel de corruption
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (viewingPlayer && viewingPlayer.faction === 'Death Guard' && viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id)) {
             planetDiv.classList.add('corrupted-planet');
@@ -315,6 +329,34 @@ const renderGalacticMap = () => {
                 }
             }
         });
+    });
+
+    const drawnGatewayLinks = new Set();
+    (campaignData.gatewayLinks || []).forEach(link => {
+        const key = [link.systemId1, link.systemId2].sort().join('-');
+        if (drawnGatewayLinks.has(key)) return;
+
+        const system1 = systemsToDisplay.find(s => s.id === link.systemId1);
+        const system2 = systemsToDisplay.find(s => s.id === link.systemId2);
+
+        if (system1 && system2 && system1.position && system2.position) {
+            const pos1 = system1.position;
+            const pos2 = system2.position;
+            
+            const line = document.createElement('div');
+            line.className = 'gateway-line';
+            const deltaX = pos2.x - pos1.x;
+            const deltaY = pos2.y - pos1.y;
+            const distance = Math.hypot(deltaX, deltaY);
+            const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+            
+            line.style.left = `${pos1.x}px`;
+            line.style.top = `${pos1.y}px`;
+            line.style.width = `${distance}px`;
+            line.style.transform = `rotate(${angle}deg)`;
+            viewport.appendChild(line);
+            drawnGatewayLinks.add(key);
+        }
     });
 
     systemsToDisplay.forEach(system => {
@@ -531,7 +573,6 @@ const renderSainthoodBox = (player) => {
     }
 };
 
-// NOUVELLE FONCTION de rendu pour la Death Guard
 const renderDeathGuardBox = (player) => {
     if (!player || player.faction !== 'Death Guard' || !player.deathGuardData) return;
 

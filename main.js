@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
             const numPlanets = 5;
             const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
-                id: crypto.randomUUID(), // NOUVEAU : ID unique pour chaque planète
+                id: crypto.randomUUID(),
                 type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(),
                 name: planetNames[i] || `Planète ${i + 1}`,
                 owner: i === 0 ? newPlayerId : "neutral",
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: newPlayerId, systemId: newSystemId, name: name,
                 faction: faction,
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
-                supplyLimit: 500,
+                supplyLimit: 50,
                 upgradeSupplyCost: 0,
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
@@ -190,24 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.player-info-grid').addEventListener('input', (e) => {
         if (activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
-        let needsSupplyUpdate = false;
         const targetId = e.target.id;
         const value = e.target.value;
 
         if (targetId === 'supply-limit') {
             player.supplyLimit = parseInt(value) || 0;
-            needsSupplyUpdate = true;
+            updateSupplyDisplay(); // Mise à jour directe
         } else if (targetId === 'crusade-faction') {
             player.crusadeFaction = value;
-        } else if (targetId === 'upgrade-supply-cost') {
-            player.upgradeSupplyCost = parseInt(value) || 0;
-            needsSupplyUpdate = true;
         }
 
         saveData();
-        if (needsSupplyUpdate) {
-            updateSupplyDisplay();
-        }
     });
 
     document.getElementById('goals-notes').addEventListener('change', (e) => {
@@ -396,6 +389,21 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(unitModal);
     };
 
+    document.getElementById('double-unit-cost-btn').addEventListener('click', () => {
+        const unitPowerInput = document.getElementById('unit-power');
+        const currentCost = parseInt(unitPowerInput.value) || 0;
+        unitPowerInput.value = currentCost * 2;
+    
+        const equipmentTextarea = document.getElementById('unit-equipment');
+        const note = "\n- Effectif doublé.";
+        if (!equipmentTextarea.value.includes(note)) {
+            equipmentTextarea.value = (equipmentTextarea.value || '').trim() + note;
+        }
+    
+        unitPowerInput.dispatchEvent(new Event('change', { bubbles: true }));
+        equipmentTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
     document.getElementById('add-unit-btn').addEventListener('click', () => {
         editingUnitIndex = -1;
         unitModalTitle.textContent = "Ajouter une Unité";
@@ -434,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (await showConfirm("Supprimer l'unité", `Supprimer l'unité "<b>${unitName}</b>" de l'ordre de bataille ?`)) {
                 campaignData.players[activePlayerIndex].units.splice(index, 1);
                 saveData();
-                renderOrderOfBattle();
+                renderPlayerDetail(); // MODIFICATION: Recalcule le coût total des optimisations
                 showNotification(`Unité <b>${unitName}</b> supprimée.`, 'info');
             }
         }
@@ -461,8 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const existingUnit = player.units[editingUnitIndex];
         player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
         saveData();
+        renderPlayerDetail(); // Mise à jour en temps réel de la fiche joueur
     };
-
 
     unitForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -489,11 +497,13 @@ document.addEventListener('DOMContentLoaded', () => {
             player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
         } else {
             unitData.id = crypto.randomUUID();
+            // NOUVEAU : Initialisation de la structure pour les optimisations
+            unitData.detachmentUpgrades = [];
             player.units.push(unitData);
         }
     
         saveData();
-        renderOrderOfBattle();
+        renderPlayerDetail(); // MODIFICATION: Appelle la fonction principale pour tout rafraîchir
         closeModal(unitModal);
     });
 
@@ -506,12 +516,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const { systemId, planetIndex } = planetElement.dataset;
             const system = campaignData.systems.find(s => s.id === systemId);
             const planet = system.planets[planetIndex];
-
+    
             document.getElementById('planet-system-id').value = systemId;
             document.getElementById('planet-index').value = planetIndex;
             document.getElementById('planet-name-input').value = planet.name;
             document.getElementById('planet-type-select').value = planet.type;
-
+    
             const ownerSelect = document.getElementById('planet-owner-select');
             ownerSelect.innerHTML = '<option value="neutral">Neutre (PNJ)</option>';
             campaignData.players.forEach(player => {
@@ -521,23 +531,61 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('planet-defense-input').value = planet.defense || 0;
             document.getElementById('planet-type-modal-title').textContent = `Modifier ${planet.name}`;
             document.getElementById('halve-defense-btn').classList.toggle('hidden', planet.owner !== 'neutral' || planet.defense === 0);
+    
+            const deadWorldContainer = document.getElementById('dead-world-link-container');
+            const deadWorldSelect = document.getElementById('dead-world-link-select');
+            deadWorldSelect.innerHTML = '';
+            
+            if (planet.type === 'Monde Mort' && planet.owner !== 'neutral') {
+                const ownerId = planet.owner;
+                const potentialDestinations = [];
+                
+                campaignData.systems.forEach(s => {
+                    if (!s.position || s.id === systemId) return;
 
+                    s.planets.forEach(p => {
+                        if (p.id !== planet.id && p.type === 'Monde Mort' && p.owner === ownerId) {
+                            potentialDestinations.push({
+                                systemId: s.id,
+                                systemName: s.name,
+                                planetName: p.name
+                            });
+                        }
+                    });
+                });
+
+                if (potentialDestinations.length > 0) {
+                    potentialDestinations.forEach(dest => {
+                        const option = document.createElement('option');
+                        option.value = dest.systemId;
+                        option.textContent = `${dest.systemName} (${dest.planetName})`;
+                        deadWorldSelect.appendChild(option);
+                    });
+                    deadWorldContainer.classList.remove('hidden');
+                } else {
+                    deadWorldSelect.innerHTML = '<option disabled>Aucune autre Monde Mort possédé</option>';
+                    deadWorldContainer.classList.remove('hidden');
+                }
+            } else {
+                deadWorldContainer.classList.add('hidden');
+            }
+    
             ownerSelect.dispatchEvent(new Event('change'));
             openModal(planetTypeModal);
-
+    
             const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
             const plagueBtnContainer = document.getElementById('planet-plague-actions');
             if (plagueBtnContainer) plagueBtnContainer.remove();
-
+    
             if (viewingPlayer && viewingPlayer.faction === 'Death Guard') {
                 const container = document.createElement('div');
                 container.id = 'planet-plague-actions';
                 container.style.marginTop = '15px';
                 container.style.paddingTop = '15px';
                 container.style.borderTop = '1px solid var(--border-color)';
-
+    
                 const isCorrupted = viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id);
-
+    
                 if (isCorrupted) {
                     const manageBtn = document.createElement('button');
                     manageBtn.type = 'button';
@@ -558,7 +606,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
 
     worldModal.addEventListener('click', (e) => {
         if (e.target.id === 'show-map-btn') {
@@ -623,6 +670,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
             closeModal(planetTypeModal);
             showNotification(`Planète randomisée ! Nouveau type : <b>${planet.type}</b>.`, 'success');
+        }
+    });
+    
+    document.getElementById('link-dead-world-btn').addEventListener('click', async () => {
+        const sourceSystemId = document.getElementById('planet-system-id').value;
+        const targetSystemId = document.getElementById('dead-world-link-select').value;
+
+        if (!targetSystemId) {
+            showNotification("Veuillez sélectionner une destination.", 'warning');
+            return;
+        }
+
+        const sourceSystem = campaignData.systems.find(s => s.id === sourceSystemId);
+        const targetSystem = campaignData.systems.find(s => s.id === targetSystemId);
+
+        if (await showConfirm("Confirmer le Portail", `Voulez-vous créer un portail permanent entre <b>${sourceSystem.name}</b> et <b>${targetSystem.name}</b> ? Cette action est irréversible.`)) {
+            const linkExists = (campaignData.gatewayLinks || []).some(link => 
+                (link.systemId1 === sourceSystemId && link.systemId2 === targetSystemId) ||
+                (link.systemId1 === targetSystemId && link.systemId2 === sourceSystemId)
+            );
+
+            if (linkExists) {
+                showNotification("Ce lien de portail existe déjà.", 'info');
+                return;
+            }
+
+            campaignData.gatewayLinks.push({ systemId1: sourceSystemId, systemId2: targetSystemId });
+            saveData();
+            showNotification("Portail du Monde Mort activé !", 'success');
+            closeModal(planetTypeModal);
+            if (!mapModal.classList.contains('hidden')) {
+                renderGalacticMap();
+            }
         }
     });
 
@@ -829,6 +909,48 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(`Évolution ${morphName} absorbée !`, 'success');
         }
     });
+
+    // NOUVEL ÉVÉNEMENT : Gère l'ajout d'une optimisation de détachement
+    document.getElementById('add-detachment-upgrade-btn').addEventListener('click', async () => {
+        const select = document.getElementById('detachment-upgrade-select');
+        const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption || !selectedOption.value) return;
+
+        const player = campaignData.players[activePlayerIndex];
+        const unit = player.units[editingUnitIndex];
+        const upgradeName = selectedOption.value;
+        const upgradeCost = parseInt(selectedOption.dataset.cost);
+        const requisitionCost = 1; // Toujours 1 PR pour une optimisation
+
+        if (player.requisitionPoints < requisitionCost) {
+            showNotification(`Points de Réquisition insuffisants (coût: ${requisitionCost} PR).`, 'error');
+            return;
+        }
+
+        const confirmText = `Voulez-vous dépenser <b>${requisitionCost} PR</b> pour donner l'optimisation <i>${upgradeName}</i> (${upgradeCost} pts) à cette unité ?<br><br>Le coût en points sera ajouté automatiquement à votre total.`;
+        if (await showConfirm("Acheter une Optimisation", confirmText)) {
+            // Déduire le coût en PR
+            player.requisitionPoints -= requisitionCost;
+
+            // Ajouter l'optimisation à la liste de l'unité
+            if (!unit.detachmentUpgrades) {
+                unit.detachmentUpgrades = [];
+            }
+            unit.detachmentUpgrades.push({ name: upgradeName, cost: upgradeCost });
+
+            // Ajouter une note dans les honneurs
+            addUpgradeToUnitData(unit, 'unit-honours', upgradeName, `(${upgradeCost} pts)`, "Optimisation: ");
+
+            // Sauvegarder et rafraîchir
+            saveData();
+            renderPlayerDetail();
+            showNotification(`Optimisation "${upgradeName}" ajoutée !`, 'success');
+
+            // Réinitialiser le sélecteur
+            select.value = '';
+        }
+    });
+    
     
     // --- NOUVELLES FONCTIONS DE LOGIQUE POUR LA DEATH GUARD ---
     function infectPlanet(planetId) {
@@ -845,18 +967,16 @@ document.addEventListener('DOMContentLoaded', () => {
             player.deathGuardData.corruptedPlanetIds.push(planetId);
         }
         
-        // Assigner les caractéristiques de la planète basées sur son type
         for (const system of campaignData.systems) {
             const planet = system.planets.find(p => p.id === planetId);
             if (planet) {
-                // NOUVELLE LOGIQUE BASÉE SUR LES RÈGLES
                 if (typeof planet.fecundity === 'undefined') {
                     const baseStats = deathGuardCrusadeRules.planetBaseStats[planet.type];
                     if (baseStats) {
                         planet.fecundity = baseStats.fecundity;
                         planet.populationDensity = baseStats.population;
                         planet.vulnerability = baseStats.vulnerability;
-                    } else { // Fallback si le type de planète n'est pas dans les règles
+                    } else { 
                         planet.fecundity = Math.ceil(Math.random() * 6);
                         planet.populationDensity = Math.ceil(Math.random() * 6);
                         planet.vulnerability = Math.ceil(Math.random() * 6);
@@ -875,7 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function openPlagueManagementModal(planetId) {
         plagueManagementModal = document.getElementById('plague-management-modal');
-        plagueManagementModal.dataset.planetId = planetId; // Stocke l'ID pour une utilisation ultérieure
+        plagueManagementModal.dataset.planetId = planetId;
         closeModal(planetTypeModal);
     
         const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
@@ -894,7 +1014,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('player-plague-survival').textContent = plagueStats.survival;
         document.getElementById('player-plague-adaptability').textContent = plagueStats.adaptability;
     
-        // Calcul du "Total de Peste" (Note: C'est la somme des 3 paires de caractéristiques)
         const totalPeste = Math.min(6, (planet.fecundity || 0) + plagueStats.reproduction) +
                            Math.min(6, (planet.populationDensity || 0) + plagueStats.survival) +
                            Math.min(6, (planet.vulnerability || 0) + plagueStats.adaptability);
@@ -906,9 +1025,6 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(plagueManagementModal);
     }
     
-    // --- NOUVELLE LOGIQUE COMPLÈTE POUR LA PESTE DEATH GUARD ---
-
-    // Ouvre une modale pour choisir un Bienfait de Nurgle pour un personnage
     async function selectNurgleBoonForCharacter(player) {
         const characters = player.units.filter(u => u.role === 'Personnage' || u.role === 'Hero Epique');
         if (characters.length === 0) {
@@ -952,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if(unit && boon) {
                     addUpgradeToUnitData(unit, 'unit-honours', boon.name, boon.desc, "Bienfait de Nurgle: ");
-                    unit.crusadePoints = (unit.crusadePoints || 0) + 1; // Un bienfait coûte 1 PC
+                    unit.crusadePoints = (unit.crusadePoints || 0) + 1;
                     showNotification(`${unit.name} a reçu le bienfait : ${boon.name} !`, 'success');
                 }
                 closeModalFunc();
@@ -960,8 +1076,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
-    // Événement pour le bouton "Améliorer la Peste" (version corrigée)
     document.getElementById('upgrade-plague-btn').addEventListener('click', async () => {
         if (activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
@@ -974,9 +1088,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let isPowerUpgrade = upgradeId === 'pathogenPower';
 
         if (isPowerUpgrade) {
-            cost = player.deathGuardData.pathogenPower + 1; // Le coût est la valeur à atteindre
+            cost = player.deathGuardData.pathogenPower + 1;
         } else {
-            cost = 5; // Coût fixe pour les autres stats
+            cost = 5;
         }
         
         if (player.deathGuardData.contagionPoints < cost) {
@@ -989,7 +1103,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (isPowerUpgrade) {
                 player.deathGuardData.pathogenPower++;
-                // Vérifier si une nouvelle Bénédiction est débloquée
                 const newPower = player.deathGuardData.pathogenPower;
                 const newBlessing = deathGuardCrusadeRules.plagueBlessings[newPower];
                 const newCurse = deathGuardCrusadeRules.plagueBlessings[-newPower];
@@ -1043,11 +1156,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Événement pour le bouton "Concrétiser la Peste" (version corrigée)
     document.getElementById('conquer-plague-btn').addEventListener('click', async () => {
         if (activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
-        const cost = 1; // 1 PR
+        const cost = 1;
     
         if (player.requisitionPoints < cost) {
             showNotification(`Points de Réquisition insuffisants (${cost} PR requis).`, 'error');
@@ -1064,10 +1176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalProbeClass = probeBtn.className;
     
         try {
-            // 1. Fermer la modale en arrière-plan pour éviter la superposition
             closeModal(document.getElementById('plague-management-modal'));
             
-            // 2. Modifier temporairement les boutons de la modale d'exploration
             blindJumpBtn.textContent = "Succès";
             probeBtn.textContent = "Échec";
             probeBtn.className = 'btn-danger';
@@ -1075,18 +1185,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const outcome = await showExplorationChoice(title, text);
     
             if (outcome === 'cancel') {
-                return; // L'utilisateur a annulé, ne rien faire et ne pas dépenser de RP.
+                return;
             }
     
-            // Dépenser le RP seulement si un choix est fait
             player.requisitionPoints -= cost;
     
-            if (outcome === 'blind_jump') { // Mappé à "Succès"
-                const xpGained = Math.ceil(Math.random() * 3) + 3; // D3+3 XP
+            if (outcome === 'blind_jump') {
+                const xpGained = Math.ceil(Math.random() * 3) + 3;
                 await showConfirm("Succès !", `La peste c'est concrétiser !<br><br>Une de vos unités gagne <b>${xpGained} XP</b>.<br>De plus, vous pouvez choisir un <b>Bienfait de Nurgle</b> pour un de vos personnages.`);
                 await selectNurgleBoonForCharacter(player);
                 showNotification(`N'oubliez pas d'assigner les ${xpGained} XP à l'une de vos unités ayant participé à la bataille !`, 'info', 10000);
-            } else if (outcome === 'probe') { // Mappé à "Échec"
+            } else if (outcome === 'probe') {
                 const pointsLost = Math.ceil(player.deathGuardData.contagionPoints / 2);
                 player.deathGuardData.contagionPoints -= pointsLost;
                 await showConfirm("Échec...", `La Peste n'a pas pu être concrétisée.<br><br>Vous perdez la moitié de vos Points de Contagion (-${pointsLost} PC).`);
@@ -1096,7 +1205,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPlayerDetail();
     
         } finally {
-            // 3. Toujours restaurer l'état original des boutons
             blindJumpBtn.textContent = originalBlindJumpText;
             probeBtn.textContent = originalProbeText;
             probeBtn.className = originalProbeClass;

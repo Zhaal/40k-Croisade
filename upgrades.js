@@ -132,6 +132,20 @@ const populateUpgradeSelectors = () => {
     } else {
         nurgleBoonSection.classList.add('hidden');
     }
+
+    // Logique pour les Optimisations de la Légion de l'Ombre
+    const legionOfShadowSection = document.getElementById('legion-of-shadow-section');
+    if (player && player.faction === 'Chaos Daemons' && isCharacter) {
+        legionOfShadowSection.classList.remove('hidden');
+        const legionSelect = document.getElementById('legion-of-shadow-select');
+        legionSelect.innerHTML = '<option value="">Choisir une optimisation...</option>';
+        chaosDaemonsCrusadeRules.legionOfShadowEnhancements.forEach(enhancement => {
+            legionSelect.innerHTML += `<option value="${enhancement.name}" data-cost="${enhancement.cost}" data-cp-cost="${enhancement.crusadePointCost}">${enhancement.name}</option>`;
+        });
+    } else {
+        legionOfShadowSection.classList.add('hidden');
+    }
+
 };
 
 const addUpgradeToUnitData = (unit, textareaId, upgradeName, upgradeDesc, prefix = '') => {
@@ -311,4 +325,25 @@ document.getElementById('add-nurgle-boon-btn').addEventListener('click', () => {
     saveData();
     showNotification(`Le Bienfait "${boon.name}" a été accordé.`, 'success');
     select.value = '';
+});
+
+// Listener pour les Optimisations de la Légion de l'Ombre
+document.getElementById('add-legion-of-shadow-btn').addEventListener('click', () => {
+    const select = document.getElementById('legion-of-shadow-select');
+    const selectedOption = select.options[select.selectedIndex];
+    const enhancementName = selectedOption.value;
+    if (!enhancementName) return;
+
+    const enhancement = chaosDaemonsCrusadeRules.legionOfShadowEnhancements.find(e => e.name === enhancementName);
+    if (!enhancement) return;
+
+    handleRpPurchase(enhancement.name, enhancement.cost, () => {
+        const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+        addUpgradeToUnitData(unit, 'unit-honours', enhancement.name, enhancement.desc, "Optimisation de l'Ombre: ");
+
+        unit.crusadePoints = (unit.crusadePoints || 0) + enhancement.crusadePointCost;
+        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
+
+        select.value = '';
+    });
 });

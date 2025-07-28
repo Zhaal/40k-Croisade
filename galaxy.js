@@ -47,6 +47,7 @@ const generateRandomNPCSystem = (usedNames) => {
     const planets = [];
     for (let i = 0; i < numPlanets; i++) {
         planets.push({
+            id: crypto.randomUUID(), // Chaque planète a un ID unique
             type: getWeightedRandomPlanetType(),
             name: `${planetNames[i] || `Planète ${i + 1}`}`,
             owner: "neutral",
@@ -86,6 +87,66 @@ const generateGalaxy = () => {
     showNotification(`Galaxie de <b>${newSystems.length}</b> systèmes PNJ créée.`, 'success');
 };
 
+/**
+ * Vérifie s'il existe un chemin de systèmes contrôlés par le joueur jusqu'à son système d'origine.
+ * @param {string} startSystemId - L'ID du système de départ de la vérification.
+ * @param {string} playerId - L'ID du joueur effectuant la vérification.
+ * @returns {boolean} - True si une ligne de ravitaillement existe, sinon false.
+ */
+const hasSupplyLine = (startSystemId, playerId) => {
+    const player = campaignData.players.find(p => p.id === playerId);
+    if (!player) return false;
+    
+    const homeSystemId = player.systemId;
+    if (startSystemId === homeSystemId) return true; // On peut toujours agir depuis son système natal
+
+    const queue = [startSystemId];
+    const visited = new Set([startSystemId]);
+
+    while (queue.length > 0) {
+        const currentId = queue.shift();
+        const currentSystem = campaignData.systems.find(s => s.id === currentId);
+
+        if (!currentSystem) continue;
+
+        // Étape 1 : Récupérer les connexions normales
+        const neighborIds = Object.values(currentSystem.connections).filter(id => id !== null);
+        
+        // Étape 2 : AJOUTER les connexions via portail (gateway)
+        (campaignData.gatewayLinks || []).forEach(link => {
+            if (link.systemId1 === currentId) {
+                neighborIds.push(link.systemId2);
+            }
+            if (link.systemId2 === currentId) {
+                neighborIds.push(link.systemId1);
+            }
+        });
+
+        for (const neighborId of neighborIds) {
+            if (visited.has(neighborId)) continue;
+            
+            const neighborSystem = campaignData.systems.find(s => s.id === neighborId);
+            if (!neighborSystem) continue;
+
+            // La ligne est coupée si le système voisin n'est pas contrôlé par le joueur
+            const isControlledByPlayer = neighborSystem.planets.some(p => p.owner === playerId);
+            if (!isControlledByPlayer) {
+                continue; // Ne pas explorer plus loin via ce chemin
+            }
+
+            if (neighborId === homeSystemId) {
+                return true; // Chemin trouvé !
+            }
+
+            visited.add(neighborId);
+            queue.push(neighborId);
+        }
+    }
+
+    return false; // Aucun chemin trouvé
+};
+
+
 const handleExploration = async (direction) => {
     const currentSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
     if (!currentSystem) return;
@@ -119,6 +180,12 @@ const handleExploration = async (direction) => {
         return;
     }
     
+    // Nouvelle vérification de la ligne de ravitaillement
+    if (!hasSupplyLine(currentSystem.id, viewingPlayer.id)) {
+        showNotification("<b>Ligne de ravitaillement rompue !</b> Impossible d'explorer depuis ce système car il n'est pas connecté à votre bastion par une chaîne de systèmes contrôlés.", 'error', 8000);
+        return;
+    }
+
     const parentPos = currentSystem.position;
     const targetPos = { x: parentPos.x, y: parentPos.y };
     if (direction === 'up') targetPos.y -= STEP_DISTANCE;
@@ -206,7 +273,6 @@ const handleExploration = async (direction) => {
         return;
     }
 
-    // *** DÉBUT DE LA MODIFICATION ***
     const explorationChoice = await showExplorationChoice(
         "Méthode d'Exploration",
         "Comment souhaitez-vous procéder ? Un saut à l'aveugle est gratuit mais risqué. L'envoi d'une sonde coûte 1 RP mais fournit des informations vitales avant de s'engager."
@@ -266,6 +332,4 @@ const handleExploration = async (direction) => {
         saveData();
         renderPlanetarySystem(discoveredSystem.id);
     }
-    // Si 'cancel', ne rien faire.
-    // *** FIN DE LA MODIFICATION ***
 };
