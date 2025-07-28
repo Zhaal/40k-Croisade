@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: newPlayerId, systemId: newSystemId, name: name,
                 faction: faction,
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
-                supplyLimit: 50,
+                supplyLimit: 500,
                 upgradeSupplyCost: 0,
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
