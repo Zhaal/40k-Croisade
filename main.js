@@ -516,12 +516,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const { systemId, planetIndex } = planetElement.dataset;
             const system = campaignData.systems.find(s => s.id === systemId);
             const planet = system.planets[planetIndex];
-    
+
             document.getElementById('planet-system-id').value = systemId;
             document.getElementById('planet-index').value = planetIndex;
             document.getElementById('planet-name-input').value = planet.name;
             document.getElementById('planet-type-select').value = planet.type;
-    
+
             const ownerSelect = document.getElementById('planet-owner-select');
             ownerSelect.innerHTML = '<option value="neutral">Neutre (PNJ)</option>';
             campaignData.players.forEach(player => {
@@ -531,71 +531,84 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('planet-defense-input').value = planet.defense || 0;
             document.getElementById('planet-type-modal-title').textContent = `Modifier ${planet.name}`;
             document.getElementById('halve-defense-btn').classList.toggle('hidden', planet.owner !== 'neutral' || planet.defense === 0);
-    
+
             const deadWorldContainer = document.getElementById('dead-world-link-container');
             const deadWorldSelect = document.getElementById('dead-world-link-select');
+            const linkButton = document.getElementById('link-dead-world-btn');
+
+            // Reset state
             deadWorldSelect.innerHTML = '';
-            
-            // MODIFIED: Reset button state every time modal is opened
-            document.getElementById('link-dead-world-btn').disabled = false;
+            linkButton.disabled = false;
+            linkButton.textContent = 'Activer le Portail';
 
             if (planet.type === 'Monde Mort' && planet.owner !== 'neutral') {
                 const ownerId = planet.owner;
-                const potentialDestinations = [];
-                
-                campaignData.systems.forEach(s => {
-                    if (!s.position || s.id === systemId) return;
 
-                    s.planets.forEach(p => {
-                        if (p.id !== planet.id && p.type === 'Monde Mort' && p.owner === ownerId) {
-                            // Check if a link doesn't already exist
-                            const linkExists = (campaignData.gatewayLinks || []).some(link => 
-                                (link.systemId1 === systemId && link.systemId2 === s.id) ||
-                                (link.systemId1 === s.id && link.systemId2 === systemId)
-                            );
-                            if (!linkExists) {
-                                potentialDestinations.push({
-                                    systemId: s.id,
-                                    systemName: s.name,
-                                    planetName: p.name
-                                });
-                            }
+                const isSourceSystemLinked = (campaignData.gatewayLinks || []).some(link =>
+                    link.systemId1 === systemId || link.systemId2 === systemId
+                );
+
+                if (isSourceSystemLinked) {
+                    deadWorldSelect.innerHTML = '<option disabled>Portail déjà actif depuis ce système.</option>';
+                    linkButton.disabled = true;
+                } else {
+                    const potentialDestinations = [];
+                    campaignData.systems.forEach(s => {
+                        if (!s.position || s.id === systemId) return;
+
+                        const isDestinationSystemLinked = (campaignData.gatewayLinks || []).some(link =>
+                            link.systemId1 === s.id || link.systemId2 === s.id
+                        );
+
+                        if (isDestinationSystemLinked) return;
+
+                        const hasQualifyingPlanet = s.planets.some(p =>
+                            p.type === 'Monde Mort' && p.owner === ownerId
+                        );
+
+                        if (hasQualifyingPlanet) {
+                            const destPlanet = s.planets.find(p => p.type === 'Monde Mort' && p.owner === ownerId);
+                            potentialDestinations.push({
+                                systemId: s.id,
+                                systemName: s.name,
+                                planetName: destPlanet.name
+                            });
                         }
                     });
-                });
 
-                if (potentialDestinations.length > 0) {
-                    potentialDestinations.forEach(dest => {
-                        const option = document.createElement('option');
-                        option.value = dest.systemId;
-                        option.textContent = `${dest.systemName} (${dest.planetName})`;
-                        deadWorldSelect.appendChild(option);
-                    });
-                    deadWorldContainer.classList.remove('hidden');
-                } else {
-                    deadWorldSelect.innerHTML = '<option disabled>Aucune autre Monde Mort possédé ou tous sont déjà liés.</option>';
-                    deadWorldContainer.classList.remove('hidden');
+                    if (potentialDestinations.length > 0) {
+                        potentialDestinations.forEach(dest => {
+                            const option = document.createElement('option');
+                            option.value = dest.systemId;
+                            option.textContent = `${dest.systemName} (${dest.planetName})`;
+                            deadWorldSelect.appendChild(option);
+                        });
+                    } else {
+                        deadWorldSelect.innerHTML = '<option disabled>Aucun Monde Mort non-lié disponible.</option>';
+                        linkButton.disabled = true;
+                    }
                 }
+                deadWorldContainer.classList.remove('hidden');
             } else {
                 deadWorldContainer.classList.add('hidden');
             }
-    
+
             ownerSelect.dispatchEvent(new Event('change'));
             openModal(planetTypeModal);
-    
+
             const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
             const plagueBtnContainer = document.getElementById('planet-plague-actions');
             if (plagueBtnContainer) plagueBtnContainer.remove();
-    
+
             if (viewingPlayer && viewingPlayer.faction === 'Death Guard') {
                 const container = document.createElement('div');
                 container.id = 'planet-plague-actions';
                 container.style.marginTop = '15px';
                 container.style.paddingTop = '15px';
                 container.style.borderTop = '1px solid var(--border-color)';
-    
+
                 const isCorrupted = viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id);
-    
+
                 if (isCorrupted) {
                     const manageBtn = document.createElement('button');
                     manageBtn.type = 'button';

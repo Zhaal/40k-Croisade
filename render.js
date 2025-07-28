@@ -309,7 +309,7 @@ const renderGalacticMap = () => {
     svgOverlay.style.width = '100%';
     svgOverlay.style.height = '100%';
     svgOverlay.style.pointerEvents = 'none';
-    svgOverlay.style.zIndex = '8'; // Position between regular lines and nodes
+    svgOverlay.style.zIndex = '12'; // Position between regular lines and nodes
     viewport.appendChild(svgOverlay);
 
 
@@ -363,7 +363,7 @@ const renderGalacticMap = () => {
             const dist = Math.hypot(dx, dy);
             
             // Offset the control point perpendicularly to the line for the curve
-            const curveAmount = 170; // A fixed pixel value for the curve height
+            const curveAmount = 150; // A fixed pixel value for the curve height
             const controlX = midX - curveAmount * (dy / dist);
             const controlY = midY + curveAmount * (dx / dist);
 
