@@ -525,7 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ownerSelect.dispatchEvent(new Event('change'));
             openModal(planetTypeModal);
 
-            // NOUVELLE LOGIQUE pour la Death Guard
             const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
             const plagueBtnContainer = document.getElementById('planet-plague-actions');
             if (plagueBtnContainer) plagueBtnContainer.remove();
@@ -830,7 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(`Évolution ${morphName} absorbée !`, 'success');
         }
     });
-
+    
     // --- NOUVELLES FONCTIONS DE LOGIQUE POUR LA DEATH GUARD ---
     function infectPlanet(planetId) {
         const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
@@ -846,15 +845,22 @@ document.addEventListener('DOMContentLoaded', () => {
             player.deathGuardData.corruptedPlanetIds.push(planetId);
         }
         
-        // Assigner des caractéristiques à la planète si elle n'en a pas
+        // Assigner les caractéristiques de la planète basées sur son type
         for (const system of campaignData.systems) {
             const planet = system.planets.find(p => p.id === planetId);
             if (planet) {
+                // NOUVELLE LOGIQUE BASÉE SUR LES RÈGLES
                 if (typeof planet.fecundity === 'undefined') {
-                    planet.fecundity = Math.ceil(Math.random() * 6);
-                    planet.populationDensity = Math.ceil(Math.random() * 6);
-                    planet.vulnerability = Math.ceil(Math.random() * 6);
-                    console.log(`Planet ${planet.name} initialized with stats.`);
+                    const baseStats = deathGuardCrusadeRules.planetBaseStats[planet.type];
+                    if (baseStats) {
+                        planet.fecundity = baseStats.fecundity;
+                        planet.populationDensity = baseStats.population;
+                        planet.vulnerability = baseStats.vulnerability;
+                    } else { // Fallback si le type de planète n'est pas dans les règles
+                        planet.fecundity = Math.ceil(Math.random() * 6);
+                        planet.populationDensity = Math.ceil(Math.random() * 6);
+                        planet.vulnerability = Math.ceil(Math.random() * 6);
+                    }
                 }
                 break; 
             }
@@ -869,6 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function openPlagueManagementModal(planetId) {
         plagueManagementModal = document.getElementById('plague-management-modal');
+        plagueManagementModal.dataset.planetId = planetId; // Stocke l'ID pour une utilisation ultérieure
         closeModal(planetTypeModal);
     
         const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
@@ -877,7 +884,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const planet = system.planets.find(p => p.id === planetId);
         if (!planet) return;
     
-        // Remplir les données de la modale
         document.getElementById('plague-modal-title').textContent = `Guerre Bactériologique sur ${planet.name}`;
         document.getElementById('planet-fecundity').textContent = planet.fecundity;
         document.getElementById('planet-population').textContent = planet.populationDensity;
@@ -888,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('player-plague-survival').textContent = plagueStats.survival;
         document.getElementById('player-plague-adaptability').textContent = plagueStats.adaptability;
     
-        // Calculer le Total de Peste (Note: C'est la somme des 3 paires de caractéristiques)
+        // Calcul du "Total de Peste" (Note: C'est la somme des 3 paires de caractéristiques)
         const totalPeste = Math.min(6, (planet.fecundity || 0) + plagueStats.reproduction) +
                            Math.min(6, (planet.populationDensity || 0) + plagueStats.survival) +
                            Math.min(6, (planet.vulnerability || 0) + plagueStats.adaptability);
@@ -900,6 +906,182 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(plagueManagementModal);
     }
     
+    // --- NOUVELLE LOGIQUE COMPLÈTE POUR LA PESTE DEATH GUARD ---
+
+    // Ouvre une modale pour choisir un Bienfait de Nurgle pour un personnage
+    async function selectNurgleBoonForCharacter(player) {
+        const characters = player.units.filter(u => u.role === 'Personnage' || u.role === 'Hero Epique');
+        if (characters.length === 0) {
+            showNotification("Aucun personnage éligible pour recevoir un Bienfait.", 'warning');
+            return;
+        }
+
+        return new Promise(resolve => {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            const characterOptions = characters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            const boonOptions = deathGuardCrusadeRules.boonsOfNurgle.map(b => `<option value="${b.name}">${b.name} (${b.roll})</option>`).join('');
+
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-btn">&times;</span>
+                    <h3>Accorder un Bienfait de Nurgle</h3>
+                    <p>Choisissez un personnage et le bienfait qu'il recevra.</p>
+                    <div class="form-group">
+                        <label for="boon-char-select">Personnage :</label>
+                        <select id="boon-char-select">${characterOptions}</select>
+                    </div>
+                    <div class="form-group">
+                        <label for="boon-select">Bienfait :</label>
+                        <select id="boon-select">${boonOptions}</select>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="confirm-boon-btn" class="btn-primary">Confirmer</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            const closeModalFunc = () => { modal.remove(); resolve(); };
+            modal.querySelector('.close-btn').onclick = closeModalFunc;
+            
+            modal.querySelector('#confirm-boon-btn').onclick = () => {
+                const charId = modal.querySelector('#boon-char-select').value;
+                const boonName = modal.querySelector('#boon-select').value;
+                const unit = player.units.find(u => u.id === charId);
+                const boon = deathGuardCrusadeRules.boonsOfNurgle.find(b => b.name === boonName);
+
+                if(unit && boon) {
+                    addUpgradeToUnitData(unit, 'unit-honours', boon.name, boon.desc, "Bienfait de Nurgle: ");
+                    unit.crusadePoints = (unit.crusadePoints || 0) + 1; // Un bienfait coûte 1 PC
+                    showNotification(`${unit.name} a reçu le bienfait : ${boon.name} !`, 'success');
+                }
+                closeModalFunc();
+            };
+        });
+    }
+
+
+    // Événement pour le bouton "Améliorer la Peste" (version corrigée)
+    document.getElementById('upgrade-plague-btn').addEventListener('click', async () => {
+        if (activePlayerIndex === -1) return;
+        const player = campaignData.players[activePlayerIndex];
+        if (!player.deathGuardData) return;
+
+        const upgradeId = await showUpgradeChoiceModal(player);
+        if (!upgradeId) return;
+
+        let cost = 0;
+        let isPowerUpgrade = upgradeId === 'pathogenPower';
+
+        if (isPowerUpgrade) {
+            cost = player.deathGuardData.pathogenPower + 1; // Le coût est la valeur à atteindre
+        } else {
+            cost = 5; // Coût fixe pour les autres stats
+        }
+        
+        if (player.deathGuardData.contagionPoints < cost) {
+            showNotification("Points de Contagion insuffisants.", 'error');
+            return;
+        }
+
+        if (await showConfirm("Confirmer la Mutation", `Cette amélioration coûtera <b>${cost} Points de Contagion</b>. Continuer ?`)) {
+            player.deathGuardData.contagionPoints -= cost;
+            
+            if (isPowerUpgrade) {
+                player.deathGuardData.pathogenPower++;
+                // Vérifier si une nouvelle Bénédiction est débloquée
+                const newPower = player.deathGuardData.pathogenPower;
+                const newBlessing = deathGuardCrusadeRules.plagueBlessings[newPower];
+                const newCurse = deathGuardCrusadeRules.plagueBlessings[-newPower];
+                if (newBlessing) showNotification(`Nouvelle Propriété débloquée : ${newBlessing.name}!`, 'info', 6000);
+                if (newCurse) showNotification(`Nouvel Inconvénient subi : ${newCurse.name}...`, 'warning', 6000);
+
+            } else {
+                player.deathGuardData.plagueStats[upgradeId]++;
+            }
+
+            saveData();
+            renderPlayerDetail();
+            showNotification("La Peste a muté avec succès !", 'success');
+        }
+    });
+
+    async function showUpgradeChoiceModal(player) {
+        return new Promise(resolve => {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+
+            const power = player.deathGuardData.pathogenPower;
+            const stats = player.deathGuardData.plagueStats;
+            const upgrades = [
+                { id: 'pathogenPower', name: 'Puissance du Pathogène', current: power, max: 5, cost: power + 1 },
+                { id: 'reproduction', name: 'Taux de Reproduction', current: stats.reproduction, max: 6, cost: 5 },
+                { id: 'survival', name: 'Taux de Survie', current: stats.survival, max: 6, cost: 5 },
+                { id: 'adaptability', name: 'Adaptabilité', current: stats.adaptability, max: 6, cost: 5 }
+            ];
+
+            let optionsHTML = upgrades.map(u => {
+                if (u.current < u.max) {
+                    return `<button class="btn-primary" style="margin: 5px;" data-id="${u.id}">${u.name} (${u.cost} PC)</button>`;
+                }
+                return `<button class="btn-secondary" style="margin: 5px;" disabled>${u.name} (Max)</button>`;
+            }).join('');
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-btn">&times;</span><h3>Améliorer la Peste</h3>
+                    <p>Points disponibles: ${player.deathGuardData.contagionPoints}</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">${optionsHTML}</div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            const closeModalFunc = (value = null) => { modal.remove(); resolve(value); };
+            modal.querySelector('.close-btn').onclick = () => closeModalFunc();
+            modal.querySelectorAll('button[data-id]').forEach(btn => {
+                btn.onclick = () => closeModalFunc(btn.dataset.id);
+            });
+        });
+    }
+
+    // Événement pour le bouton "Concrétiser la Peste" (version corrigée)
+    document.getElementById('conquer-plague-btn').addEventListener('click', async () => {
+        if (activePlayerIndex === -1) return;
+        const player = campaignData.players[activePlayerIndex];
+        const cost = 1; // 1 PR
+
+        if (player.requisitionPoints < cost) {
+            showNotification(`Points de Réquisition insuffisants (${cost} PR requis).`, 'error');
+            return;
+        }
+
+        const confirmText = `Vous allez dépenser <b>1 PR</b> pour tenter de Concrétiser la Peste. Lancez 1D6. Si le résultat est supérieur à votre Puissance du Pathogène (${player.deathGuardData.pathogenPower}), c'est un succès. Sinon, c'est un échec.`;
+
+        if (await showConfirm("Tenter de Concrétiser la Peste", confirmText)) {
+            player.requisitionPoints -= cost;
+            const roll = Math.ceil(Math.random() * 6);
+            
+            if (roll > player.deathGuardData.pathogenPower) {
+                // SUCCÈS
+                const xpGained = Math.ceil(Math.random() * 3) + 3; // D3+3 XP
+                await showConfirm("Succès !", `Votre jet de <b>${roll}</b> est supérieur à votre Puissance de <b>${player.deathGuardData.pathogenPower}</b>. La planète est conquise !<br><br>Une de vos unités gagne <b>${xpGained} XP</b>.<br>De plus, vous pouvez choisir un <b>Bienfait de Nurgle</b> pour un de vos personnages.`);
+
+                // Laisser le joueur choisir l'unité pour l'XP et le personnage pour le bienfait
+                await selectNurgleBoonForCharacter(player); // Ouvre la modale pour le bienfait
+                showNotification(`N'oubliez pas d'assigner les ${xpGained} XP à l'une de vos unités ayant participé à la bataille !`, 'info', 10000);
+
+            } else {
+                // ÉCHEC
+                const pointsLost = Math.ceil(player.deathGuardData.contagionPoints / 2);
+                player.deathGuardData.contagionPoints -= pointsLost;
+                await showConfirm("Échec...", `Votre jet de <b>${roll}</b> est inférieur ou égal à votre Puissance de <b>${player.deathGuardData.pathogenPower}</b>. La Peste n'a pas pu être concrétisée.<br><br>Vous perdez la moitié de vos Points de Contagion (-${pointsLost} PC).`);
+            }
+            
+            saveData();
+            renderPlayerDetail();
+            closeModal(document.getElementById('plague-management-modal'));
+        }
+    });
+
     //======================================================================
     //  INITIALISATION
     //======================================================================

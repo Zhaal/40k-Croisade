@@ -1020,27 +1020,44 @@ const tyranidCrusadeRules = {
 
 // NOUVEL AJOUT : Règles de croisade spécifiques à la Death Guard
 const deathGuardCrusadeRules = {
-    // Inspiré de l'image "Voie de la Contagion"
-    contagionPointSources: [
-        { name: "Mise en Culture", desc: "Après une bataille où vous avez utilisé votre objectif de Croisade 'Fomentation Virulente', +d3 PC.", cost: 0 },
-        { name: "Bilan des Victimes", desc: "Si le nombre de figurines ennemies détruites est supérieur ou égal au double de votre caractéristique de Vulnérabilité, +d3 PC.", cost: 0 },
-        { name: "Offrande Acceptable", desc: "Si vous avez réussi à 'Concrétiser une Peste', +1 PC.", cost: 0 }
+    // Caractéristiques de base des planètes selon les règles
+    planetBaseStats: {
+        "Monde Mort":           { fecundity: 1, population: 1, vulnerability: 2, adequation: 10 },
+        "Monde Sauvage":        { fecundity: 3, population: 2, vulnerability: 4, adequation: 10 },
+        "Agri-monde":           { fecundity: 4, population: 2, vulnerability: 1, adequation: 10 },
+        "Monde Forge":          { fecundity: 1, population: 3, vulnerability: 3, adequation: 10 },
+        "Monde Ruche":          { fecundity: 2, population: 4, vulnerability: 2, adequation: 10 },
+        "Monde Saint (relique)":{ fecundity: 2, population: 1, vulnerability: 4, adequation: 10 }
+    },
+
+    // Propriétés et Inconvénients de la peste
+    plagueBlessings: {
+        // Propriétés
+        2: { type: 'propriete', name: 'Pourriture', desc: 'À chaque attaque de cette figurine avec une Touche Critique, l\'ennemi subit 1 Blessure Mortelle.' },
+        3: { type: 'propriete', name: 'Hypervecteur', desc: 'À votre phase de Tir, après que cette figurine a tiré, choisissez 1 unité ennemie touchée. Jusqu\'à votre prochaine phase, cette unité est Affligée.' },
+        4: { type: 'propriete', name: 'Implantation Parasitaire', desc: 'Le rang de Touches Dévastatrices de cette figurine est amélioré de 1 (sur 5+ au lieu de 6+).' },
+        5: { type: 'propriete', name: 'Écoulement Ignoble', desc: 'À la phase de Combat, si cette figurine est détruite, choisissez 1 unité ennemie à 6" et lancez 1D6. Sur 4+, cette unité est Ébranlée.' },
+        // Inconvénients
+        '-2': { type: 'inconvenient', name: 'Force des Miasmes', desc: 'Soustraire 1 à la caractéristique de Mouvement de cette figurine.' },
+        '-3': { type: 'inconvenient', name: 'Incongruent', desc: 'Soustraire 1 à la caractéristique de CC et CT de cette figurine.' },
+        '-4': { type: 'inconvenient', name: 'Supprimé', desc: 'À chaque attaque de cette figurine, vous ne pouvez pas relancer le jet de Touche.' },
+        '-5': { type: 'inconvenient', name: 'Aucun', desc: 'Aucun inconvénient.' }
+    },
+
+    // Bienfaits de Nurgle (Honneurs de Bataille)
+    boonsOfNurgle: [
+        { roll: "11", name: "Vitalité Fébrile", desc: "Ajoutez 1 à la caractéristique de PV de cette figurine." },
+        { roll: "12", name: "Membres Sinueux", desc: "Ajoutez 1 aux jets d'Avance et de Charge pour cette figurine." },
+        { roll: "13", name: "Tentacules Grouillants", desc: "Ajoutez 1 à la caractéristique d'Attaques des armes de mêlée de cette figurine." },
+        { roll: "21", name: "Hideusement Enflé", desc: "Ajoutez 1 à la caractéristique d'Endurance de cette figurine." },
+        { roll: "22", name: "Insensibilité Lépreuse", desc: "Cette figurine a l'aptitude Insensible à la Douleur 5+." },
+        { roll: "23", name: "Voile de Mouches", desc: "Les figurines de l'unité de cette figurine ont l'aptitude Discrétion." },
+        { roll: "31", name: "Contact Putréfiant", desc: "Améliorez de 1 la caractéristique de PA des armes de mêlée de cette figurine." },
+        { roll: "32", name: "Pestevision", desc: "À chaque attaque de cette figurine qui cible une unité Affligée, vous pouvez relancer le jet de touche." },
+        { roll: "33", name: "Tourbillon de Miasmes", desc: "Ajoutez 6\" à la portée de l'aptitude Don de Contagion de cette figurine." }
     ],
-    // Inspiré de l'image "Bénédictions de Nurgle"
-    plagueUpgrades: [
-        { id: "reproduction", name: "Améliorer Taux de Reproduction", cost: 5, max: 6 },
-        { id: "survival", name: "Améliorer Taux de Survie", cost: 5, max: 6 },
-        { id: "adaptability", name: "Améliorer Adaptabilité", cost: 5, max: 6 },
-        { id: "pathogenPower", name: "Augmenter Puissance du Pathogène", cost: 10, max: 5 }
-    ],
-    // Inspiré de l'image "Réquisitions"
-    requisitions: [
-        { name: "Sublimation Souillée (1PR)", desc: "Dépensez des points de contagion pour acheter des améliorations de Peste." },
-        { name: "Fruits du Chaudron (1PR)", desc: "Adaptez une toxine pour la prochaine bataille." },
-        { name: "Ascension Putride (2PR)", desc: "Un PERSONNAGE devient un PRINCE DÉMON ou un REJETON DU CHAOS." },
-        { name: "Puissance Paisible (2PR)", desc: "Un champion reçoit des bénédictions même s'il ne succombe pas à ses blessures." }
-    ],
-    // Inspiré de l'image "Intentions"
+
+    // Déjà présent, mais gardé pour la cohérence
     intents: {
         SEMER_LES_GRAINES: { name: "Semer les Graines de la Corruption", cost: 1, desc: "Pour 1 Point de Contagion, une de vos unités peut tenter de contaminer une planète en fin de bataille."}
     }
