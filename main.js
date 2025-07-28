@@ -1048,37 +1048,58 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
         const cost = 1; // 1 PR
-
+    
         if (player.requisitionPoints < cost) {
             showNotification(`Points de Réquisition insuffisants (${cost} PR requis).`, 'error');
             return;
         }
-
-        const confirmText = `Vous allez dépenser <b>1 PR</b> pour tenter de Concrétiser la Peste. Lancez 1D6. Si le résultat est supérieur à votre Puissance du Pathogène (${player.deathGuardData.pathogenPower}), c'est un succès. Sinon, c'est un échec.`;
-
-        if (await showConfirm("Tenter de Concrétiser la Peste", confirmText)) {
-            player.requisitionPoints -= cost;
-            const roll = Math.ceil(Math.random() * 6);
+    
+        const title = "Résultat de la Concrétisation";
+        const text = `Vous allez dépenser <b>1 PR</b> pour tenter de Concrétiser la Peste. Lancez 1D6. Si le résultat est supérieur à votre Puissance du Pathogène (${player.deathGuardData.pathogenPower}), c'est un succès.<br><br><b>Quel a été le résultat de votre jet ?</b>`;
+    
+        const blindJumpBtn = document.getElementById('exploration-choice-blind-jump-btn');
+        const probeBtn = document.getElementById('exploration-choice-probe-btn');
+        const originalBlindJumpText = blindJumpBtn.textContent;
+        const originalProbeText = probeBtn.textContent;
+        const originalProbeClass = probeBtn.className;
+    
+        try {
+            // 1. Fermer la modale en arrière-plan pour éviter la superposition
+            closeModal(document.getElementById('plague-management-modal'));
             
-            if (roll > player.deathGuardData.pathogenPower) {
-                // SUCCÈS
+            // 2. Modifier temporairement les boutons de la modale d'exploration
+            blindJumpBtn.textContent = "Succès";
+            probeBtn.textContent = "Échec";
+            probeBtn.className = 'btn-danger';
+    
+            const outcome = await showExplorationChoice(title, text);
+    
+            if (outcome === 'cancel') {
+                return; // L'utilisateur a annulé, ne rien faire et ne pas dépenser de RP.
+            }
+    
+            // Dépenser le RP seulement si un choix est fait
+            player.requisitionPoints -= cost;
+    
+            if (outcome === 'blind_jump') { // Mappé à "Succès"
                 const xpGained = Math.ceil(Math.random() * 3) + 3; // D3+3 XP
-                await showConfirm("Succès !", `Votre jet de <b>${roll}</b> est supérieur à votre Puissance de <b>${player.deathGuardData.pathogenPower}</b>. La planète est conquise !<br><br>Une de vos unités gagne <b>${xpGained} XP</b>.<br>De plus, vous pouvez choisir un <b>Bienfait de Nurgle</b> pour un de vos personnages.`);
-
-                // Laisser le joueur choisir l'unité pour l'XP et le personnage pour le bienfait
-                await selectNurgleBoonForCharacter(player); // Ouvre la modale pour le bienfait
+                await showConfirm("Succès !", `La peste c'est concrétiser !<br><br>Une de vos unités gagne <b>${xpGained} XP</b>.<br>De plus, vous pouvez choisir un <b>Bienfait de Nurgle</b> pour un de vos personnages.`);
+                await selectNurgleBoonForCharacter(player);
                 showNotification(`N'oubliez pas d'assigner les ${xpGained} XP à l'une de vos unités ayant participé à la bataille !`, 'info', 10000);
-
-            } else {
-                // ÉCHEC
+            } else if (outcome === 'probe') { // Mappé à "Échec"
                 const pointsLost = Math.ceil(player.deathGuardData.contagionPoints / 2);
                 player.deathGuardData.contagionPoints -= pointsLost;
-                await showConfirm("Échec...", `Votre jet de <b>${roll}</b> est inférieur ou égal à votre Puissance de <b>${player.deathGuardData.pathogenPower}</b>. La Peste n'a pas pu être concrétisée.<br><br>Vous perdez la moitié de vos Points de Contagion (-${pointsLost} PC).`);
+                await showConfirm("Échec...", `La Peste n'a pas pu être concrétisée.<br><br>Vous perdez la moitié de vos Points de Contagion (-${pointsLost} PC).`);
             }
-            
+    
             saveData();
             renderPlayerDetail();
-            closeModal(document.getElementById('plague-management-modal'));
+    
+        } finally {
+            // 3. Toujours restaurer l'état original des boutons
+            blindJumpBtn.textContent = originalBlindJumpText;
+            probeBtn.textContent = originalProbeText;
+            probeBtn.className = originalProbeClass;
         }
     });
 
