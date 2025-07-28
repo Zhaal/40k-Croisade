@@ -1508,7 +1508,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: newPlayerId, systemId: newSystemId, name: name,
                 faction: document.getElementById('player-faction-input').value.trim(),
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
-                supplyLimit: 50, 
+                supplyLimit: 500, // MODIFIED: Starting supply limit set to 500
                 upgradeSupplyCost: 0, // NOUVEAU
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
@@ -1688,6 +1688,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!button || activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
         const action = button.dataset.action;
+        // NEW: Handle the new supply limit button
+        if (button.id === 'increase-supply-limit-btn') return;
+        
         const [operation, stat] = action.split('-');
         const change = operation === 'increase' ? 1 : -1;
 
@@ -1712,6 +1715,33 @@ document.addEventListener('DOMContentLoaded', () => {
         saveData();
         renderPlayerDetail();
     });
+    
+    // NEW: Event Listener for the supply limit increase button
+    document.getElementById('increase-supply-limit-btn').addEventListener('click', async () => {
+        if (activePlayerIndex === -1) return;
+
+        const player = campaignData.players[activePlayerIndex];
+        const cost = 1;
+        const increase = 200;
+
+        if (player.requisitionPoints < cost) {
+            showNotification(`Points de Réquisition insuffisants (coût: ${cost} RP).`, 'warning');
+            return;
+        }
+
+        const confirmed = await showConfirm(
+            "Augmenter la Limite de Ravitaillement",
+            `Voulez-vous dépenser <b>${cost} Point de Réquisition</b> pour augmenter votre limite de ravitaillement de <b>${increase} PL</b> ?<br><br>Limite actuelle: ${player.supplyLimit} PL &rarr; ${player.supplyLimit + increase} PL<br>Solde RP actuel: ${player.requisitionPoints} RP &rarr; ${player.requisitionPoints - cost} RP`
+        );
+
+        if (confirmed) {
+            player.requisitionPoints -= cost;
+            player.supplyLimit += increase;
+            saveData();
+            renderPlayerDetail(); // This will refresh all player info fields
+            showNotification(`Limite de ravitaillement augmentée à ${player.supplyLimit} PL !`, 'success');
+        }
+    });
 
     //======================================================================
     //  NOUVELLE LOGIQUE : GESTION DES AMÉLIORATIONS D'UNITÉ
@@ -1732,14 +1762,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return foundRule ? foundRule.desc : null;
     };
 
-    // NOUVEAU: Gestion des infobulles pour les améliorations
+    // MODIFIED: Gestion des infobulles pour les améliorations
     const upgradesSection = document.getElementById('unit-upgrades-section');
     upgradesSection.addEventListener('mouseover', (e) => {
-        const label = e.target.closest('.upgrade-control-group > label');
-        if (!label) return;
-
-        const select = label.closest('.upgrade-control-group').querySelector('select');
-        if (!select || !select.value) {
+        const select = e.target.closest('select');
+        if (!select || !select.closest('.upgrade-control-group') || !select.value) {
             customTooltip.style.opacity = '0';
             return;
         }
@@ -1748,7 +1775,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (desc) {
             customTooltip.innerHTML = `<strong>${select.value}</strong><p style="margin: 5px 0 0 0;">${desc}</p>`;
             
-            const rect = label.getBoundingClientRect();
+            const rect = select.getBoundingClientRect();
             customTooltip.style.left = `${rect.left}px`;
             customTooltip.style.top = `${rect.bottom + 5}px`;
             customTooltip.style.opacity = '1';
@@ -1757,10 +1784,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    upgradesSection.addEventListener('mouseout', (e) => {
-        if (e.target.closest('.upgrade-control-group > label')) {
-            customTooltip.style.opacity = '0';
-        }
+    upgradesSection.addEventListener('mouseout', () => {
+        customTooltip.style.opacity = '0';
     });
 
 
