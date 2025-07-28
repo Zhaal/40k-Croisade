@@ -1,0 +1,842 @@
+/* --- Police et Thème Général --- */
+:root {
+    --primary-color: #a37c27; /* Or/Bronze */
+    --friendly-color: #3cb371; /* Vert - Ajouté pour le statut "ami" */
+    --background-color: #1e1e1e;
+    --surface-color: #2a2a2a;
+    --text-color: #e0e0e0;
+    --text-muted-color: #888;
+    --border-color: #444;
+    --danger-color: #b33a3a;
+    --warning-color: #ffcc00; /* Jaune pour les systèmes neutres */
+    --probed-color: #3498db; /* NOUVEAU: Bleu pour les systèmes sondés */
+}
+
+body {
+    font-family: sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+}
+
+h1, h2, h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-shadow: 1px 1px 2px black;
+}
+
+h4 {
+     font-family: 'Cinzel', serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: var(--surface-color);
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 20px 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* --- En-tête et Contrôles de Campagne --- */
+header {
+    text-align: center;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.storage-warning {
+    background-color: #4d4432;
+    border: 1px solid var(--primary-color);
+    padding: 10px;
+    font-size: 0.9em;
+    max-width: 800px;
+    margin: 15px auto 0 auto;
+}
+
+.management-controls {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* --- Boutons et Formulaires --- */
+button, .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: 1px solid #7c5c1a;
+    padding: 10px 15px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-family: 'Cinzel', serif;
+    transition: background-color 0.2s;
+    border-radius: 3px;
+}
+
+button:hover, .btn-primary:hover {
+    background-color: #c0953c;
+}
+
+button.btn-secondary, .btn-secondary {
+    background-color: #555;
+    border-color: #333;
+}
+button.btn-secondary:hover {
+    background-color: #777;
+}
+
+button.btn-danger, .btn-danger {
+    background-color: var(--danger-color);
+    border-color: #8e2b2b;
+}
+button.btn-danger:hover {
+    background-color: #d14f4f;
+}
+
+input[type="text"], input[type="number"], select, textarea {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 3px;
+    box-sizing: border-box;
+    margin-top: 4px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted-color);
+    font-size: 0.9em;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+#planet-type-form button {
+    margin-top: 10px;
+}
+
+/* --- Liste des Joueurs --- */
+#player-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.player-card {
+    background-color: #333;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.player-card:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.player-card h3 {
+    margin: 0 0 5px 0;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.player-card p {
+    margin: 0 0 10px 0;
+    color: var(--text-muted-color);
+    font-style: italic;
+    flex-grow: 1;
+}
+
+.player-card-actions {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.player-card-actions button {
+    flex-grow: 1;
+    font-size: 0.8em;
+    padding: 8px 5px;
+}
+
+
+/* --- Vue Fiche de Progression (Roster View) --- */
+.roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.roster-header h3 {
+    margin: 0;
+}
+#back-to-list-btn {
+    font-size: 0.9em;
+}
+
+.player-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    background-color: #1a1a1a;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+}
+.info-box {
+    background-color: #2a2a2a;
+    padding: 10px;
+    border: 1px solid #333;
+}
+.info-box strong { color: var(--primary-color); }
+.info-box .stat-value { font-weight: bold; color: white; margin: 0 5px;}
+.info-box input { display: inline-block; width: 80px; margin-right: 5px; }
+.tally-btn { padding: 2px 8px; margin-left: 5px; font-size: 0.8em; }
+
+.battle-tally-controls {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+.battle-tally-controls .tally-btn {
+    flex-grow: 1;
+}
+
+
+#order-of-battle {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+#order-of-battle th, #order-of-battle td {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+#order-of-battle th {
+    background-color: #333;
+    font-family: 'Cinzel', serif;
+}
+
+#order-of-battle tr:nth-child(even) {
+    background-color: #272727;
+}
+#order-of-battle td button { font-size: 0.8em; padding: 5px; }
+
+#goals-notes {
+    width: 100%;
+    min-height: 80px;
+}
+
+
+/* --- Modales --- */
+.modal {
+    position: fixed;
+    z-index: 100;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.modal-content {
+    background-color: var(--surface-color);
+    padding: 30px;
+    border: 1px solid var(--primary-color);
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    max-height: 95vh;
+    overflow-y: auto;
+}
+.modal-content.large { max-width: 900px; }
+.modal-content.x-large { max-width: 1100px; }
+
+
+.close-btn {
+    position: absolute;
+    top: 10px; right: 15px;
+    color: var(--text-muted-color);
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.close-btn:hover { color: white; }
+
+/* --- Style Spécifique Crusade Card Modal --- */
+.modal-content.crusade-card {
+    background: #333;
+}
+
+.crusade-card-title {
+    text-align: center;
+    border-bottom: 1px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.unit-card-header { margin-bottom: 15px; }
+
+.unit-card-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 20px;
+}
+.unit-card-column .form-group { margin-bottom: 15px; }
+.unit-card-column .form-group.small {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.unit-card-column .form-group.small label { margin-bottom: 0; }
+.unit-card-column .form-group.small input { width: 80px; }
+.unit-card-column label {
+    font-family: 'Cinzel', serif;
+    color: var(--primary-color);
+    font-size: 1em;
+}
+#unit-rank-display {
+    font-weight: bold;
+    color: white;
+}
+
+/* --- Section des améliorations --- */
+#unit-upgrades-section {
+    background-color: #1e1e1e;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    margin: 20px 0;
+    border-radius: 4px;
+}
+.upgrades-title {
+    color: var(--primary-color);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+.upgrades-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+.upgrade-control-group label {
+    font-size: 0.9em;
+    font-family: sans-serif;
+    color: var(--text-muted-color);
+    margin-bottom: 8px;
+    display: block;
+    cursor: help;
+}
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+.input-group select {
+    flex-grow: 1;
+    margin-top: 0;
+}
+.input-group button {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 0.8em;
+    align-self: flex-start;
+}
+
+
+/* --- Style pour la modale d'information --- */
+.modal-content.info-panel {
+    background: url('https://wow.zamimg.com/images/textures/parchment/parchment-noise.png') #fcf5e5;
+    background-size: cover;
+    color: #3a2e1c;
+    border: 10px solid transparent;
+    border-image: url('https://wow.zamimg.com/images/border-art/simple-brown/simple-brown-border.png') 30 round;
+    box-shadow: 0 0 25px rgba(0,0,0,0.8);
+    max-width: 700px;
+}
+
+.info-panel .info-title {
+    font-family: 'Cinzel', serif;
+    color: #5a2a0a; /* Brun foncé */
+    text-align: center;
+    font-size: 1.8em;
+    text-shadow: 1px 1px 1px #e4d1b1;
+    margin-bottom: 20px;
+}
+
+.info-panel .info-body h4 {
+    font-family: 'Cinzel', serif;
+    color: #7a3a1a;
+    border-bottom: 2px solid #c8b79a;
+    padding-bottom: 5px;
+    margin-top: 20px;
+    font-size: 1.2em;
+}
+
+.info-panel .info-body p, .info-panel .info-body li {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    line-height: 1.6;
+    text-shadow: 1px 1px 1px #fff;
+}
+
+.info-panel .info-body ul {
+    list-style-type: square;
+    margin-left: 20px;
+    padding-left: 10px;
+}
+
+.info-panel .info-body b {
+    color: #5a2a0a;
+}
+
+.info-panel .close-btn {
+    color: #7a3a1a;
+    font-size: 35px;
+    text-shadow: 0 0 5px white;
+    top: 5px;
+    right: 20px;
+}
+
+.info-panel .close-btn:hover {
+    color: #5a2a0a;
+}
+
+
+/* --- Style Système Planétaire --- */
+#system-container {
+    position: relative;
+    width: 100%;
+    max-width: 650px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#planetary-system {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1 / 1;
+    background: #111 url('https://www.transparenttextures.com/patterns/stardust.png');
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.sun {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 13%;
+    height: 13%;
+    transform: translate(-50%, -50%);
+    background-color: var(--warning-color);
+    border-radius: 50%;
+    box-shadow: 0 0 30px var(--warning-color), 0 0 60px #ff8800;
+}
+
+.orbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border: 1px dotted #444;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.planet-wrapper {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.planet {
+    pointer-events: auto;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75em;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 5px black, 0 0 3px black;
+    text-align: center;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+
+.planet:hover {
+    transform: scale(1.3);
+    z-index: 10;
+}
+
+.planet-label {
+    margin-top: 5px;
+    padding: 2px 6px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-shadow: 1px 1px 2px black;
+    white-space: nowrap;
+    z-index: 5;
+}
+
+
+/* --- Keyframes pour l'animation de pulsation --- */
+@keyframes pulse-player {
+    0% { box-shadow: 0 0 10px var(--primary-color); }
+    50% { box-shadow: 0 0 22px var(--primary-color), 0 0 10px #fff; }
+    100% { box-shadow: 0 0 10px var(--primary-color); }
+}
+
+@keyframes pulse-neutral {
+    0% { box-shadow: 0 0 12px rgba(238, 238, 238, 0.7); }
+    50% { box-shadow: 0 0 28px #fff, 0 0 12px #eee; }
+    100% { box-shadow: 0 0 12px rgba(238, 238, 238, 0.7); }
+}
+
+@keyframes pulse-player-friendly {
+    0% { box-shadow: 0 0 10px var(--friendly-color); }
+    50% { box-shadow: 0 0 22px var(--friendly-color), 0 0 10px #fff; }
+    100% { box-shadow: 0 0 10px var(--friendly-color); }
+}
+
+
+/* --- Statut des Planètes --- */
+.planet[data-owner]:not([data-owner="neutral"]) {
+    border: 3px solid var(--primary-color);
+    box-shadow: 0 0 12px var(--primary-color);
+}
+
+.planet.friendly-planet {
+    border-color: var(--friendly-color);
+    box-shadow: 0 0 12px var(--friendly-color);
+    animation: pulse-player-friendly 1.8s infinite ease-in-out;
+}
+
+.planet[data-owner="neutral"] {
+    border: 2px dashed #FFFFFF;
+    box-shadow: 0 0 12px rgba(238, 238, 238, 0.7);
+    animation: pulse-neutral 1.8s infinite ease-in-out;
+}
+
+
+/* Types de planètes */
+.planet[data-type="Monde Mort"], .legend-color[data-type="Monde Mort"] { background: radial-gradient(circle, #8c8c8c, #3b3b3b); }
+.planet[data-type="Monde Sauvage"], .legend-color[data-type="Monde Sauvage"] { background: radial-gradient(circle, #5ca469, #1e6f33); }
+.planet[data-type="Agri-monde"], .legend-color[data-type="Agri-monde"] { background: radial-gradient(circle, #c4a484, #8b5a2b); }
+.planet[data-type="Monde Forge"], .legend-color[data-type="Monde Forge"] { background: radial-gradient(circle, #d95d39, #9a2b0c); }
+.planet[data-type="Monde Ruche"], .legend-color[data-type="Monde Ruche"] { background: radial-gradient(circle, #f0e68c, #eac100); color: #111; }
+.planet[data-type="Monde Saint (relique)"], .legend-color[data-type="Monde Saint (relique)"] { background: radial-gradient(circle, #9370db, #4b0082); }
+
+
+/* --- Style pour les flèches d'exploration --- */
+.explore-arrow {
+    position: absolute;
+    z-index: 20;
+    min-width: 60px;
+    padding: 8px 5px;
+    font-size: 14px;
+    line-height: 1.2;
+    text-align: center;
+    background-color: var(--surface-color);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.explore-arrow:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+#explore-up { top: -25px; left: 50%; transform: translateX(-50%); }
+#explore-down { bottom: -25px; left: 50%; transform: translateX(-50%); }
+#explore-left { left: -25px; top: 50%; transform: translateY(-50%); }
+#explore-right { right: -25px; top: 50%; transform: translateY(-50%); }
+
+.explore-arrow .arrow-symbol { font-size: 24px; line-height: 1; }
+.explore-arrow small { font-size: 0.7em; display: block; margin-top: 2px; text-transform: uppercase; }
+
+/* --- Styles Carte Galactique --- */
+#map-modal .modal-content { max-width: 95vw; height: 90vh; }
+
+#galactic-map-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 75vh;
+    background: #111 url('https://www.transparenttextures.com/patterns/stardust.png');
+    border: 1px solid var(--border-color);
+    overflow: auto;
+    cursor: grab;
+}
+
+.map-viewport { position: relative; width: 2000px; height: 2000px; }
+
+.map-controls {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.map-controls label {
+    margin-bottom: 0;
+    color: var(--primary-color);
+    font-family: 'Cinzel', serif;
+}
+
+#map-player-view-select {
+    width: auto;
+    min-width: 200px;
+}
+
+.system-node {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #555, #222);
+    border: 3px solid var(--danger-color); /* Default/Contested */
+    box-shadow: 0 0 15px var(--danger-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    cursor: default;
+    z-index: 10;
+    padding: 5px;
+    box-sizing: border-box;
+    font-size: 0.8em;
+    color: white;
+    text-shadow: 1px 1px 2px black;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.system-node:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+    z-index: 11;
+}
+
+/* Statut des systèmes sur la carte */
+.system-node.player-controlled {
+    border-color: var(--friendly-color);
+    box-shadow: 0 0 20px var(--friendly-color);
+    background: radial-gradient(circle, #5fbf8f, #2e8b57);
+}
+
+.system-node.contested {
+    border-color: var(--danger-color); /* Rouge/Contesté */
+    box-shadow: 0 0 20px var(--danger-color);
+}
+
+.system-node.fully-neutral {
+    border-color: var(--warning-color); /* Jaune/PNJ uniquement */
+    box-shadow: 0 0 20px var(--warning-color);
+    background: radial-gradient(circle, #666, #333);
+}
+
+
+.system-node span { font-weight: bold; font-family: 'Cinzel', serif; }
+.system-node small { display: block; font-size: 0.8em; color: #ccc; }
+
+.connection-line {
+    position: absolute;
+    background-color: #555;
+    height: 2px;
+    transform-origin: 0 0;
+    z-index: 5;
+    box-shadow: 0 0 5px #000;
+}
+
+/* --- Légende Planètes --- */
+#planet-legend {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+#planet-legend h4 {
+    margin-bottom: 10px;
+    color: var(--text-muted-color);
+}
+
+#colonization-percentage {
+    font-weight: normal;
+    color: var(--text-color);
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 10px 5px 10px;
+    font-size: 0.9em;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid #555;
+}
+
+/* --- NOUVEAU : Modale de Confirmation --- */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* --- NOUVEAU : Notifications Stylisées --- */
+#notification-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    pointer-events: none; /* Permet de cliquer "à travers" le conteneur */
+}
+
+.notification {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    padding: 15px 20px;
+    border-radius: 5px;
+    border-left: 5px solid var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    max-width: 380px;
+    font-size: 0.95em;
+    cursor: pointer;
+    pointer-events: auto; /* Rend les notifications cliquables */
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.hide {
+    opacity: 0;
+    transform: translateX(100%);
+    margin-top: -10px; /* Petit effet de glissement vers le haut en partant */
+}
+
+/* Types de notification */
+.notification.info { border-left-color: var(--probed-color); }
+.notification.success { border-left-color: var(--friendly-color); }
+.notification.warning { border-left-color: var(--warning-color); }
+.notification.error { border-left-color: var(--danger-color); }
+
+.notification b, .notification strong {
+    color: var(--primary-color);
+}
+
+/* --- NOUVEAU : Infobulle personnalisée --- */
+#custom-tooltip {
+    position: fixed;
+    z-index: 1001; /* Doit être au-dessus des modales (z-index: 100) */
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--primary-color);
+    font-size: 0.9em;
+    line-height: 1.4;
+    max-width: 300px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+#custom-tooltip strong {
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* --- Responsivité --- */
+@media (max-width: 900px) {
+    .unit-card-body { grid-template-columns: 1fr; }
+    .upgrades-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    #system-container { transform: scale(0.8); }
+}
+@media (max-width: 480px) {
+    h1 { font-size: 1.5em; }
+    .campaign-controls { display: flex; flex-direction: column; }
+    #notification-container {
+        width: 100%;
+        bottom: 0;
+        right: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        align-items: center;
+    }
+    .notification {
+        width: 100%;
+        max-width: 100%;
+    }
+}
