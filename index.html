@@ -101,6 +101,37 @@
                 </div>
             </div>
 
+            <div id="sororitas-sainthood-box" class="hidden">
+                <hr>
+                <h3>Épreuves d'une Sainte Vivante</h3>
+                <div class="sainthood-controls">
+                    <div class="info-box">
+                        <strong>Sainte Potentia Actuelle:</strong>
+                        <span id="saint-potentia-name">Aucune</span>
+                        <button id="select-saint-btn" class="btn-secondary">Choisir</button>
+                        <button id="change-saint-btn" class="btn-danger">Changer (1 RP)</button>
+                    </div>
+                    <div class="info-box">
+                        <label for="active-trial-select"><strong>Épreuve Active:</strong></label>
+                        <select id="active-trial-select"></select>
+                    </div>
+                    <div class="info-box">
+                        <strong>Points de Martyre:</strong>
+                        <span id="martyrdom-points" class="stat-value">0</span>
+                        <button class="tally-btn" data-action="decrease-martyrdom">-</button>
+                        <button class="tally-btn" data-action="increase-martyrdom">+</button>
+                    </div>
+                </div>
+                <div id="trials-grid">
+                    </div>
+                 <div class="info-panel" style="margin-top: 15px; background-color: #1a1a1a; padding: 15px;">
+                    <h4>Récompenses de Sainte</h4>
+                    <div id="saint-rewards-display">
+                        <p>Les récompenses des Épreuves terminées (10+ points) apparaîtront ici.</p>
+                    </div>
+                </div>
+            </div>
+
             <hr>
 
             <h3>Ordre de Bataille</h3>
@@ -430,7 +461,7 @@
     <script src="engine.js"></script> 
     <script src="rules.js"></script>
     <script src="galaxy.js"></script>
-    <script src="render.js"></script>
+    <script src="sororitas_rules.js"></script> <script src="render.js"></script>
     <script src="upgrades.js"></script>
     <script src="main.js"></script>
 </body>

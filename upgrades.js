@@ -4,30 +4,60 @@
 //  LOGIQUE : GESTION DES AMÉLIORATIONS D'UNITÉ
 //======================================================================
 
+// MODIFIÉ : La fonction cherche désormais aussi dans les règles spécifiques aux factions
 const findUpgradeDescription = (upgradeName) => {
     if (!upgradeName) return null;
+
+    const player = campaignData.players[activePlayerIndex];
+    let factionRules = {};
+    if (player && player.faction === 'Adepta Sororitas') {
+        factionRules = sororitasCrusadeRules || {};
+    }
+    // (On pourrait ajouter d'autres factions ici avec 'else if')
+
     const allRules = [
         ...Object.values(crusadeRules.battleTraits).flat(),
         ...crusadeRules.weaponMods,
         ...Object.values(crusadeRules.relics).flat(),
         ...crusadeRules.sombrerocheHonours,
         ...crusadeRules.sombrerocheRelics,
-        ...crusadeRules.battleScars
+        ...crusadeRules.battleScars,
+        // Ajout des règles de faction
+        ...Object.values(factionRules.battleTraits || {}).flat(),
+        ...Object.values(factionRules.relics || {}).flat()
     ];
+
     const foundRule = allRules.find(rule => rule.name === upgradeName);
     return foundRule ? foundRule.desc : null;
 };
 
+
+// MODIFIÉ : Les sélecteurs sont maintenant remplis avec les options de faction
 const populateUpgradeSelectors = () => {
     const unitRole = document.getElementById('unit-role').value;
+    const player = campaignData.players[activePlayerIndex];
     const isCharacter = unitRole === 'Personnage' || unitRole === 'Hero Epique';
 
+    // --- Traits de Bataille ---
     const battleTraitSelect = document.getElementById('battle-trait-select');
     battleTraitSelect.innerHTML = '<option value="">Choisir un trait...</option>';
-    const traits = crusadeRules.battleTraits[unitRole] || [];
-    traits.forEach(trait => {
+    const genericTraits = crusadeRules.battleTraits[unitRole] || [];
+    genericTraits.forEach(trait => {
         battleTraitSelect.innerHTML += `<option value="${trait.name}">${trait.name}</option>`;
     });
+
+    // --- AJOUT : Traits de Bataille Spécifiques aux Sororitas ---
+    if (player && player.faction === 'Adepta Sororitas') {
+        Object.entries(sororitasCrusadeRules.battleTraits).forEach(([type, traits]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = `Sororitas: ${type}`;
+            traits.forEach(trait => {
+                optgroup.innerHTML += `<option value="${trait.name}">${trait.name}</option>`;
+            });
+            battleTraitSelect.appendChild(optgroup);
+        });
+    }
+
 
     const weaponModSelect = document.getElementById('weapon-mod-select');
     weaponModSelect.innerHTML = '<option value="">Choisir une modification...</option>';
@@ -35,19 +65,35 @@ const populateUpgradeSelectors = () => {
         weaponModSelect.innerHTML += `<option value="${mod.name}">${mod.name}</option>`;
     });
 
+    // --- Reliques ---
     const relicSelect = document.getElementById('relic-select');
     relicSelect.innerHTML = '<option value="">Choisir une relique...</option>';
     if (isCharacter) {
+        // Reliques génériques
         Object.entries(crusadeRules.relics).forEach(([type, relics]) => {
             const optgroup = document.createElement('optgroup');
-            optgroup.label = `${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
+            optgroup.label = `Générique: ${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
             relics.forEach(relic => {
                 optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="relics.${type}">${relic.name}</option>`;
             });
             relicSelect.appendChild(optgroup);
         });
+        
+        // --- AJOUT : Reliques Spécifiques aux Sororitas ---
+        if (player && player.faction === 'Adepta Sororitas') {
+            Object.entries(sororitasCrusadeRules.relics).forEach(([type, relics]) => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `Sororitas: ${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
+                relics.forEach(relic => {
+                    // Note: Le data-type pointe vers la structure de sororitasCrusadeRules
+                    optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="sororitas.relics.${type}">${relic.name}</option>`;
+                });
+                relicSelect.appendChild(optgroup);
+            });
+        }
     }
     relicSelect.disabled = !isCharacter;
+
 
     const battleScarSelect = document.getElementById('battle-scar-select');
     battleScarSelect.innerHTML = '<option value="">Choisir une cicatrice...</option>';
@@ -74,7 +120,6 @@ const populateUpgradeSelectors = () => {
     sombrerocheRelicSelect.disabled = !isCharacter;
 
     // Logique pour les Bienfaits de Nurgle
-    const player = campaignData.players[activePlayerIndex];
     const nurgleBoonSection = document.getElementById('nurgle-boon-section');
 
     if (player && player.faction === 'Death Guard' && isCharacter) {
@@ -89,7 +134,6 @@ const populateUpgradeSelectors = () => {
     }
 };
 
-// **CORRIGÉ** : La fonction met à jour directement l'objet de données ET le champ de texte.
 const addUpgradeToUnitData = (unit, textareaId, upgradeName, upgradeDesc, prefix = '') => {
     const textToAdd = `\n- ${prefix}${upgradeName}: ${upgradeDesc}`;
     const key = textareaId.replace('unit-', ''); // 'honours' ou 'relic' ou 'scars'
@@ -123,13 +167,13 @@ document.getElementById('add-battle-trait-btn').addEventListener('click', () => 
     const traitName = select.value;
     if (!traitName) return;
 
-    const unitRole = document.getElementById('unit-role').value;
-    const trait = crusadeRules.battleTraits[unitRole].find(t => t.name === traitName);
+    // Recherche dans les traits génériques ET de faction
+    const trait = findUpgradeDescription(traitName);
     if (!trait) return;
     
-    handleRpPurchase(`Trait: ${trait.name}`, 1, () => {
+    handleRpPurchase(`Trait: ${traitName}`, 1, () => {
         const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
-        addUpgradeToUnitData(unit, 'unit-honours', trait.name, trait.desc);
+        addUpgradeToUnitData(unit, 'unit-honours', traitName, trait);
         unit.crusadePoints = (unit.crusadePoints || 0) + 1;
         document.getElementById('unit-crusade-points').value = unit.crusadePoints;
         select.value = '';
@@ -158,8 +202,15 @@ document.getElementById('add-relic-btn').addEventListener('click', () => {
     const selectedOption = select.options[select.selectedIndex];
     if (!selectedOption.dataset.type) return;
 
-    const [category, type] = selectedOption.dataset.type.split('.');
-    const relic = crusadeRules[category][type].find(r => r.name === selectedOption.value);
+    const [source, category, type] = selectedOption.dataset.type.split('.');
+    let ruleSet;
+    if (source === 'sororitas') {
+        ruleSet = sororitasCrusadeRules[category][type];
+    } else {
+        ruleSet = crusadeRules[category][type];
+    }
+
+    const relic = ruleSet.find(r => r.name === selectedOption.value);
     if (!relic) return;
     
     handleRpPurchase(`Relique: ${relic.name}`, relic.cost, () => {

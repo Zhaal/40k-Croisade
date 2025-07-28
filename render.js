@@ -71,7 +71,7 @@ const renderPlayerDetail = () => {
         biomassBox.classList.add('hidden');
     }
 
-    // NOUVEAU : Affichage conditionnel de la boîte Death Guard
+    // Affichage conditionnel de la boîte Death Guard
     const deathguardBox = document.getElementById('deathguard-box');
     if (player.faction === 'Death Guard') {
         deathguardBox.classList.remove('hidden');
@@ -80,6 +80,16 @@ const renderPlayerDetail = () => {
         deathguardBox.classList.add('hidden');
     }
 
+    // *** DÉBUT DE LA CORRECTION ***
+    // Affichage conditionnel de la boîte de Sainteté (Adepta Sororitas)
+    const sainthoodBox = document.getElementById('sororitas-sainthood-box');
+    if (player.faction === 'Adepta Sororitas') {
+        sainthoodBox.classList.remove('hidden');
+        renderSainthoodBox(player); // Appel de la fonction de rendu
+    } else {
+        sainthoodBox.classList.add('hidden');
+    }
+    // *** FIN DE LA CORRECTION ***
 
     document.getElementById('supply-limit').value = player.supplyLimit;
     document.getElementById('upgrade-supply-cost').value = player.upgradeSupplyCost || 0;
@@ -431,3 +441,92 @@ const updateExplorationArrows = (currentSystem) => {
         arrow.innerHTML = label;
     });
 };
+
+
+// *** DÉBUT DE LA NOUVELLE FONCTION ***
+/**
+ * Renders the content of the Sororitas Sainthood box based on player data.
+ * @param {object} player - The active player object, who must be Adepta Sororitas.
+ */
+const renderSainthoodBox = (player) => {
+    if (!player || player.faction !== 'Adepta Sororitas') return;
+
+    const potentiaNameEl = document.getElementById('saint-potentia-name');
+    const selectSaintBtn = document.getElementById('select-saint-btn');
+    const changeSaintBtn = document.getElementById('change-saint-btn');
+    const activeTrialSelect = document.getElementById('active-trial-select');
+    const martyrdomPointsEl = document.getElementById('martyrdom-points');
+    const trialsGridEl = document.getElementById('trials-grid');
+    const rewardsDisplayEl = document.getElementById('saint-rewards-display');
+
+    // --- Sainte Potentia ---
+    const potentiaUnitId = player.sainthood.potentiaUnitId;
+    if (potentiaUnitId) {
+        const potentiaUnit = player.units.find(u => u.id === potentiaUnitId);
+        potentiaNameEl.textContent = potentiaUnit ? potentiaUnit.name : 'Unité introuvable';
+        selectSaintBtn.classList.add('hidden');
+        changeSaintBtn.classList.remove('hidden');
+    } else {
+        potentiaNameEl.textContent = 'Aucune';
+        selectSaintBtn.classList.remove('hidden');
+        changeSaintBtn.classList.add('hidden');
+    }
+
+    // --- Épreuve Active ---
+    activeTrialSelect.innerHTML = '';
+    sororitasCrusadeRules.trials.forEach(trial => {
+        const option = document.createElement('option');
+        option.value = trial.id;
+        option.textContent = trial.name;
+        if (trial.id === player.sainthood.activeTrial) {
+            option.selected = true;
+        }
+        activeTrialSelect.appendChild(option);
+    });
+
+    // --- Points de Martyre ---
+    martyrdomPointsEl.textContent = player.sainthood.martyrdomPoints || 0;
+
+    // --- Grille des Épreuves ---
+    trialsGridEl.innerHTML = '';
+    sororitasCrusadeRules.trials.forEach(trial => {
+        const points = player.sainthood.trials[trial.id] || 0;
+        const isCompleted = points >= 10;
+        const card = document.createElement('div');
+        card.className = 'trial-card';
+        if (isCompleted) {
+            card.classList.add('completed');
+        }
+
+        card.innerHTML = `
+            <h4>${trial.name}</h4>
+            <p>${trial.acts}</p>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: auto;">
+                <span>${points} / 10</span>
+                <progress value="${points}" max="10" style="flex-grow: 1;"></progress>
+                <button class="tally-btn" data-action="decrease-trial" data-trial="${trial.id}" title="Retirer 1 point">-</button>
+                <button class="tally-btn" data-action="increase-trial" data-trial="${trial.id}" title="Ajouter 1 point">+</button>
+            </div>
+        `;
+        trialsGridEl.appendChild(card);
+    });
+
+    // --- Récompenses ---
+    rewardsDisplayEl.innerHTML = '';
+    let completedRewards = [];
+    Object.entries(player.sainthood.trials).forEach(([trialId, points]) => {
+        if (points >= 10) {
+            const trialRule = sororitasCrusadeRules.trials.find(t => t.id === trialId);
+            if (trialRule) {
+                completedRewards.push(`<li><b>${trialRule.reward_name}:</b> ${trialRule.reward_desc}</li>`);
+            }
+        }
+    });
+
+    if (completedRewards.length > 0) {
+        rewardsDisplayEl.innerHTML = `<ul>${completedRewards.join('')}</ul>`;
+    } else {
+        rewardsDisplayEl.innerHTML = `<p>Les récompenses des Épreuves terminées (10+ points) apparaîtront ici.</p>`;
+    }
+};
+// *** FIN DE LA NOUVELLE FONCTION ***

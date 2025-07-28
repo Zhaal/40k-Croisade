@@ -364,6 +364,23 @@ const loadData = () => {
                 console.log(`Migration: Ajout de contagionPoints pour le joueur Death Guard ${player.name}`);
             }
         }
+        // NOUVEAU : Migration pour les données de Sainteté des Adepta Sororitas
+        if (player.faction === 'Adepta Sororitas' && player.sainthood === undefined) {
+            player.sainthood = {
+                potentiaUnitId: null,
+                activeTrial: 'foi',
+                trials: {
+                    foi: 0,
+                    souffrance: 0,
+                    purete: 0,
+                    vertu: 0,
+                    vaillance: 0
+                },
+                martyrdomPoints: 0
+            };
+            dataWasModified = true;
+            console.log(`Migration: Ajout des données de Sainteté pour la joueuse Sororitas ${player.name}`);
+        }
     });
 
     campaignData.systems.forEach(system => {

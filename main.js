@@ -166,6 +166,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (faction === 'Death Guard') {
                 newPlayer.contagionPoints = 0;
             }
+            // NOUVEAU : Ajout de la structure de données pour la Sainteté si Adepta Sororitas
+            if (faction === 'Adepta Sororitas') {
+                newPlayer.sainthood = {
+                    potentiaUnitId: null,
+                    activeTrial: 'foi',
+                    trials: { foi: 0, souffrance: 0, purete: 0, vertu: 0, vaillance: 0 },
+                    martyrdomPoints: 0
+                };
+            }
 
             campaignData.players.push(newPlayer);
         }
@@ -257,6 +266,90 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // *** DÉBUT DE LA CORRECTION ***
+    document.getElementById('sororitas-sainthood-box').addEventListener('click', async (e) => {
+        const player = campaignData.players[activePlayerIndex];
+        if (!player || player.faction !== 'Adepta Sororitas') return;
+
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        if (button.classList.contains('tally-btn')) {
+            const [operation, type] = button.dataset.action.split('-');
+            const change = operation === 'increase' ? 1 : -1;
+
+            if (type === 'trial') {
+                const trialId = button.dataset.trial;
+                if (!trialId) return;
+                const currentPoints = player.sainthood.trials[trialId] || 0;
+                player.sainthood.trials[trialId] = Math.max(0, Math.min(10, currentPoints + change));
+            } else if (type === 'martyrdom') {
+                player.sainthood.martyrdomPoints = Math.max(0, (player.sainthood.martyrdomPoints || 0) + change);
+                if (change > 0) { // Gagner un point de martyre déclenche l'épreuve de souffrance
+                    const currentSuffering = player.sainthood.trials.souffrance || 0;
+                    player.sainthood.trials.souffrance = Math.min(10, currentSuffering + 3);
+                    showNotification("Point de Martyre gagné ! +3 points pour l'Épreuve de Souffrance.", "info");
+                }
+            }
+            saveData();
+            renderSainthoodBox(player);
+        } else if (e.target.id === 'select-saint-btn' || e.target.id === 'change-saint-btn') {
+            const isChanging = e.target.id === 'change-saint-btn';
+            if (isChanging) {
+                if (player.requisitionPoints < 1) {
+                    showNotification("Pas assez de Points de Réquisition (1 RP requis).", "error");
+                    return;
+                }
+                if (!await showConfirm("Changer de Sainte Potentia", "Voulez-vous dépenser <b>1 Point de Réquisition</b> pour désigner une nouvelle Sainte Potentia ? L'ancienne perdra ce statut.")) {
+                    return;
+                }
+                player.requisitionPoints--;
+            }
+
+            const characters = player.units.filter(u => u.role === 'Personnage' || u.role === 'Hero Epique');
+            if (characters.length === 0) {
+                showNotification("Aucune unité de type 'Personnage' ou 'Hero Epique' dans votre Ordre de Bataille.", "warning");
+                return;
+            }
+
+            // Création d'une modale de sélection simple
+            const selectionModal = document.createElement('div');
+            selectionModal.className = 'modal';
+            let optionsHTML = characters.map(char => `<button class="btn-primary" style="margin: 5px; width: 90%;" data-id="${char.id}">${char.name}</button>`).join('');
+            selectionModal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-btn">&times;</span>
+                    <h3>Choisir une Sainte Potentia</h3>
+                    <div class="saint-selection-list" style="display: flex; flex-direction: column; align-items: center;">${optionsHTML}</div>
+                </div>`;
+            document.body.appendChild(selectionModal);
+            
+            selectionModal.querySelector('.close-btn').onclick = () => selectionModal.remove();
+            selectionModal.onclick = (event) => { if (event.target === selectionModal) selectionModal.remove(); };
+
+            selectionModal.querySelectorAll('button[data-id]').forEach(btn => {
+                btn.onclick = () => {
+                    player.sainthood.potentiaUnitId = btn.dataset.id;
+                    saveData();
+                    renderPlayerDetail();
+                    selectionModal.remove();
+                    showNotification("Nouvelle Sainte Potentia désignée !", "success");
+                };
+            });
+        }
+    });
+    // *** FIN DE LA CORRECTION ***
+
+
+    document.getElementById('active-trial-select').addEventListener('change', (e) => {
+        const player = campaignData.players[activePlayerIndex];
+        if (player && player.sainthood) {
+            player.sainthood.activeTrial = e.target.value;
+            saveData();
+            renderSainthoodBox(player);
+        }
+    });
+
     // --- Événements de l'Ordre de Bataille et Unités ---
     
     const populateUnitSelector = () => {
@@ -322,35 +415,17 @@ document.addEventListener('DOMContentLoaded', () => {
             unitForm.dataset.initialXp = unit.xp || 0;
             unitForm.dataset.initialGlory = unit.markedForGlory || 0;
             
-            // =================================================================
-            // BUG FIX START: Correctly populate all form fields from saved data
-            // The previous loop failed to populate fields where the data property name 
-            // (e.g., 'battleHonours') did not directly map to the element ID (e.g., 'unit-honours').
-            // This explicit approach is more robust and fixes the reported bug.
             Object.keys(unit).forEach(key => {
-                // Generate the potential ID from the property key
                 let elementId = `unit-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
-
-                // Handle specific inconsistencies in naming between data model and HTML IDs
-                if (key === 'battleHonours') {
-                    elementId = 'unit-honours';
-                } else if (key === 'battleScars') {
-                    elementId = 'unit-scars';
-                }
+                if (key === 'battleHonours') elementId = 'unit-honours';
+                else if (key === 'battleScars') elementId = 'unit-scars';
                 
                 const element = document.getElementById(elementId);
                 if (element) {
-                    if (element.type === 'checkbox') {
-                        element.checked = unit[key];
-                    } else {
-                        // For all other elements, including textareas and inputs, set the value.
-                        element.value = unit[key] || '';
-                    }
+                    if (element.type === 'checkbox') element.checked = unit[key];
+                    else element.value = unit[key] || '';
                 }
             });
-            // BUG FIX END
-            // =================================================================
-
             document.getElementById('unit-id').value = editingUnitIndex;
             document.getElementById('unit-rank-display').textContent = getRankFromXp(unit.xp || 0);
             populateUpgradeSelectors();
@@ -365,6 +440,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    const updateAndSaveUnitDataFromForm = () => {
+        if (editingUnitIndex < 0 || activePlayerIndex < 0) return;
+        const name = document.getElementById('unit-name').value;
+        if (!name) return;
+        const player = campaignData.players[activePlayerIndex];
+        const unitData = {
+            name: name,
+            role: document.getElementById('unit-role').value,
+            power: parseInt(document.getElementById('unit-power').value) || 0,
+            xp: parseInt(document.getElementById('unit-xp').value) || 0,
+            crusadePoints: parseInt(document.getElementById('unit-crusade-points').value) || 0,
+            equipment: document.getElementById('unit-equipment').value,
+            warlordTrait: document.getElementById('unit-warlord-trait').value,
+            relic: document.getElementById('unit-relic').value,
+            battleHonours: document.getElementById('unit-honours').value,
+            battleScars: document.getElementById('unit-scars').value,
+            markedForGlory: parseInt(document.getElementById('unit-marked-for-glory').value) || 0
+        };
+        const existingUnit = player.units[editingUnitIndex];
+        player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
+        saveData();
+    };
+
 
     unitForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -398,6 +497,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderOrderOfBattle();
         closeModal(unitModal);
     });
+
+    unitForm.addEventListener('change', updateAndSaveUnitDataFromForm);
     
     // --- Événements du système planétaire et de la carte ---
     planetarySystemDiv.addEventListener('click', (e) => {

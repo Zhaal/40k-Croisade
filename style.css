@@ -815,6 +815,58 @@ label {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* --- NOUVEAU : Styles pour la boîte de Sainteté Sororitas --- */
+#sororitas-sainthood-box {
+    background-color: #1a1a1a;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    margin-top: 20px;
+}
+
+#sororitas-sainthood-box h3 {
+    text-align: center;
+}
+
+.sainthood-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.sainthood-controls .info-box {
+    flex-grow: 1;
+}
+
+#trials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.trial-card {
+    background-color: var(--surface-color);
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-left: 5px solid var(--primary-color);
+}
+.trial-card.completed {
+    border-left-color: var(--friendly-color);
+}
+
+.trial-card h4 {
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+}
+.trial-card p {
+    font-size: 0.9em;
+    color: var(--text-muted-color);
+    margin-bottom: 10px;
+    min-height: 50px;
+}
+
+
 /* --- Responsivité --- */
 @media (max-width: 900px) {
     .unit-card-body { grid-template-columns: 1fr; }
