@@ -94,6 +94,40 @@ const populateUpgradeSelectors = () => {
     }
     relicSelect.disabled = !isCharacter;
 
+    // --- NOUVEAU BLOC CORRIGÉ ---
+    // --- Optimisations de Détachement ---
+    const detachmentUpgradeSelect = document.getElementById('detachment-upgrade-select');
+    detachmentUpgradeSelect.innerHTML = '<option value="">Choisir une optimisation...</option>';
+
+    if (player && player.faction && factionDetachments[player.faction]) {
+        const detachmentUpgrades = factionDetachments[player.faction];
+        const groupedUpgrades = {};
+
+        // Regrouper les optimisations par leur détachement ('group')
+        detachmentUpgrades.forEach(upgrade => {
+            if (!groupedUpgrades[upgrade.group]) {
+                groupedUpgrades[upgrade.group] = [];
+            }
+            groupedUpgrades[upgrade.group].push(upgrade);
+        });
+
+        // Créer un <optgroup> pour chaque détachement
+        for (const groupName in groupedUpgrades) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = groupName;
+            groupedUpgrades[groupName].forEach(upgrade => {
+                const option = document.createElement('option');
+                option.value = upgrade.name;
+                option.textContent = `${upgrade.name} (${upgrade.cost} pts)`;
+                option.dataset.cost = upgrade.cost;
+                optgroup.appendChild(option);
+            });
+            detachmentUpgradeSelect.appendChild(optgroup);
+        }
+    }
+    // Les optimisations de détachement ne sont généralement pas limitées aux personnages
+    detachmentUpgradeSelect.disabled = !isCharacter;
+
 
     const battleScarSelect = document.getElementById('battle-scar-select');
     battleScarSelect.innerHTML = '<option value="">Choisir une cicatrice...</option>';
