@@ -17,6 +17,7 @@ let mapModal;
 let worldModal;
 let playerListView;
 let playerDetailView;
+let plagueManagementModal; // Ajouter une référence pour la nouvelle modale
 
 let activePlayerIndex = -1;
 let editingPlayerIndex = -1;
@@ -393,14 +394,27 @@ const loadData = () => {
             dataWasModified = true;
             console.log(`Migration: Ajout de biomassPoints pour le joueur Tyranide ${player.name}`);
         }
-        // NOUVEAU : Migration pour les points de Contagion (Death Guard)
+        
+        // MODIFIÉ : Migration complète pour la Death Guard
         if (player.faction === 'Death Guard') {
-            if (player.contagionPoints === undefined) {
-                player.contagionPoints = 0;
+            if (typeof player.deathGuardData === 'undefined') {
+                console.log(`Migration: Ajout de deathGuardData pour le joueur ${player.name}`);
+                player.deathGuardData = {
+                    contagionPoints: player.contagionPoints || 0,
+                    pathogenPower: 1, // Puissance du Pathogène de base
+                    corruptedPlanetIds: [], // Planètes actuellement infectées
+                    // Caractéristiques de la Peste du joueur
+                    plagueStats: {
+                        reproduction: 1,
+                        survival: 1,
+                        adaptability: 1
+                    }
+                };
+                delete player.contagionPoints; // Supprimer l'ancienne clé
                 dataWasModified = true;
-                console.log(`Migration: Ajout de contagionPoints pour le joueur Death Guard ${player.name}`);
             }
         }
+
         // NOUVEAU : Migration pour les données de Sainteté des Adepta Sororitas
         if (player.faction === 'Adepta Sororitas' && player.sainthood === undefined) {
             player.sainthood = {

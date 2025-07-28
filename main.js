@@ -128,11 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const newPlayerId = crypto.randomUUID();
             const newSystemId = crypto.randomUUID();
-            const faction = document.getElementById('player-faction-input').value.trim(); // Faction
+            const faction = document.getElementById('player-faction-input').value.trim();
             const DEFENSE_VALUES = [500, 1000, 1500, 2000];
             const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
             const numPlanets = 5;
             const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
+                id: crypto.randomUUID(), // NOUVEAU : ID unique pour chaque planète
                 type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(),
                 name: planetNames[i] || `Planète ${i + 1}`,
                 owner: i === 0 ? newPlayerId : "neutral",
@@ -158,15 +159,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 discoveredSystemIds: [newSystemId]
             };
 
-            // Ajout des points de Biomasse si le joueur est Tyranide
             if (faction === 'Tyranids') {
                 newPlayer.biomassPoints = 0;
             }
-            // Ajout des points de Contagion si le joueur est Death Guard
             if (faction === 'Death Guard') {
-                newPlayer.contagionPoints = 0;
+                newPlayer.deathGuardData = {
+                    contagionPoints: 0,
+                    pathogenPower: 1,
+                    corruptedPlanetIds: [],
+                    plagueStats: { reproduction: 1, survival: 1, adaptability: 1 }
+                };
             }
-            // NOUVEAU : Ajout de la structure de données pour la Sainteté si Adepta Sororitas
             if (faction === 'Adepta Sororitas') {
                 newPlayer.sainthood = {
                     potentiaUnitId: null,
@@ -214,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.querySelector('.player-info-grid').addEventListener('click', (e) => {
+    document.getElementById('player-detail-view').addEventListener('click', (e) => {
         const button = e.target.closest('.tally-btn');
         if (!button || activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
@@ -231,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (stat === 'biomass') { 
             player.biomassPoints = Math.max(0, (player.biomassPoints || 0) + change);
         } else if (stat === 'contagion') {
-            player.contagionPoints = Math.max(0, (player.contagionPoints || 0) + change);
+            player.deathGuardData.contagionPoints = Math.max(0, (player.deathGuardData.contagionPoints || 0) + change);
         } else {
             const battleStat = stat === 'win' ? 'wins' : 'losses';
             if (change < 0 && (player.battles[battleStat] || 0) === 0) return;
@@ -266,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // *** DÉBUT DE LA CORRECTION ***
     document.getElementById('sororitas-sainthood-box').addEventListener('click', async (e) => {
         const player = campaignData.players[activePlayerIndex];
         if (!player || player.faction !== 'Adepta Sororitas') return;
@@ -285,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 player.sainthood.trials[trialId] = Math.max(0, Math.min(10, currentPoints + change));
             } else if (type === 'martyrdom') {
                 player.sainthood.martyrdomPoints = Math.max(0, (player.sainthood.martyrdomPoints || 0) + change);
-                if (change > 0) { // Gagner un point de martyre déclenche l'épreuve de souffrance
+                if (change > 0) {
                     const currentSuffering = player.sainthood.trials.souffrance || 0;
                     player.sainthood.trials.souffrance = Math.min(10, currentSuffering + 3);
                     showNotification("Point de Martyre gagné ! +3 points pour l'Épreuve de Souffrance.", "info");
@@ -312,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Création d'une modale de sélection simple
             const selectionModal = document.createElement('div');
             selectionModal.className = 'modal';
             let optionsHTML = characters.map(char => `<button class="btn-primary" style="margin: 5px; width: 90%;" data-id="${char.id}">${char.name}</button>`).join('');
@@ -338,8 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
-    // *** FIN DE LA CORRECTION ***
-
 
     document.getElementById('active-trial-select').addEventListener('change', (e) => {
         const player = campaignData.players[activePlayerIndex];
@@ -363,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         unitSelect.innerHTML = '<option value="" disabled selected>Choisir une unité...</option>';
 
         if (units.length > 0) {
-            units.sort((a, b) => a.name.localeCompare(b.name)); // Tri alphabétique
+            units.sort((a, b) => a.name.localeCompare(b.name));
             units.forEach(unit => {
                 unitSelect.innerHTML += `<option value="${unit.name}" data-cost="${unit.cost}">${unit.name}</option>`;
             });
@@ -525,8 +524,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
             ownerSelect.dispatchEvent(new Event('change'));
             openModal(planetTypeModal);
+
+            // NOUVELLE LOGIQUE pour la Death Guard
+            const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+            const plagueBtnContainer = document.getElementById('planet-plague-actions');
+            if (plagueBtnContainer) plagueBtnContainer.remove();
+
+            if (viewingPlayer && viewingPlayer.faction === 'Death Guard') {
+                const container = document.createElement('div');
+                container.id = 'planet-plague-actions';
+                container.style.marginTop = '15px';
+                container.style.paddingTop = '15px';
+                container.style.borderTop = '1px solid var(--border-color)';
+
+                const isCorrupted = viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id);
+
+                if (isCorrupted) {
+                    const manageBtn = document.createElement('button');
+                    manageBtn.type = 'button';
+                    manageBtn.className = 'btn-primary';
+                    manageBtn.textContent = 'Gérer la Peste';
+                    manageBtn.onclick = () => openPlagueManagementModal(planet.id);
+                    container.appendChild(manageBtn);
+                } else {
+                    const infectBtn = document.createElement('button');
+                    infectBtn.type = 'button';
+                    infectBtn.className = 'btn-secondary';
+                    const cost = deathGuardCrusadeRules.intents.SEMER_LES_GRAINES.cost;
+                    infectBtn.textContent = `Infecter la Planète (${cost} PC)`;
+                    infectBtn.onclick = () => infectPlanet(planet.id);
+                    container.appendChild(infectBtn);
+                }
+                planetTypeForm.appendChild(container);
+            }
         }
     });
+
 
     worldModal.addEventListener('click', (e) => {
         if (e.target.id === 'show-map-btn') {
@@ -710,6 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
                 const numPlanets = 5;
                 const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
+                    id: crypto.randomUUID(),
                     type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(),
                     name: planetNames[i] || `Planète ${i + 1}`,
                     owner: i === 0 ? player.id : "neutral",
@@ -758,48 +792,114 @@ document.addEventListener('DOMContentLoaded', () => {
         customTooltip.style.opacity = '0';
     });
     
-document.getElementById('add-biomorphology-btn').addEventListener('click', async () => {
-    const select = document.getElementById('biomorphology-select');
-    const selectedOption = select.options[select.selectedIndex];
-    if (!selectedOption || !selectedOption.value) return;
-
-    const player = campaignData.players[activePlayerIndex];
-    const biomassCost = parseInt(selectedOption.dataset.biomass);
-    const cpCost = parseInt(selectedOption.dataset.cp);
-    const morphName = selectedOption.value;
-    const morph = tyranidCrusadeRules.biomorphologies.find(m => m.name === morphName);
-
-    if (!morph) return;
-
-    if (player.biomassPoints < biomassCost) {
-        showNotification(`Biomasse insuffisante (Requis: ${biomassCost}).`, 'error');
-        return;
-    }
-
-    const confirmText = `Voulez-vous dépenser <b>${biomassCost} Biomasse</b> pour faire évoluer cette unité avec <i>${morphName}</i>?<br><br>Coût: ${cpCost} PC<br>Solde Biomasse: ${player.biomassPoints} &rarr; ${player.biomassPoints - biomassCost}`;
+    document.getElementById('add-biomorphology-btn').addEventListener('click', async () => {
+        const select = document.getElementById('biomorphology-select');
+        const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption || !selectedOption.value) return;
     
-    if (await showConfirm("Confirmer l'Évolution", confirmText)) {
-        const unit = player.units[editingUnitIndex];
-
-        // Mettre à jour les données du joueur et de l'unité
-        player.biomassPoints -= biomassCost;
+        const player = campaignData.players[activePlayerIndex];
+        const biomassCost = parseInt(selectedOption.dataset.biomass);
+        const cpCost = parseInt(selectedOption.dataset.cp);
+        const morphName = selectedOption.value;
+        const morph = tyranidCrusadeRules.biomorphologies.find(m => m.name === morphName);
+    
+        if (!morph) return;
+    
+        if (player.biomassPoints < biomassCost) {
+            showNotification(`Biomasse insuffisante (Requis: ${biomassCost}).`, 'error');
+            return;
+        }
+    
+        const confirmText = `Voulez-vous dépenser <b>${biomassCost} Biomasse</b> pour faire évoluer cette unité avec <i>${morphName}</i>?<br><br>Coût: ${cpCost} PC<br>Solde Biomasse: ${player.biomassPoints} &rarr; ${player.biomassPoints - biomassCost}`;
         
-        const textToAdd = `\n- Biomorphologie: ${morph.name}: ${morph.desc}`;
-        unit.battleHonours = (unit.battleHonours || '').trim() + textToAdd;
-        unit.crusadePoints = (unit.crusadePoints || 0) + cpCost;
-        
-        // Mettre à jour l'interface utilisateur
-        document.getElementById('unit-honours').value = unit.battleHonours;
-        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
-        select.value = '';
+        if (await showConfirm("Confirmer l'Évolution", confirmText)) {
+            const unit = player.units[editingUnitIndex];
+    
+            player.biomassPoints -= biomassCost;
+            
+            const textToAdd = `\n- Biomorphologie: ${morph.name}: ${morph.desc}`;
+            unit.battleHonours = (unit.battleHonours || '').trim() + textToAdd;
+            unit.crusadePoints = (unit.crusadePoints || 0) + cpCost;
+            
+            document.getElementById('unit-honours').value = unit.battleHonours;
+            document.getElementById('unit-crusade-points').value = unit.crusadePoints;
+            select.value = '';
+    
+            saveData();
+            renderPlayerDetail(); 
+            showNotification(`Évolution ${morphName} absorbée !`, 'success');
+        }
+    });
 
-        // Sauvegarder et notifier
+    // --- NOUVELLES FONCTIONS DE LOGIQUE POUR LA DEATH GUARD ---
+    function infectPlanet(planetId) {
+        const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        const cost = deathGuardCrusadeRules.intents.SEMER_LES_GRAINES.cost;
+    
+        if (player.deathGuardData.contagionPoints < cost) {
+            showNotification("Points de Contagion insuffisants.", 'error');
+            return;
+        }
+    
+        player.deathGuardData.contagionPoints -= cost;
+        if (!player.deathGuardData.corruptedPlanetIds.includes(planetId)) {
+            player.deathGuardData.corruptedPlanetIds.push(planetId);
+        }
+        
+        // Assigner des caractéristiques à la planète si elle n'en a pas
+        for (const system of campaignData.systems) {
+            const planet = system.planets.find(p => p.id === planetId);
+            if (planet) {
+                if (typeof planet.fecundity === 'undefined') {
+                    planet.fecundity = Math.ceil(Math.random() * 6);
+                    planet.populationDensity = Math.ceil(Math.random() * 6);
+                    planet.vulnerability = Math.ceil(Math.random() * 6);
+                    console.log(`Planet ${planet.name} initialized with stats.`);
+                }
+                break; 
+            }
+        }
+    
         saveData();
-        renderPlayerDetail(); 
-        showNotification(`Évolution ${morphName} absorbée !`, 'success');
+        renderPlayerDetail();
+        renderPlanetarySystem(currentlyViewedSystemId);
+        closeModal(planetTypeModal);
+        showNotification("La planète a été infectée ! Vous pouvez maintenant gérer la peste.", 'success');
     }
-});
-
+    
+    function openPlagueManagementModal(planetId) {
+        plagueManagementModal = document.getElementById('plague-management-modal');
+        closeModal(planetTypeModal);
+    
+        const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        const system = campaignData.systems.find(s => s.planets.some(p => p.id === planetId));
+        if (!system) return;
+        const planet = system.planets.find(p => p.id === planetId);
+        if (!planet) return;
+    
+        // Remplir les données de la modale
+        document.getElementById('plague-modal-title').textContent = `Guerre Bactériologique sur ${planet.name}`;
+        document.getElementById('planet-fecundity').textContent = planet.fecundity;
+        document.getElementById('planet-population').textContent = planet.populationDensity;
+        document.getElementById('planet-vulnerability').textContent = planet.vulnerability;
+        
+        const plagueStats = player.deathGuardData.plagueStats;
+        document.getElementById('player-plague-reproduction').textContent = plagueStats.reproduction;
+        document.getElementById('player-plague-survival').textContent = plagueStats.survival;
+        document.getElementById('player-plague-adaptability').textContent = plagueStats.adaptability;
+    
+        // Calculer le Total de Peste (Note: C'est la somme des 3 paires de caractéristiques)
+        const totalPeste = Math.min(6, (planet.fecundity || 0) + plagueStats.reproduction) +
+                           Math.min(6, (planet.populationDensity || 0) + plagueStats.survival) +
+                           Math.min(6, (planet.vulnerability || 0) + plagueStats.adaptability);
+        document.getElementById('total-peste-value').textContent = totalPeste;
+    
+        const conquerBtn = document.getElementById('conquer-plague-btn');
+        conquerBtn.disabled = totalPeste < 7;
+        
+        openModal(plagueManagementModal);
+    }
+    
     //======================================================================
     //  INITIALISATION
     //======================================================================

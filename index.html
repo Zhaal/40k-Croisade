@@ -60,12 +60,7 @@
                     <button class="tally-btn" data-action="decrease-biomass">-</button>
                     <button class="tally-btn" data-action="increase-biomass">+</button>
                 </div>
-                <div id="deathguard-box" class="info-box hidden">
-                    <strong>Points de Contagion:</strong>
-                    <span id="contagion-points" class="stat-value"></span>
-                    <button class="tally-btn" data-action="decrease-contagion">-</button>
-                    <button class="tally-btn" data-action="increase-contagion">+</button>
-                </div>
+                
                 <div class="info-box">
                     <strong>Éclats de Sombreroche:</strong>
                     <span id="sombreroche-points" class="stat-value"></span>
@@ -129,6 +124,34 @@
                     <div id="saint-rewards-display">
                         <p>Les récompenses des Épreuves terminées (10+ points) apparaîtront ici.</p>
                     </div>
+                </div>
+            </div>
+            
+            <div id="deathguard-box" class="info-box hidden" style="grid-column: 1 / -1; background-color: #1a1a1a; padding: 15px; border: 1px solid var(--border-color); margin-top: 20px;">
+                <h3 style="text-align: center; color: var(--friendly-color);">Centre de Commandement de la Peste</h3>
+                <div class="sainthood-controls">
+                    <div class="info-box">
+                        <strong>Points de Contagion:</strong>
+                        <span id="contagion-points" class="stat-value"></span>
+                        <button class="tally-btn" data-action="decrease-contagion">-</button>
+                        <button class="tally-btn" data-action="increase-contagion">+</button>
+                    </div>
+                    <div class="info-box">
+                        <strong>Puissance du Pathogène:</strong>
+                        <span id="pathogen-power" class="stat-value">1</span> / 5
+                    </div>
+                    <div class="info-box">
+                        <strong>Taux de Reproduction:</strong> <span id="plague-reproduction" class="stat-value">1</span> / 6
+                    </div>
+                    <div class="info-box">
+                        <strong>Taux de Survie:</strong> <span id="plague-survival" class="stat-value">1</span> / 6
+                    </div>
+                    <div class="info-box">
+                        <strong>Adaptabilité:</strong> <span id="plague-adaptability" class="stat-value">1</span> / 6
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button id="upgrade-plague-btn" class="btn-secondary">Améliorer la Peste (5-10 PC)</button>
                 </div>
             </div>
 
@@ -472,10 +495,40 @@
             </div>
         </div>
     </div>
+
+    <div id="plague-management-modal" class="modal hidden">
+        <div class="modal-content large">
+            <span class="close-btn">&times;</span>
+            <h3 id="plague-modal-title" class="crusade-card-title">Guerre Bactériologique</h3>
+            <div id="plague-warfare-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4 style="text-align: center;">Caractéristiques du Monde</h4>
+                    <div class="info-box"><strong>Fécondité:</strong> <span id="planet-fecundity"></span></div>
+                    <div class="info-box"><strong>Densité de Population:</strong> <span id="planet-population"></span></div>
+                    <div class="info-box"><strong>Vulnérabilité:</strong> <span id="planet-vulnerability"></span></div>
+                </div>
+                <div>
+                    <h4 style="text-align: center;">Caractéristiques de la Peste</h4>
+                    <div class="info-box"><strong>Taux de Reproduction:</strong> <span id="player-plague-reproduction"></span></div>
+                    <div class="info-box"><strong>Taux de Survie:</strong> <span id="player-plague-survival"></span></div>
+                    <div class="info-box"><strong>Adaptabilité:</strong> <span id="player-plague-adaptability"></span></div>
+                </div>
+            </div>
+            <hr>
+            <div style="text-align: center;">
+                <h3>Total de Peste: <span id="total-peste-value" style="color: var(--friendly-color);">0</span></h3>
+                <p>Le Total de Peste est la somme des 3 scores combinés ci-dessus.</p>
+                <p>Un score de <b>7+</b> est nécessaire pour tenter de Concrétiser la Peste.</p>
+                <button id="conquer-plague-btn" class="btn-primary" disabled>Concrétiser la Peste (1 PR)</button>
+            </div>
+        </div>
+    </div>
+
     <script src="engine.js"></script> 
     <script src="rules.js"></script>
     <script src="galaxy.js"></script>
-    <script src="sororitas_rules.js"></script> <script src="render.js"></script>
+    <script src="sororitas_rules.js"></script> 
+    <script src="render.js"></script>
     <script src="upgrades.js"></script>
     <script src="main.js"></script>
 </body>

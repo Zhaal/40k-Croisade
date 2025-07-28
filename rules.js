@@ -1020,17 +1020,30 @@ const tyranidCrusadeRules = {
 
 // NOUVEL AJOUT : Règles de croisade spécifiques à la Death Guard
 const deathGuardCrusadeRules = {
-    boonsOfNurgle: [
-        { name: "Vitalité Fébrile", roll: 11, desc: "Ajoutez 1 à la caractéristique de Points de Vie des figurines de cette unité." },
-        { name: "Membres Sinueux", roll: 12, desc: "Ajoutez 1 aux jets d'Avance et de Charge pour cette figurine." },
-        { name: "Tentacules Grouillants", roll: 13, desc: "Ajoutez 1 à la caractéristique d'Attaques des armes de mêlée dont cette figurine est équipée." },
-        { name: "Hideusement Enflé", roll: 21, desc: "Ajoutez 2 à la caractéristique de Points de Vie de cette figurine." },
-        { name: "Insensibilité Lépreuse", roll: 22, desc: "Cette figurine a l'aptitude Insensible à la Douleur 5+." },
-        { name: "Voile de Mouches", roll: 23, desc: "Les figurines de l'unité de cette figurine ont l'aptitude Discrétion." },
-        { name: "Contact Putréfiant", roll: 31, desc: "Améliorez de 1 la caractéristique de Pénétration d'Armure des armes de mêlée dont cette figurine est équipée." },
-        { name: "Pestevision", roll: 32, desc: "À chaque attaque de tir effectuée par cette figurine, ignorez les bonus que la cible reçoit pour son couvert." },
-        { name: "Tourbillon de Miasmes", roll: 33, desc: "Ajoutez D3\" à la portée de Contagion de cette figurine." }
-    ]
+    // Inspiré de l'image "Voie de la Contagion"
+    contagionPointSources: [
+        { name: "Mise en Culture", desc: "Après une bataille où vous avez utilisé votre objectif de Croisade 'Fomentation Virulente', +d3 PC.", cost: 0 },
+        { name: "Bilan des Victimes", desc: "Si le nombre de figurines ennemies détruites est supérieur ou égal au double de votre caractéristique de Vulnérabilité, +d3 PC.", cost: 0 },
+        { name: "Offrande Acceptable", desc: "Si vous avez réussi à 'Concrétiser une Peste', +1 PC.", cost: 0 }
+    ],
+    // Inspiré de l'image "Bénédictions de Nurgle"
+    plagueUpgrades: [
+        { id: "reproduction", name: "Améliorer Taux de Reproduction", cost: 5, max: 6 },
+        { id: "survival", name: "Améliorer Taux de Survie", cost: 5, max: 6 },
+        { id: "adaptability", name: "Améliorer Adaptabilité", cost: 5, max: 6 },
+        { id: "pathogenPower", name: "Augmenter Puissance du Pathogène", cost: 10, max: 5 }
+    ],
+    // Inspiré de l'image "Réquisitions"
+    requisitions: [
+        { name: "Sublimation Souillée (1PR)", desc: "Dépensez des points de contagion pour acheter des améliorations de Peste." },
+        { name: "Fruits du Chaudron (1PR)", desc: "Adaptez une toxine pour la prochaine bataille." },
+        { name: "Ascension Putride (2PR)", desc: "Un PERSONNAGE devient un PRINCE DÉMON ou un REJETON DU CHAOS." },
+        { name: "Puissance Paisible (2PR)", desc: "Un champion reçoit des bénédictions même s'il ne succombe pas à ses blessures." }
+    ],
+    // Inspiré de l'image "Intentions"
+    intents: {
+        SEMER_LES_GRAINES: { name: "Semer les Graines de la Corruption", cost: 1, desc: "Pour 1 Point de Contagion, une de vos unités peut tenter de contaminer une planète en fin de bataille."}
+    }
 };
 
 

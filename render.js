@@ -75,21 +75,19 @@ const renderPlayerDetail = () => {
     const deathguardBox = document.getElementById('deathguard-box');
     if (player.faction === 'Death Guard') {
         deathguardBox.classList.remove('hidden');
-        document.getElementById('contagion-points').textContent = player.contagionPoints || 0;
+        renderDeathGuardBox(player);
     } else {
         deathguardBox.classList.add('hidden');
     }
 
-    // *** DÉBUT DE LA CORRECTION ***
     // Affichage conditionnel de la boîte de Sainteté (Adepta Sororitas)
     const sainthoodBox = document.getElementById('sororitas-sainthood-box');
     if (player.faction === 'Adepta Sororitas') {
         sainthoodBox.classList.remove('hidden');
-        renderSainthoodBox(player); // Appel de la fonction de rendu
+        renderSainthoodBox(player);
     } else {
         sainthoodBox.classList.add('hidden');
     }
-    // *** FIN DE LA CORRECTION ***
 
     document.getElementById('supply-limit').value = player.supplyLimit;
     document.getElementById('upgrade-supply-cost').value = player.upgradeSupplyCost || 0;
@@ -186,6 +184,15 @@ const renderPlanetarySystem = (systemId) => {
         planetDiv.dataset.owner = planet.owner;
         planetDiv.dataset.systemId = systemId;
         planetDiv.dataset.planetIndex = index;
+        
+        // NOUVEAU : Ajout de l'effet visuel de corruption
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        if (viewingPlayer && viewingPlayer.faction === 'Death Guard' && viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id)) {
+            planetDiv.classList.add('corrupted-planet');
+        } else {
+            planetDiv.classList.remove('corrupted-planet');
+        }
+        
         if (planet.owner === mapViewingPlayerId) {
             planetDiv.classList.add('friendly-planet');
         }
@@ -442,12 +449,6 @@ const updateExplorationArrows = (currentSystem) => {
     });
 };
 
-
-// *** DÉBUT DE LA NOUVELLE FONCTION ***
-/**
- * Renders the content of the Sororitas Sainthood box based on player data.
- * @param {object} player - The active player object, who must be Adepta Sororitas.
- */
 const renderSainthoodBox = (player) => {
     if (!player || player.faction !== 'Adepta Sororitas') return;
 
@@ -529,4 +530,14 @@ const renderSainthoodBox = (player) => {
         rewardsDisplayEl.innerHTML = `<p>Les récompenses des Épreuves terminées (10+ points) apparaîtront ici.</p>`;
     }
 };
-// *** FIN DE LA NOUVELLE FONCTION ***
+
+// NOUVELLE FONCTION de rendu pour la Death Guard
+const renderDeathGuardBox = (player) => {
+    if (!player || player.faction !== 'Death Guard' || !player.deathGuardData) return;
+
+    document.getElementById('contagion-points').textContent = player.deathGuardData.contagionPoints || 0;
+    document.getElementById('pathogen-power').textContent = player.deathGuardData.pathogenPower || 1;
+    document.getElementById('plague-reproduction').textContent = player.deathGuardData.plagueStats.reproduction || 1;
+    document.getElementById('plague-survival').textContent = player.deathGuardData.plagueStats.survival || 1;
+    document.getElementById('plague-adaptability').textContent = player.deathGuardData.plagueStats.adaptability || 1;
+};
