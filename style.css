@@ -356,6 +356,7 @@ label {
     color: var(--text-muted-color);
     margin-bottom: 8px;
     display: block;
+    cursor: help;
 }
 .input-group {
     display: flex;
@@ -786,6 +787,32 @@ label {
 
 .notification b, .notification strong {
     color: var(--primary-color);
+}
+
+/* --- NOUVEAU : Infobulle personnalisée --- */
+#custom-tooltip {
+    position: fixed;
+    z-index: 1001; /* Doit être au-dessus des modales (z-index: 100) */
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--primary-color);
+    font-size: 0.9em;
+    line-height: 1.4;
+    max-width: 300px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+#custom-tooltip strong {
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 /* --- Responsivité --- */

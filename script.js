@@ -137,6 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmModalOkBtn = document.getElementById('confirm-modal-ok-btn');
     const confirmModalCancelBtn = document.getElementById('confirm-modal-cancel-btn');
 
+    // NOUVEAU: Création de l'élément d'infobulle personnalisé
+    const customTooltip = document.createElement('div');
+    customTooltip.id = 'custom-tooltip';
+    document.body.appendChild(customTooltip);
+
 
     //======================================================================
     //  SYSTÈME DE NOTIFICATION ET DE CONFIRMATION
@@ -1200,7 +1205,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const openUnitModal = () => {
         unitForm.reset();
         document.getElementById('unit-id').value = '';
-        const role = document.getElementById('unit-role').value;
+        
+        // NOUVEAU: Initialiser les données pour le calcul d'XP en direct pour une nouvelle unité
+        unitForm.dataset.initialXp = "0";
+        unitForm.dataset.initialGlory = "0";
+        document.getElementById('unit-marked-for-glory').value = 0;
+        
         document.getElementById('unit-rank-display').textContent = getRankFromXp(0);
         
         // Déplacer la section des améliorations en haut
@@ -1306,7 +1316,11 @@ document.addEventListener('DOMContentLoaded', () => {
             editingUnitIndex = parseInt(target.dataset.index);
             const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
             unitModalTitle.textContent = `Modifier ${unit.name}`;
-            openUnitModal(); // Ouvre la modale et place les éléments correctement
+            openUnitModal();
+
+            // NOUVEAU: Stocker les valeurs initiales pour le calcul d'XP en direct
+            unitForm.dataset.initialXp = unit.xp || 0;
+            unitForm.dataset.initialGlory = unit.markedForGlory || 0;
             
             // Pré-remplir les champs après ouverture
             Object.keys(unit).forEach(key => {
@@ -1510,9 +1524,15 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const name = document.getElementById('unit-name').value.trim();
         if (!name) return;
-
+    
+        const player = campaignData.players[activePlayerIndex];
+        
+        // La logique d'XP est maintenant gérée en direct par un écouteur d'événement.
+        // Nous lisons simplement la valeur finale du formulaire.
+    
         const unitData = {
-            name: name, role: document.getElementById('unit-role').value,
+            name: name,
+            role: document.getElementById('unit-role').value,
             power: parseInt(document.getElementById('unit-power').value) || 0,
             xp: parseInt(document.getElementById('unit-xp').value) || 0,
             crusadePoints: parseInt(document.getElementById('unit-crusade-points').value) || 0,
@@ -1523,8 +1543,7 @@ document.addEventListener('DOMContentLoaded', () => {
             battleScars: document.getElementById('unit-scars').value,
             markedForGlory: parseInt(document.getElementById('unit-marked-for-glory').value) || 0
         };
-
-        const player = campaignData.players[activePlayerIndex];
+    
         if (editingUnitIndex > -1) {
             const existingUnit = player.units[editingUnitIndex];
             player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
@@ -1532,6 +1551,7 @@ document.addEventListener('DOMContentLoaded', () => {
             unitData.id = crypto.randomUUID();
             player.units.push(unitData);
         }
+    
         saveData();
         renderOrderOfBattle();
         closeModal(unitModal);
@@ -1611,6 +1631,25 @@ document.addEventListener('DOMContentLoaded', () => {
         populateUpgradeSelectors();
     });
 
+    // NOUVEAU: Mise à jour en direct de l'XP pour "Marqué pour la Gloire"
+    document.getElementById('unit-marked-for-glory').addEventListener('input', (e) => {
+        const unitForm = document.getElementById('unit-form');
+        const initialXp = parseInt(unitForm.dataset.initialXp || 0);
+        const initialGlory = parseInt(unitForm.dataset.initialGlory || 0);
+        
+        const newGloryValue = parseInt(e.target.value || 0);
+
+        const xpGained = Math.floor(newGloryValue / 3) - Math.floor(initialGlory / 3);
+        const newTotalXp = initialXp + xpGained;
+
+        const xpInput = document.getElementById('unit-xp');
+        if (parseInt(xpInput.value) !== newTotalXp) {
+            xpInput.value = newTotalXp;
+            // Déclencher l'événement 'input' sur le champ XP pour mettre à jour le rang
+            xpInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+
     // MODIFIÉ: L'event listener pour les inputs de la grille d'info joueur a été amélioré.
     document.querySelector('.player-info-grid').addEventListener('input', (e) => {
         if (activePlayerIndex === -1) return;
@@ -1677,6 +1716,54 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     //  NOUVELLE LOGIQUE : GESTION DES AMÉLIORATIONS D'UNITÉ
     //======================================================================
+
+    // NOUVEAU: Helper pour trouver la description d'une amélioration
+    const findUpgradeDescription = (upgradeName) => {
+        if (!upgradeName) return null;
+        const allRules = [
+            ...Object.values(crusadeRules.battleTraits).flat(),
+            ...crusadeRules.weaponMods,
+            ...Object.values(crusadeRules.relics).flat(),
+            ...crusadeRules.sombrerocheHonours,
+            ...crusadeRules.sombrerocheRelics,
+            ...crusadeRules.battleScars
+        ];
+        const foundRule = allRules.find(rule => rule.name === upgradeName);
+        return foundRule ? foundRule.desc : null;
+    };
+
+    // NOUVEAU: Gestion des infobulles pour les améliorations
+    const upgradesSection = document.getElementById('unit-upgrades-section');
+    upgradesSection.addEventListener('mouseover', (e) => {
+        const label = e.target.closest('.upgrade-control-group > label');
+        if (!label) return;
+
+        const select = label.closest('.upgrade-control-group').querySelector('select');
+        if (!select || !select.value) {
+            customTooltip.style.opacity = '0';
+            return;
+        }
+
+        const desc = findUpgradeDescription(select.value);
+        if (desc) {
+            customTooltip.innerHTML = `<strong>${select.value}</strong><p style="margin: 5px 0 0 0;">${desc}</p>`;
+            
+            const rect = label.getBoundingClientRect();
+            customTooltip.style.left = `${rect.left}px`;
+            customTooltip.style.top = `${rect.bottom + 5}px`;
+            customTooltip.style.opacity = '1';
+        } else {
+            customTooltip.style.opacity = '0';
+        }
+    });
+
+    upgradesSection.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.upgrade-control-group > label')) {
+            customTooltip.style.opacity = '0';
+        }
+    });
+
+
     const populateUpgradeSelectors = () => {
         const unitRole = document.getElementById('unit-role').value;
         const isCharacter = unitRole === 'Personnage' || unitRole === 'Hero Epique';
