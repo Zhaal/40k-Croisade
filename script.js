@@ -273,6 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 player.sombrerochePoints = 0;
                 dataWasModified = true;
             }
+            // NOUVELLE MIGRATION
+            if (player.upgradeSupplyCost === undefined) {
+                player.upgradeSupplyCost = 0;
+                dataWasModified = true;
+            }
         });
 
         campaignData.systems.forEach(system => {
@@ -537,6 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pr-points').textContent = player.requisitionPoints;
         document.getElementById('sombreroche-points').textContent = player.sombrerochePoints || 0;
         document.getElementById('supply-limit').value = player.supplyLimit;
+        // NOUVEAU: Mettre à jour le champ pour le coût des optimisations
+        document.getElementById('upgrade-supply-cost').value = player.upgradeSupplyCost || 0;
+
 
         const battleTally = (player.battles.wins || 0) + (player.battles.losses || 0);
         document.getElementById('battle-tally').textContent = battleTally;
@@ -546,6 +554,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('goals-notes').value = player.goalsNotes || '';
 
         renderOrderOfBattle();
+    };
+    
+    // NOUVELLE FONCTION: Met à jour l'affichage du ravitaillement
+    const updateSupplyDisplay = () => {
+        if (activePlayerIndex === -1) return;
+        const player = campaignData.players[activePlayerIndex];
+
+        const supplyFromUnits = (player.units || []).reduce((total, unit) => total + (unit.power || 0), 0);
+        const supplyFromUpgrades = player.upgradeSupplyCost || 0;
+        const totalUsed = supplyFromUnits + supplyFromUpgrades;
+        const remainingSupply = (player.supplyLimit || 0) - totalUsed;
+
+        // NOTE: Ces mises à jour supposent que votre HTML a été modifié pour inclure
+        // un input avec id="upgrade-supply-cost" et un span avec id="supply-remaining".
+        document.getElementById('supply-used').textContent = totalUsed;
+        document.getElementById('supply-remaining').textContent = remainingSupply;
     };
 
     const getRankFromXp = (xp) => {
@@ -560,16 +584,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const player = campaignData.players[activePlayerIndex];
         const tbody = document.getElementById('units-tbody');
         tbody.innerHTML = '';
-        let supplyUsed = 0;
-
+        
         (player.units || []).forEach((unit, index) => {
-            supplyUsed += unit.powerRating;
             const rank = getRankFromXp(unit.xp);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${unit.name}</td>
                 <td>${unit.role}</td>
-                <td>${unit.powerRating}</td>
+                <td>${unit.power || 0}</td>
                 <td>${unit.crusadePoints || 0}</td>
                 <td>${unit.xp}</td>
                 <td>${rank}</td>
@@ -581,7 +603,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(row);
         });
 
-        document.getElementById('supply-used').textContent = supplyUsed;
+        // MODIFIÉ: Appelle la nouvelle fonction pour mettre à jour tout le bloc de ravitaillement
+        updateSupplyDisplay();
     };
 
     const renderPlanetarySystem = (systemId) => {
@@ -1471,7 +1494,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: newPlayerId, systemId: newSystemId, name: name,
                 faction: document.getElementById('player-faction-input').value.trim(),
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
-                supplyLimit: 50, battles: { wins: 0, losses: 0 },
+                supplyLimit: 50, 
+                upgradeSupplyCost: 0, // NOUVEAU
+                battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
                 discoveredSystemIds: [newSystemId]
             });
@@ -1488,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const unitData = {
             name: name, role: document.getElementById('unit-role').value,
-            powerRating: parseInt(document.getElementById('unit-power').value) || 0,
+            power: parseInt(document.getElementById('unit-power').value) || 0,
             xp: parseInt(document.getElementById('unit-xp').value) || 0,
             crusadePoints: parseInt(document.getElementById('unit-crusade-points').value) || 0,
             equipment: document.getElementById('unit-equipment').value,
@@ -1586,12 +1611,30 @@ document.addEventListener('DOMContentLoaded', () => {
         populateUpgradeSelectors();
     });
 
+    // MODIFIÉ: L'event listener pour les inputs de la grille d'info joueur a été amélioré.
     document.querySelector('.player-info-grid').addEventListener('input', (e) => {
         if (activePlayerIndex === -1) return;
         const player = campaignData.players[activePlayerIndex];
-        if (e.target.id === 'supply-limit') player.supplyLimit = parseInt(e.target.value) || 0;
-        else if (e.target.id === 'crusade-faction') player.crusadeFaction = e.target.value;
+        let needsSupplyUpdate = false;
+
+        const targetId = e.target.id;
+        const value = e.target.value;
+
+        if (targetId === 'supply-limit') {
+            player.supplyLimit = parseInt(value) || 0;
+            needsSupplyUpdate = true;
+        } else if (targetId === 'crusade-faction') {
+            player.crusadeFaction = value;
+        } else if (targetId === 'upgrade-supply-cost') { // NOUVEAU
+            player.upgradeSupplyCost = parseInt(value) || 0;
+            needsSupplyUpdate = true;
+        }
+
         saveData();
+
+        if (needsSupplyUpdate) {
+            updateSupplyDisplay();
+        }
     });
 
     document.getElementById('goals-notes').addEventListener('change', (e) => {

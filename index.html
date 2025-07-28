@@ -64,7 +64,15 @@
                     <strong>Limite de Ravitaillement:</strong>
                     <input type="number" id="supply-limit" min="0"> PL
                 </div>
-                <div class="info-box"><strong>Ravitaillement Utilisé:</strong> <span id="supply-used" class="stat-value readonly"></span> PL</div>
+                <div class="info-box">
+                    <strong>Coût Optimisations:</strong>
+                    <input type="number" id="upgrade-supply-cost" min="0"> PL
+                </div>
+                <div class="info-box">
+                    <strong>Ravitaillement Utilisé:</strong> <span id="supply-used" class="stat-value readonly"></span> PL
+                    <br>
+                    <small>Restant: <span id="supply-remaining" style="color: white; font-weight: bold;"></span> PL</small>
+                </div>
                 <div class="info-box">
                     <strong>Décompte de Batailles:</strong> <span id="battle-tally" class="stat-value">0</span>
                     (V:<span id="wins">0</span> / D:<span id="losses">0</span>)
@@ -85,7 +93,7 @@
                     <tr>
                         <th>Nom de l'Unité</th>
                         <th>Rôle</th>
-                        <th>Puissance</th>
+                        <th>Coût en Points</th>
                         <th>Points de Croisade</th>
                         <th>XP</th>
                         <th>Rang</th>
@@ -144,15 +152,11 @@
                                 <option value="Vehicule">Véhicule</option>
                                 <option value="Bête">Bête</option>
                                 <option value="Fortification">Fortification</option>
-                                <option value="Aéronef">Aéronef</option>
-                                <option value="Transport">Transport</option>
-                                <option value="Marcheur">Marcheur</option>
                                 <option value="Titanesque">Titanesque</option>
                                 <option value="Nuée">Nuée</option>
-                                <option value="Artillerie">Artillerie</option>
                             </select>
                         </div>
-                        <div class="form-group small"><label for="unit-power">Puissance :</label><input type="number" id="unit-power" min="0" required></div>
+                        <div class="form-group small"><label for="unit-power">Coût en Points :</label><input type="number" id="unit-power" min="0" required></div>
                         <div class="form-group small"><label for="unit-xp">XP :</label><input type="number" id="unit-xp" min="0"></div>
                         <div class="form-group small"><label for="unit-crusade-points">Points de Croisade :</label><input type="number" id="unit-crusade-points" min="0"></div>
                         <div class="form-group small"><strong>Rang:</strong> <span id="unit-rank-display"></span></div>
