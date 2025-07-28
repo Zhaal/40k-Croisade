@@ -92,6 +92,43 @@ function showConfirm(title, text) {
     });
 }
 
+// *** DÉBUT DE LA MODIFICATION ***
+function showExplorationChoice(title, text) {
+    return new Promise(resolve => {
+        const choiceModal = document.getElementById('exploration-choice-modal');
+        const choiceTitle = document.getElementById('exploration-choice-title');
+        const choiceText = document.getElementById('exploration-choice-text');
+        const cancelBtn = document.getElementById('exploration-choice-cancel-btn');
+        const blindJumpBtn = document.getElementById('exploration-choice-blind-jump-btn');
+        const probeBtn = document.getElementById('exploration-choice-probe-btn');
+
+        choiceTitle.textContent = title;
+        choiceText.innerHTML = text;
+        openModal(choiceModal);
+
+        const closeAndResolve = (value) => {
+            closeModal(choiceModal);
+            // Retire les écouteurs d'événements pour éviter les fuites de mémoire
+            cancelBtn.removeEventListener('click', cancelListener);
+            blindJumpBtn.removeEventListener('click', blindJumpListener);
+            probeBtn.removeEventListener('click', probeListener);
+            choiceModal.querySelector('.close-btn').removeEventListener('click', cancelListener);
+            resolve(value);
+        };
+
+        const cancelListener = () => closeAndResolve('cancel');
+        const blindJumpListener = () => closeAndResolve('blind_jump');
+        const probeListener = () => closeAndResolve('probe');
+
+        // Ajoute les écouteurs d'événements
+        cancelBtn.addEventListener('click', cancelListener);
+        blindJumpBtn.addEventListener('click', blindJumpListener);
+        probeBtn.addEventListener('click', probeListener);
+        choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener);
+    });
+}
+// *** FIN DE LA MODIFICATION ***
+
 const openModal = (modal) => modal.classList.remove('hidden');
 const closeModal = (modal) => modal.classList.add('hidden');
 

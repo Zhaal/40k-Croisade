@@ -457,7 +457,21 @@
             </div>
         </div>
     </div>
-
+    
+    <div id="exploration-choice-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="exploration-choice-title">Méthode d'Exploration</h3>
+            <p id="exploration-choice-text" style="line-height: 1.6;"></p>
+            <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap;">
+                <button id="exploration-choice-cancel-btn" class="btn-secondary">Annuler</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="exploration-choice-blind-jump-btn" class="btn-primary">Saut à l'aveugle</button>
+                    <button id="exploration-choice-probe-btn" class="btn-primary">Envoyer la sonde (1 RP)</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="engine.js"></script> 
     <script src="rules.js"></script>
     <script src="galaxy.js"></script>

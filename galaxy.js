@@ -206,9 +206,13 @@ const handleExploration = async (direction) => {
         return;
     }
 
-    const useProbe = await showConfirm("Méthode d'Exploration", "Envoyer une sonde (coût: 1 RP) ?<br><small>(Annuler pour un saut à l'aveugle standard, gratuit mais plus risqué)</small>");
+    // *** DÉBUT DE LA MODIFICATION ***
+    const explorationChoice = await showExplorationChoice(
+        "Méthode d'Exploration",
+        "Comment souhaitez-vous procéder ? Un saut à l'aveugle est gratuit mais risqué. L'envoi d'une sonde coûte 1 RP mais fournit des informations vitales avant de s'engager."
+    );
     
-    if (useProbe) {
+    if (explorationChoice === 'probe') {
         if (viewingPlayer.requisitionPoints < 1) {
             showNotification("Points de Réquisition insuffisants !", 'warning');
             return;
@@ -231,7 +235,7 @@ const handleExploration = async (direction) => {
         saveData();
         if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
         updateExplorationArrows(currentSystem);
-    } else {
+    } else if (explorationChoice === 'blind_jump') {
         showNotification("Saut à l'aveugle initié...", 'info', 3000);
 
         currentSystem.connections[direction] = discoveredSystem.id;
@@ -262,4 +266,6 @@ const handleExploration = async (direction) => {
         saveData();
         renderPlanetarySystem(discoveredSystem.id);
     }
+    // Si 'cancel', ne rien faire.
+    // *** FIN DE LA MODIFICATION ***
 };
