@@ -169,7 +169,14 @@ const handleExploration = async (direction) => {
         showNotification("Vous devez d'abord conquérir votre système natal pour rejoindre la carte galactique.", 'warning', 6000);
         return;
     }
-    const hasEnemyPlanetInCurrent = currentSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
+
+    // Identifie les ID de tous les autres joueurs
+    const otherPlayerIds = campaignData.players
+        .map(p => p.id)
+        .filter(id => id !== viewingPlayer.id);
+    // Vérifie si une planète dans le système actuel appartient à un autre joueur
+    const hasEnemyPlanetInCurrent = currentSystem.planets.some(p => otherPlayerIds.includes(p.owner));
+
     if (hasEnemyPlanetInCurrent) {
         showNotification("<b>Blocus ennemi !</b> Vous ne pouvez pas explorer depuis ce système tant qu'une planète ennemie est présente.", 'error');
         return;
