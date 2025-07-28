@@ -1,6 +1,99 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const APP_VERSION = "1.2.4"; // Version mise à jour pour refléter la correction
+    const APP_VERSION = "1.3.1"; // Version avec correction de la logique d'amélioration
+
+    //======================================================================
+    //  BASE DE DONNÉES DES RÈGLES DE CROISADE (Nexus Paria)
+    //======================================================================
+    const crusadeRules = {
+        battleTraits: {
+            Personnage: [
+                { name: "Diriger en Première Ligne", desc: "Cette unité passe les tests de Moral automatiquement si elle est à 6\" d'une unité MONSTRE ou VÉHICULE amie qui n'est pas Ébranlée." },
+                { name: "Immunisé aux Horreurs", desc: "Cette unité peut relancer les tests de Moral." },
+                { name: "Grand Acquisiteur", desc: "Ajoutez 3 à la caractéristique de Contrôle d'Objectif de la figurine PERSONNAGE de cette unité." },
+                { name: "Rôdeur Conquérant", desc: "Tant que cette unité est à portée d'un pion d'objectif, elle gagne l'aptitude Discrétion." },
+                { name: "Constitution Héroïque", desc: "Ajoutez 1 à la caractéristique de PV de cette unité." },
+                { name: "Duelliste", desc: "Le champ d'attraction de nimbus de force est amélioré. À chaque attaque de mêlée effectuée par une figurine ennemie qui cible cette unité, si l'attaquant est à portée d'Engagement de cette unité, il subit 1 blessure mortelle." }
+            ],
+            Vehicule: [ // Inclut Monstre et Véhicule
+                { name: "Protections Durcies", desc: "Dans les environnements tordus de cette zone de guerre, cette unité a su renforcer ses protections. Les figurines de cette unité ont l'aptitude insensible à la Douleur 6+." },
+                { name: "Présence Totémique", desc: "Cette unité est considérée comme une icône de la victoire par ses camarades. Chaque fois que cette unité contrôle un pion d'objectif, ajoutez 1 à la caractéristique de Contrôle d'Objectif de 1 figurine de cette unité." },
+                { name: "Chasseur de Chars", desc: "À chaque attaque effectuée par une figurine de cette unité qui cible une unité VÉHICULE ennemie, vous pouvez relancer le jet de blessure." },
+                { name: "Explorateur Obstiné", desc: "Les figurines de cette unité ne sont pas ralenties par les débris et les obstacles et ignorent toutes les règles qui pénalisent le mouvement ou les jets d'Avance pour le terrain difficile." },
+                { name: "Lourdement Blindé", desc: "Soustraire 1 à la caractéristique de Dégâts des attaques de mêlée." },
+                { name: "Faucheur", desc: "À chaque attaque de mêlée effectuée par une figurine de cette unité MONTRÉE, relancez tout jet de touche de 1." }
+            ],
+            Monstre: [ // Partage les mêmes que Véhicule
+                { name: "Protections Durcies", desc: "Dans les environnements tordus de cette zone de guerre, cette unité a su renforcer ses protections. Les figurines de cette unité ont l'aptitude insensible à la Douleur 6+." },
+                { name: "Présence Totémique", desc: "Cette unité est considérée comme une icône de la victoire par ses camarades. Chaque fois que cette unité contrôle un pion d'objectif, ajoutez 1 à la caractéristique de Contrôle d'Objectif de 1 figurine de cette unité." },
+                { name: "Chasseur de Chars", desc: "À chaque attaque effectuée par une figurine de cette unité qui cible une unité VÉHICULE ennemie, vous pouvez relancer le jet de blessure." },
+                { name: "Explorateur Obstiné", desc: "Les figurines de cette unité ne sont pas ralenties par les débris et les obstacles et ignorent toutes les règles qui pénalisent le mouvement ou les jets d'Avance pour le terrain difficile." },
+                { name: "Lourdement Blindé", desc: "Soustraire 1 à la caractéristique de Dégâts des attaques de mêlée." },
+                { name: "Faucheur", desc: "À chaque attaque de mêlée effectuée par une figurine de cette unité MONTRÉE, relancez tout jet de touche de 1." }
+            ],
+            Infantrie: [
+                { name: "Résistance de Briscard", desc: "Les figurines de cette unité ont l'aptitude Insensible à la Douleur 6+." },
+                { name: "Spectres des Ruines", desc: "Les figurines de cette unité ont l'aptitude Infiltrateurs." },
+                { name: "Unis dans l'Adversité", desc: "Vous pouvez cibler cette unité avec le Stratagème Intervention Héroïque pour 0 PC, même si vous avez déjà ciblé une unité différente avec ce Stratagème." },
+                { name: "Pillards", desc: "À chaque attaque d'une figurine de cette unité avec une arme de mêlée qui cible une unité qui est à portée d'un pion d'objectif, relancez tout jet de touche de 1." },
+                { name: "Purificateurs", desc: "Si elle a déjà le mot-clé GRENADES, vous pouvez cibler cette unité avec le Stratagème Grenade pour 0PC." },
+                { name: "Assaut de Terreur", desc: "Au début de la phase de Combat, choisissez 1 unité ennemie à Portée d'Engagement de cette unité. L'unité ennemie doit faire un test d'Ébranlement." }
+            ],
+            Cavalerie: [ // Mounted
+                { name: "Cavaliers des Ruines", desc: "Ajoutez 2\" à la caractéristique de Mouvement des figurines de cette unité." },
+                { name: "Offensive Tonitruante", desc: "Ajoutez 1 aux jets d'Avance et de Charge faits pour cette unité." },
+                { name: "Assassins sur Selle", desc: "À chaque attaque de mêlée d'une figurine de cette unité qui cible la cible éligible la plus proche, améliorez de 1 la caractéristique de Pénétration d'Armure de l'attaque." },
+                { name: "Briseurs de Lignes", desc: "Chaque fois que cette unité finit un mouvement de Charge, jusqu'à la fin du tour, les armes de mêlée dont sont équipées les figurines de cette unité ont l'aptitude [TOUCHES SOUTENUES 1]." },
+                { name: "Charge Broyeuse", desc: "Chaque fois que cette unité finit un mouvement de Charge, choisissez 1 unité ennemie à Portée d'Engagement d'elle, puis jetez 1 D6 pour chaque figurine de cette unité qui est à Portée d'Engagement de l'unité ennemie; pour chaque 4+, l'unité ennemie subit 1 blessure mortelle." },
+                { name: "Vitesse Étourdissante", desc: "Les figurines de cette unité ont l'aptitude Discrétion." }
+            ]
+        },
+        weaponMods: [
+            { name: "Finement Équilibrée", desc: "Améliorez de 1 la caractéristique de Capacité de Tir ou de Capacité de Combat de cette arme." },
+            { name: "Brutale", desc: "Ajoutez 1 à la caractéristique de Force de cette arme." },
+            { name: "Perce-Blindage", desc: "Améliorez de 1 la caractéristique de Pénétration d'Armure de cette arme." },
+            { name: "Œuvre de Maître", desc: "Ajoutez 1 à la caractéristique de Dégâts de cette arme." },
+            { name: "Héritage", desc: "Ajoutez 1 à la caractéristique d'Attaques de cette arme." },
+            { name: "Précise", desc: "À chaque Blessure Critique causée par une attaque de cette arme, l'attaque a l'aptitude [PRÉCISION]." }
+        ],
+        relics: {
+            artificer: [
+                { name: "Boussole d'Artificier", desc: "Le porteur gagne l'aptitude Infiltrateurs.", cost: 1 },
+                { name: "Voile des Doyens", desc: "Le porteur gagne l'aptitude Infiltrateurs.", cost: 1 },
+                { name: "Trésor des Technomandrites", desc: "Choisissez 1 arme dont est équipé le porteur. Chaque fois que cette arme est remplacée par une Optimisation ou une Relique de Croisade, notez-le. L'arme d'origine est considérée comme un évocateur.", cost: 1 },
+                { name: "Armure de la Sentinelle sans Âme", desc: "Améliorez de 1 les caractéristiques d'Endurance et de Sauvegarde du porteur.", cost: 1 }
+            ],
+            antique: [
+                { name: "Sceau de Noctilithe", desc: "Figurine non-PSYKER seulement. Les figurines du porteur ont l'aptitude Insensible à la Douleur 4+ contre les Attaques Psychiques.", cost: 2 },
+                { name: "Clé-Dolmen", desc: "Le porteur peut se déployer via les tunnels Dolmen (Deep Strike).", cost: 2 },
+                { name: "Miroir de Vantachren", desc: "Les figurines du porteur ont l'aptitude Discrétion. De plus, chaque fois qu'un porteur cible une unité ennemie avec une charge, soustrayez 2 au jet de Charge.", cost: 2 },
+                { name: "Œil de Mars", desc: "Après que les joueurs ont déployé leurs armées, vous pouvez placer le porteur en Réserves Stratégiques.", cost: 2 }
+            ],
+            legendaire: [
+                { name: "Lame du Dynaste", desc: "Améliorez de 1 les caractéristiques de Force, de Dégâts et de Pénétration d'Armure des armes de mêlée du porteur. Une fois par bataille, vous pouvez activer cette Relique pour ajouter 2 aux jets de Charge.", cost: 3 },
+                { name: "Bouclier Noctique", desc: "Ajoutez 1 aux caractéristiques d'Endurance et de Points de Vie du porteur. Une fois par bataille, quand une attaque cible l'unité du porteur, il peut soustraire 1 à la caractéristique de Dégâts de l'attaque.", cost: 3 },
+                { name: "Bâton de l'Omnimessie", desc: "Au début de votre phase de Commandement, le porteur récupère jusqu'à D3 PV perdus. Une fois par bataille, il peut choisir 1 unité ennemie à Portée d'Engagement du porteur. L'unité ennemie subit autant de blessures mortelles que le nombre de PV que le porteur a récupéré.", cost: 3 }
+            ]
+        },
+        sombrerocheHonours: [
+            { name: "Carte Nodale", desc: "Tant que le porteur est à portée d'un pion d'objectif, si l'unité du porteur est Ébranlée, remplacez par 1 au lieu de 0 la caractéristique de Contrôle d'Objectif des figurines.", cost: 20 },
+            { name: "Chercheur Obsessionnel", desc: "Si le porteur est votre SEIGNEUR DE GUERRE, à la fin de la bataille, jetez 1 D6. En ajoutant 2 au jet si vous avez remporté la bataille. Sur 6+, vous gagnez 5 Fragments de Sombreroche.", cost: 10 },
+            { name: "Opportuniste Cupide", desc: "Au début de la bataille, si le porteur est votre SEIGNEUR DE GUERRE, vous pouvez choisir une Posture Stratégique : Agressive (Aptitude Éclaireurs 6), Équilibrée (Aptitude Agent Solitaire), ou Défensive (Aptitude Discrétion).", cost: 15 }
+        ],
+        sombrerocheRelics: [
+            { name: "Désincitateur Empathique", desc: "Au début de la bataille, choisissez 1 pion d'objectif. Tant que le porteur est sur le champ de bataille, les unités amies à portée du pion d'objectif ont une sauvegarde invulnérable de 5+.", cost: 15 },
+            { name: "Armement de Noctilithe", desc: "Choisissez 1 arme de mêlée dont est équipé le porteur. Une fois par tour, à la fin de la phase de Combat, vous pouvez activer cette Relique de Croisade. Dans ce cas, jusqu'à la fin de la phase, à chaque attaque de cette arme, on ne peut pas faire de jet de sauvegarde invulnérable contre l'attaque.", cost: 20 },
+            { name: "Amulette de Sombreroche", desc: "Chaque fois qu'une attaque de mêlée non modifiée de 6 est allouée au porteur, l'unité attaquante subit 1 blessure mortelle après qu'elle a résolu ses attaques. Si l'attaque avait été faite avec une arme Psychique, cet effet s'applique sur un jet de sauvegarde non modifié de 5+ à la place.", cost: 20 }
+        ],
+        battleScars: [
+            { name: "Dégâts Invalidants", desc: "Cette unité ne peut pas Avancer et on soustrait 1\" à la caractéristique de Mouvement de ses figurines." },
+            { name: "Usé par la Guerre", desc: "Chaque fois que cette unité fait un test d'Ébranlement, de Commandement, de Fuite Désespérée ou de Mise Hars de Combat, soustrayez 1 au test." },
+            { name: "Épuisé", desc: "Soustrayez 1 à la caractéristique de Contrôle d'Objectif des figurines de cette unité, et cette unité ne reçoit jamais de bonus de Charge." },
+            { name: "Disgrâce", desc: "Vous ne pouvez pas utiliser de Stratagème pour affecter cette unité, et elle ne peut pas être Promise à la Grandeur." },
+            { name: "Honni", desc: "Les jets de touche ne peuvent pas être relancés pour cette unité. Si elle est Attachée, cela ne s'applique pas aux unités amies et elle ne peut pas être Promise à la Grandeur." },
+            { name: "Cicatrices Intérieures", desc: "À chaque Blessure Critique causée contre cette unité, l'attaque blesse automatiquement cette unité." }
+        ]
+    };
 
     //======================================================================
     //  ÉLÉMENTS DU DOM
@@ -37,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const campaignInfoBtn = document.getElementById('campaign-info-btn');
     const infoModal = document.getElementById('info-modal');
 
-    // NOUVEAUX ÉLÉMENTS POUR NOTIFICATIONS / CONFIRMATIONS
     const notificationContainer = document.getElementById('notification-container');
     const confirmModal = document.getElementById('confirm-modal');
     const confirmModalTitle = document.getElementById('confirm-modal-title');
@@ -50,12 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //  SYSTÈME DE NOTIFICATION ET DE CONFIRMATION
     //======================================================================
 
-    /**
-     * Affiche une notification stylisée à l'écran.
-     * @param {string} message Le message à afficher.
-     * @param {string} [type='info'] Le type de notif (info, success, warning, error).
-     * @param {number} [duration=5000] La durée en ms.
-     */
     function showNotification(message, type = 'info', duration = 5000) {
         const notif = document.createElement('div');
         notif.className = `notification ${type}`;
@@ -83,12 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * Affiche une modale de confirmation et retourne une promesse.
-     * @param {string} title Le titre de la modale.
-     * @param {string} text Le message de confirmation.
-     * @returns {Promise<boolean>} Résout à `true` si confirmé, `false` sinon.
-     */
     function showConfirm(title, text) {
         return new Promise(resolve => {
             confirmModalTitle.textContent = title;
@@ -214,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastVersion !== APP_VERSION) {
             setTimeout(() => {
                 showNotification(
-                    `<b>Mise à jour v${APP_VERSION} !</b> Voisin ennemi en rouge.`,
+                    `<b>Mise à jour v${APP_VERSION} !</b> La logique des coûts d'amélioration est corrigée.`,
                     'info',
                     10000
                 );
@@ -468,12 +548,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderOrderOfBattle();
     };
 
-    const getRankFromXp = (xp, role) => {
-        const isCharacter = role === 'Personnage' || role === 'Hero Epique';
-        if (xp >= 51) return isCharacter ? 'Légendaire (Personnage)' : 'Légendaire';
-        if (xp >= 31) return isCharacter ? 'Héroïque (Personnage)' : 'Héroïque';
+    const getRankFromXp = (xp) => {
+        if (xp >= 51) return 'Légendaire';
+        if (xp >= 31) return 'Héroïque';
         if (xp >= 16) return 'Aguerri';
-        if (xp >= 6) return 'Eprouvé';
+        if (xp >= 6) return 'Éprouvé';
         return 'Paré au Combat';
     };
 
@@ -485,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         (player.units || []).forEach((unit, index) => {
             supplyUsed += unit.powerRating;
-            const rank = getRankFromXp(unit.xp, unit.role);
+            const rank = getRankFromXp(unit.xp);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${unit.name}</td>
@@ -599,7 +678,6 @@ document.addEventListener('DOMContentLoaded', () => {
             colonizationSpan.textContent = '';
         }
 
-
         updateExplorationArrows(system);
     };
 
@@ -708,7 +786,6 @@ document.addEventListener('DOMContentLoaded', () => {
             viewport.appendChild(node);
         });
 
-
         const centerSystem = systemsToDisplay.find(s => s.id === currentlyViewedSystemId);
         if (centerSystem && centerSystem.position) {
             mapContainer.scrollLeft = centerSystem.position.x * currentMapScale - mapContainer.clientWidth / 2;
@@ -716,12 +793,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    /**
-     * CORRIGÉ : Met à jour les flèches d'exploration en se basant sur la découverte du joueur.
-     * Affiche les détails d'un système connecté uniquement si le joueur l'a découvert.
-     * Sinon, affiche une option "Explorer" générique.
-     * @param {object} currentSystem Le système actuellement affiché.
-     */
     const updateExplorationArrows = (currentSystem) => {
         const directions = ['up', 'down', 'left', 'right'];
         const arrowSymbols = { up: '↑', down: '↓', left: '←', right: '→' };
@@ -750,14 +821,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const connectedSystemId = currentSystem.connections[dir];
             const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[dir] : null;
 
-            // Reset style
             let label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>Explorer</small>`;
             arrow.style.borderColor = colors.default;
             arrow.style.color = colors.default;
             arrow.style.cursor = 'pointer';
             arrow.title = `Explorer vers ${dir}`;
 
-            // CAS 1 : Connexion globale EXISTE ET le joueur a découvert la destination -> VOYAGER
             if (connectedSystemId && viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) {
                 const connectedSystem = campaignData.systems.find(s => s.id === connectedSystemId);
                 if (connectedSystem) {
@@ -779,22 +848,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     arrow.style.cursor = 'not-allowed';
                     arrow.title = `Erreur: La connexion est rompue.`;
                 }
-            // === MODIFICATION : LOGIQUE DE SONDAGE CORRIGÉE ===
             } else if (probedInfo) {
-                // CAS 2.1 : Contact hostile sondé
                 if (probedInfo.status === 'player_contact') {
                     arrow.style.borderColor = colors.red;
                     arrow.style.color = colors.red;
                     label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>JOUEUR<br>HOSTILE</small>`;
                     arrow.title = `Sonde a détecté une présence hostile ! Cliquez pour tenter d'établir une connexion.`;
                 } else {
-                // CAS 2.2 : Contact PNJ sondé
                     arrow.style.borderColor = colors.blue;
                     arrow.style.color = colors.blue;
                     label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>SONDÉ<br>${probedInfo.name}</small>`;
                     arrow.title = `Route sondée vers ${probedInfo.name}. Cliquez pour établir la connexion.`;
                 }
-            // CAS 3 : Aucune info. Vérifier s'il y a un système à découvrir ou si c'est le vide.
             } else {
                 const parentPos = currentSystem.position;
                 const targetPos = { x: parentPos.x, y: parentPos.y };
@@ -805,12 +870,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const targetSystem = campaignData.systems.find(s => s.position && s.position.x === targetPos.x && s.position.y === targetPos.y);
                 if (!targetSystem) {
-                    // Bord de la carte, on désactive la flèche
                     arrow.style.borderColor = '#333';
                     arrow.style.color = '#555';
                     arrow.style.cursor = 'not-allowed';
                     arrow.title = 'Bord de la galaxie connue';
-                    label = `<span class="arrow-symbol" style="opacity: 0.5;">${arrowSymbols[dir]}</span>`; // Flèche grisée
+                    label = `<span class="arrow-symbol" style="opacity: 0.5;">${arrowSymbols[dir]}</span>`;
                 }
             }
             arrow.innerHTML = label;
@@ -819,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     //======================================================================
-    //  LOGIQUE D'EXPLORATION (CORRIGÉE POUR LA DÉCOUVERTE PAR JOUEUR)
+    //  LOGIQUE D'EXPLORATION
     //======================================================================
     const handleExploration = async (direction) => {
         const currentSystem = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
@@ -834,13 +898,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const connectedSystemId = currentSystem.connections[direction];
         const oppositeDirection = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
 
-        // --- 1. LOGIQUE DE VOYAGE (si déjà connecté et découvert) ---
         if (connectedSystemId && viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) {
             renderPlanetarySystem(connectedSystemId);
             return;
         }
 
-        // --- 2. Conditions de blocus ---
         if (!currentSystem.position) {
             showNotification("Vous devez d'abord conquérir votre système natal pour rejoindre la carte galactique.", 'warning', 6000);
             return;
@@ -872,10 +934,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[direction] : null;
 
-        // === MODIFICATION : LOGIQUE DE CONTACT CORRIGÉE ===
-
-        // --- 3. AGIR SUR UN SONDAGE EXISTANT ---
-        // 3.1 Agir sur un contact JOUEUR sondé
         if (probedInfo && probedInfo.status === 'player_contact') {
             const confirmed = await showConfirm(
                 "Établir un Contact Hostile",
@@ -885,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirmed) {
                 currentSystem.connections[direction] = discoveredSystem.id;
                 discoveredSystem.connections[oppositeDirection] = currentSystem.id;
-                currentSystem.probedConnections[direction] = null; // Nettoyer l'info de sondage
+                currentSystem.probedConnections[direction] = null;
 
                 if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
                     viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
@@ -904,10 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification(`Connexion établie vers le système hostile !`, 'success');
                 renderPlanetarySystem(discoveredSystem.id);
             }
-            return; // Fin de l'action
+            return;
         }
 
-        // 3.2 Agir sur un contact PNJ sondé
         if (probedInfo) {
             const probedSystem = campaignData.systems.find(s => s.id === probedInfo.id);
             if (!probedSystem) {
@@ -931,10 +988,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPlanetarySystem(probedSystem.id);
                 showNotification(`Connexion établie avec ${probedSystem.name}`, 'success');
             }
-            return; // Fin de l'action
+            return;
         }
 
-        // --- 4. SI PAS DE SONDAGE : EXPLORATION INITIALE (SAUT OU SONDE) ---
         if (connectedSystemId && !viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) { 
             const confirmDiscovery = await showConfirm(
                 "Découverte de Route",
@@ -952,25 +1008,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const useProbe = await showConfirm("Méthode d'Exploration", "Envoyer une sonde (coût: 1 RP) ?<br><small>(Annuler pour un saut à l'aveugle standard, gratuit mais plus risqué)</small>");
         
         if (useProbe) {
-            // --- 4.1. LOGIQUE DE LA SONDE (CORRIGÉE) ---
             if (viewingPlayer.requisitionPoints < 1) {
                 showNotification("Points de Réquisition insuffisants !", 'warning');
                 return;
             }
             viewingPlayer.requisitionPoints--;
             
-            // CORRECTIF : Vérifier la présence d'une planète ennemie, pas le propriétaire du système.
             const hasEnemyPlanetInTarget = discoveredSystem.planets.some(
                 p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id
             );
 
             if (hasEnemyPlanetInTarget) {
-                // SONDER UN SYSTÈME CONTENANT UN ENNEMI
                 showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
                 currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact' };
-
             } else { 
-                // SONDER UN SYSTÈME PNJ ou VIDE
                 showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'info', 8000);
                 currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact' };
             }
@@ -978,10 +1029,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification("Information enregistrée. Cliquez à nouveau sur la flèche pour agir.", 'info', 8000);
             saveData();
             if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
-            updateExplorationArrows(currentSystem); // Juste mettre à jour les flèches
-
+            updateExplorationArrows(currentSystem);
         } else {
-            // --- 4.2. LOGIQUE DU SAUT À L'AVEUGLE ---
             showNotification("Saut à l'aveugle initié...", 'info', 3000);
 
             currentSystem.connections[direction] = discoveredSystem.id;
@@ -1005,7 +1054,6 @@ document.addEventListener('DOMContentLoaded', () => {
                          console.log(`Player ${enemyPlayer.name} has been alerted to system ${currentSystem.name}`);
                     }
                 });
-
             } else {
                 showNotification(`Saut à l'aveugle réussi ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'success', 8000);
             }
@@ -1126,14 +1174,28 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(playerModal);
     });
 
-    document.getElementById('add-unit-btn').addEventListener('click', () => {
-        editingUnitIndex = -1;
+    const openUnitModal = () => {
         unitForm.reset();
         document.getElementById('unit-id').value = '';
-        unitModalTitle.textContent = "Ajouter une Unité";
         const role = document.getElementById('unit-role').value;
-        document.getElementById('unit-rank-display').textContent = getRankFromXp(0, role);
+        document.getElementById('unit-rank-display').textContent = getRankFromXp(0);
+        
+        // Déplacer la section des améliorations en haut
+        const unitModalContent = unitModal.querySelector('.modal-content');
+        const upgradesSection = unitModalContent.querySelector('#unit-upgrades-section');
+        const unitCardHeader = unitModalContent.querySelector('.unit-card-header');
+        if (upgradesSection && unitCardHeader) {
+            unitCardHeader.after(upgradesSection);
+        }
+
+        populateUpgradeSelectors();
         openModal(unitModal);
+    };
+
+    document.getElementById('add-unit-btn').addEventListener('click', () => {
+        editingUnitIndex = -1;
+        unitModalTitle.textContent = "Ajouter une Unité";
+        openUnitModal();
     });
 
     resetCampaignBtn.addEventListener('click', async () => {
@@ -1221,14 +1283,28 @@ document.addEventListener('DOMContentLoaded', () => {
             editingUnitIndex = parseInt(target.dataset.index);
             const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
             unitModalTitle.textContent = `Modifier ${unit.name}`;
+            openUnitModal(); // Ouvre la modale et place les éléments correctement
+            
+            // Pré-remplir les champs après ouverture
             Object.keys(unit).forEach(key => {
                 const elementId = `unit-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
                 const element = document.getElementById(elementId);
-                if (element) element.value = unit[key];
+                if (element) {
+                     if (key === 'battleHonours') {
+                        document.getElementById('unit-honours').value = unit[key] || '';
+                    } else if (key === 'battleScars') {
+                        document.getElementById('unit-scars').value = unit[key] || '';
+                    } else if (element.type === 'checkbox') {
+                        element.checked = unit[key];
+                    } else {
+                        element.value = unit[key];
+                    }
+                }
             });
             document.getElementById('unit-id').value = editingUnitIndex;
-            document.getElementById('unit-rank-display').textContent = getRankFromXp(unit.xp || 0, unit.role);
-            openModal(unitModal);
+            document.getElementById('unit-rank-display').textContent = getRankFromXp(unit.xp || 0);
+            populateUpgradeSelectors(); // Repopulate selectors based on loaded unit role
+
         } else if (target.classList.contains('delete-unit-btn')) {
             const index = parseInt(target.dataset.index);
             const unitName = campaignData.players[activePlayerIndex].units[index].name;
@@ -1298,7 +1374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const viewport = mapContainer.querySelector('.map-viewport');
         if (!viewport) return;
         const scaleChange = e.deltaY < 0 ? 0.1 : -0.1;
-        currentMapScale = Math.max(0.2, Math.min(currentMapScale + scaleChange, 2.5));
+        currentMapScale = Math.max(0.2, Math.min(currentMapScale + 2.5, 2.5));
         viewport.style.transform = `scale(${currentMapScale})`;
     });
     mapContainer.addEventListener('mousedown', (e) => {
@@ -1345,12 +1421,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (arrow && arrow.style.cursor !== 'not-allowed') handleExploration(arrow.id.replace('explore-', ''));
     });
 
-
-document.getElementById('planet-owner-select').addEventListener('change', (e) => {
-    const isNeutral = e.target.value === 'neutral';
-    document.getElementById('planet-defense-container').classList.toggle('hidden', !isNeutral);
-    document.getElementById('planet-defense-input').disabled = !isNeutral;
-});
+    document.getElementById('planet-owner-select').addEventListener('change', (e) => {
+        const isNeutral = e.target.value === 'neutral';
+        document.getElementById('planet-defense-container').classList.toggle('hidden', !isNeutral);
+        document.getElementById('planet-defense-input').disabled = !isNeutral;
+    });
 
     backToListBtn.addEventListener('click', () => switchView('list'));
 
@@ -1504,13 +1579,11 @@ document.getElementById('planet-owner-select').addEventListener('change', (e) =>
     });
 
     document.getElementById('unit-xp').addEventListener('input', (e) => {
-        const role = document.getElementById('unit-role').value;
-        document.getElementById('unit-rank-display').textContent = getRankFromXp(parseInt(e.target.value) || 0, role);
+        document.getElementById('unit-rank-display').textContent = getRankFromXp(parseInt(e.target.value) || 0);
     });
     
     document.getElementById('unit-role').addEventListener('change', (e) => {
-        const xp = parseInt(document.getElementById('unit-xp').value) || 0;
-        document.getElementById('unit-rank-display').textContent = getRankFromXp(xp, e.target.value);
+        populateUpgradeSelectors();
     });
 
     document.querySelector('.player-info-grid').addEventListener('input', (e) => {
@@ -1557,6 +1630,242 @@ document.getElementById('planet-owner-select').addEventListener('change', (e) =>
         saveData();
         renderPlayerDetail();
     });
+
+    //======================================================================
+    //  NOUVELLE LOGIQUE : GESTION DES AMÉLIORATIONS D'UNITÉ
+    //======================================================================
+    const populateUpgradeSelectors = () => {
+        const unitRole = document.getElementById('unit-role').value;
+        const isCharacter = unitRole === 'Personnage' || unitRole === 'Hero Epique';
+
+        const battleTraitSelect = document.getElementById('battle-trait-select');
+        battleTraitSelect.innerHTML = '<option value="">Choisir un trait...</option>';
+        const traits = crusadeRules.battleTraits[unitRole] || [];
+        traits.forEach(trait => {
+            battleTraitSelect.innerHTML += `<option value="${trait.name}" title="${trait.desc}">${trait.name}</option>`;
+        });
+
+        const weaponModSelect = document.getElementById('weapon-mod-select');
+        weaponModSelect.innerHTML = '<option value="">Choisir une modification...</option>';
+        crusadeRules.weaponMods.forEach(mod => {
+            weaponModSelect.innerHTML += `<option value="${mod.name}" title="${mod.desc}">${mod.name}</option>`;
+        });
+
+        const relicSelect = document.getElementById('relic-select');
+        relicSelect.innerHTML = '<option value="">Choisir une relique...</option>';
+        if (isCharacter) {
+            Object.entries(crusadeRules.relics).forEach(([type, relics]) => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
+                relics.forEach(relic => {
+                    optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="relics.${type}" title="${relic.desc}">${relic.name}</option>`;
+                });
+                relicSelect.appendChild(optgroup);
+            });
+        }
+        relicSelect.disabled = !isCharacter;
+
+        const battleScarSelect = document.getElementById('battle-scar-select');
+        battleScarSelect.innerHTML = '<option value="">Choisir une cicatrice...</option>';
+        crusadeRules.battleScars.forEach(scar => {
+            battleScarSelect.innerHTML += `<option value="${scar.name}" title="${scar.desc}">${scar.name}</option>`;
+        });
+
+        const sombrerocheHonourSelect = document.getElementById('sombreroche-honour-select');
+        sombrerocheHonourSelect.innerHTML = '<option value="">Choisir un honneur...</option>';
+        if (isCharacter) {
+            crusadeRules.sombrerocheHonours.forEach(honour => {
+                sombrerocheHonourSelect.innerHTML += `<option value="${honour.name}" data-cost="${honour.cost}" title="${honour.desc}">${honour.name} (${honour.cost} Éclats)</option>`;
+            });
+        }
+        sombrerocheHonourSelect.disabled = !isCharacter;
+
+        const sombrerocheRelicSelect = document.getElementById('sombreroche-relic-select');
+        sombrerocheRelicSelect.innerHTML = '<option value="">Choisir une relique...</option>';
+        if (isCharacter) {
+            crusadeRules.sombrerocheRelics.forEach(relic => {
+                sombrerocheRelicSelect.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" title="${relic.desc}">${relic.name} (${relic.cost} Éclats)</option>`;
+            });
+        }
+        sombrerocheRelicSelect.disabled = !isCharacter;
+    };
+    
+    const addUpgradeToTextarea = (textareaId, upgradeName, upgradeDesc) => {
+        const textarea = document.getElementById(textareaId);
+        const textToAdd = `\n- ${upgradeName}: ${upgradeDesc}`;
+        textarea.value = (textarea.value || '').trim() + textToAdd;
+    };
+
+    async function handleRpPurchase(upgradeName, rpCost, onConfirm) {
+        const player = campaignData.players[activePlayerIndex];
+        if (player.requisitionPoints < rpCost) {
+            showNotification(`Points de Réquisition insuffisants (Requis: ${rpCost}).`, 'error');
+            return;
+        }
+
+        const confirmText = `Voulez-vous dépenser <b>${rpCost} Point de Réquisition</b> pour cet achat : <i>${upgradeName}</i>?<br><br>Solde actuel : ${player.requisitionPoints} RP<br>Solde après achat : ${player.requisitionPoints - rpCost} RP`;
+        
+        if (await showConfirm("Confirmer Dépense de Réquisition", confirmText)) {
+            player.requisitionPoints -= rpCost;
+            onConfirm();
+            document.getElementById('pr-points').textContent = player.requisitionPoints;
+            saveData();
+            showNotification(`${upgradeName} acheté !`, 'success');
+        }
+    }
+
+document.getElementById('add-battle-trait-btn').addEventListener('click', async () => {
+        const select = document.getElementById('battle-trait-select');
+        const traitName = select.value;
+        if (!traitName) return;
+
+        const crusadePointsInput = document.getElementById('unit-crusade-points');
+        const currentPc = parseInt(crusadePointsInput.value) || 0;
+        const pcCost = 1; // Le coût de l'amélioration
+
+        if (currentPc < pcCost) {
+            showNotification(`Points de Croisade insuffisants. L'unité doit avoir au moins ${pcCost} PC.`, 'error');
+            return;
+        }
+
+        const unitRole = document.getElementById('unit-role').value;
+        const trait = crusadeRules.battleTraits[unitRole].find(t => t.name === traitName);
+        if (!trait) return;
+
+        const confirmText = `Voulez-vous dépenser <b>${pcCost} PC</b> pour acquérir ce trait ?<br><br>PC actuels de l'unité : ${currentPc}<br>PC après achat : <b>${currentPc - pcCost}</b>`;
+        if (await showConfirm("Confirmer Dépense de PC", confirmText)) {
+            // Déduit le coût du total de PC de l'unité
+            crusadePointsInput.value = currentPc - pcCost;
+            
+            // Ajoute le trait à la fiche
+            addUpgradeToTextarea('unit-honours', trait.name, trait.desc);
+            select.value = '';
+            showNotification(`Trait de bataille ajouté. Le coût a été déduit.`, 'success');
+        }
+    });
+
+document.getElementById('add-weapon-mod-btn').addEventListener('click', async () => {
+        const select = document.getElementById('weapon-mod-select');
+        const modName = select.value;
+        if (!modName) return;
+
+        const crusadePointsInput = document.getElementById('unit-crusade-points');
+        const currentPc = parseInt(crusadePointsInput.value) || 0;
+        const pcCost = 1;
+
+        if (currentPc < pcCost) {
+            showNotification(`Points de Croisade insuffisants. L'unité doit avoir au moins ${pcCost} PC.`, 'error');
+            return;
+        }
+
+        const mod = crusadeRules.weaponMods.find(m => m.name === modName);
+        if (!mod) return;
+        
+        const confirmText = `Voulez-vous dépenser <b>${pcCost} PC</b> pour cette modification ?<br><br>PC actuels de l'unité : ${currentPc}<br>PC après achat : <b>${currentPc - pcCost}</b>`;
+        if (await showConfirm("Confirmer Dépense de PC", confirmText)) {
+            // Déduit le coût du total de PC de l'unité
+            crusadePointsInput.value = currentPc - pcCost;
+
+            // Ajoute la modification à la fiche
+            addUpgradeToTextarea('unit-honours', `Mod. d'Arme: ${mod.name}`, mod.desc);
+            select.value = '';
+            showNotification(`Modification d'arme ajoutée. Le coût a été déduit.`, 'success');
+        }
+    });
+
+document.getElementById('add-relic-btn').addEventListener('click', async () => {
+        const select = document.getElementById('relic-select');
+        const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption.dataset.type) return;
+
+        const [category, type] = selectedOption.dataset.type.split('.');
+        const relic = crusadeRules[category][type].find(r => r.name === selectedOption.value);
+        if (!relic) return;
+
+        const crusadePointsInput = document.getElementById('unit-crusade-points');
+        const currentPc = parseInt(crusadePointsInput.value) || 0;
+        const pcCost = relic.cost; // Le coût est variable
+
+        if (currentPc < pcCost) {
+            showNotification(`Points de Croisade insuffisants. L'unité doit avoir au moins ${pcCost} PC.`, 'error');
+            return;
+        }
+
+        const confirmText = `Voulez-vous dépenser <b>${pcCost} PC</b> pour cette relique ?<br><br>PC actuels de l'unité : ${currentPc}<br>PC après achat : <b>${currentPc - pcCost}</b>`;
+        if (await showConfirm("Confirmer Dépense de PC", confirmText)) {
+            // Déduit le coût du total de PC de l'unité
+            crusadePointsInput.value = currentPc - pcCost;
+
+            // Ajoute la relique à la fiche
+            addUpgradeToTextarea('unit-relic', relic.name, relic.desc);
+            select.value = '';
+            showNotification(`Relique ajoutée. Le coût a été déduit.`, 'success');
+        }
+    });
+    
+    document.getElementById('add-battle-scar-btn').addEventListener('click', () => {
+        const select = document.getElementById('battle-scar-select');
+        const scarName = select.value;
+        if (!scarName) return;
+
+        const scar = crusadeRules.battleScars.find(s => s.name === scarName);
+        addUpgradeToTextarea('unit-scars', scar.name, scar.desc);
+        select.value = '';
+        showNotification("Cicatrice de Bataille ajoutée.", 'info');
+    });
+    
+    document.getElementById('add-sombreroche-honour-btn').addEventListener('click', async () => {
+        const select = document.getElementById('sombreroche-honour-select');
+        const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption.value) return;
+
+        const player = campaignData.players[activePlayerIndex];
+        const cost = parseInt(selectedOption.dataset.cost);
+        
+        if (player.sombrerochePoints < cost) {
+            showNotification(`Éclats de Sombreroche insuffisants (Requis: ${cost}).`, 'error');
+            return;
+        }
+
+        const honour = crusadeRules.sombrerocheHonours.find(h => h.name === selectedOption.value);
+        const confirmText = `Voulez-vous dépenser <b>${cost} Éclats de Sombreroche</b> pour cet Honneur : <i>${honour.name}</i>?<br><br>Solde actuel : ${player.sombrerochePoints} Éclats<br>Solde après achat : ${player.sombrerochePoints - cost} Éclats`;
+
+        if(await showConfirm("Confirmer l'Achat", confirmText)) {
+            player.sombrerochePoints -= cost;
+            addUpgradeToTextarea('unit-honours', `Honneur de Sombreroche: ${honour.name}`, honour.desc);
+            select.value = '';
+            document.getElementById('sombreroche-points').textContent = player.sombrerochePoints;
+            showNotification("Honneur de Sombreroche acheté !", 'success');
+            saveData();
+        }
+    });
+
+    document.getElementById('add-sombreroche-relic-btn').addEventListener('click', async () => {
+        const select = document.getElementById('sombreroche-relic-select');
+        const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption.value) return;
+
+        const player = campaignData.players[activePlayerIndex];
+        const cost = parseInt(selectedOption.dataset.cost);
+
+        if (player.sombrerochePoints < cost) {
+            showNotification(`Éclats de Sombreroche insuffisants (Requis: ${cost}).`, 'error');
+            return;
+        }
+
+        const relic = crusadeRules.sombrerocheRelics.find(r => r.name === selectedOption.value);
+        const confirmText = `Voulez-vous dépenser <b>${cost} Éclats de Sombreroche</b> pour cette Relique : <i>${relic.name}</i>?<br><br>Solde actuel : ${player.sombrerochePoints} Éclats<br>Solde après achat : ${player.sombrerochePoints - cost} Éclats`;
+
+        if (await showConfirm("Confirmer l'Achat", confirmText)) {
+            player.sombrerochePoints -= cost;
+            addUpgradeToTextarea('unit-relic', `Relique de Sombreroche: ${relic.name}`, relic.desc);
+            select.value = '';
+            document.getElementById('sombreroche-points').textContent = player.sombrerochePoints;
+            showNotification("Relique de Sombreroche achetée !", 'success');
+            saveData();
+        }
+    });
+
 
     //======================================================================
     //  INITIALISATION

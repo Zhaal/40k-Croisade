@@ -136,20 +136,16 @@
                         <div class="form-group small">
                             <label for="unit-role">Rôle :</label>
                             <select id="unit-role">
-                                <option value="Hero Epique">Hero Epique</option>
                                 <option value="Personnage">Personnage</option>
+                                <option value="Hero Epique">Hero Epique</option>
+                                <option value="Infantrie">Infanterie</option>
+                                <option value="Cavalerie">Cavalerie</option>
                                 <option value="Monstre">Monstre</option>
-                                <option value="Infantrie">Infantrie</option>
-                                <option value="Véhicule">Véhicule</option>
+                                <option value="Vehicule">Véhicule</option>
                                 <option value="Bête">Bête</option>
                                 <option value="Fortification">Fortification</option>
-                                <option value="Cavalerie">Cavalerie</option>
-                                <option value="Aéronef">Aéronef</option>
-                                <option value="Transport">Transport</option>
-                                <option value="Marcheur">Marcheur</option>
                                 <option value="Titanesque">Titanesque</option>
                                 <option value="Nuée">Nuée</option>
-                                <option value="Artillerie">Artillerie</option>
                             </select>
                         </div>
                         <div class="form-group small"><label for="unit-power">Puissance :</label><input type="number" id="unit-power" min="0" required></div>
@@ -166,6 +162,61 @@
                         <div class="form-group"><label for="unit-marked-for-glory">Marqué pour la Gloire (unités détruites) :</label><input type="number" id="unit-marked-for-glory" min="0"></div>
                     </div>
                 </div>
+
+                <div id="unit-upgrades-section">
+                    <h4 class="upgrades-title">Gestion des Améliorations</h4>
+                    <div class="upgrades-grid">
+
+                        <div class="upgrade-control-group">
+                            <label for="battle-trait-select">Trait de Bataille (+1 PC)</label>
+                            <div class="input-group">
+                                <select id="battle-trait-select"><option>Choisir un trait...</option></select>
+                                <button type="button" class="btn-secondary" id="add-battle-trait-btn">Ajouter</button>
+                            </div>
+                        </div>
+                        
+                        <div class="upgrade-control-group">
+                            <label for="weapon-mod-select">Modification d'Arme (+1 PC)</label>
+                            <div class="input-group">
+                                <select id="weapon-mod-select"><option>Choisir une modification...</option></select>
+                                <button type="button" class="btn-secondary" id="add-weapon-mod-btn">Ajouter</button>
+                            </div>
+                        </div>
+
+                        <div class="upgrade-control-group">
+                            <label for="relic-select">Relique de Croisade</label>
+                            <div class="input-group">
+                                <select id="relic-select"><option>Choisir une relique...</option></select>
+                                <button type="button" class="btn-secondary" id="add-relic-btn">Ajouter</button>
+                            </div>
+                        </div>
+
+                        <div class="upgrade-control-group">
+                            <label for="battle-scar-select">Cicatrice de Bataille</label>
+                            <div class="input-group">
+                                <select id="battle-scar-select"><option>Choisir une cicatrice...</option></select>
+                                <button type="button" class="btn-secondary" id="add-battle-scar-btn">Ajouter</button>
+                            </div>
+                        </div>
+
+                        <div class="upgrade-control-group">
+                            <label for="sombreroche-honour-select">Honneur de Sombreroche (Éclats)</label>
+                            <div class="input-group">
+                                <select id="sombreroche-honour-select"><option>Choisir un honneur...</option></select>
+                                <button type="button" class="btn-secondary" id="add-sombreroche-honour-btn">Acheter</button>
+                            </div>
+                        </div>
+
+                        <div class="upgrade-control-group">
+                            <label for="sombreroche-relic-select">Relique de Sombreroche (Éclats)</label>
+                            <div class="input-group">
+                                <select id="sombreroche-relic-select"><option>Choisir une relique...</option></select>
+                                <button type="button" class="btn-secondary" id="add-sombreroche-relic-btn">Acheter</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-primary">Sauvegarder l'Unité</button>
             </form>
         </div>
