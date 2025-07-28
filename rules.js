@@ -1004,6 +1004,19 @@ const factionUnits = {
     // etc... pour les autres factions
 };
 
+// NOUVEL AJOUT : Règles de croisade spécifiques aux Tyranides
+const tyranidCrusadeRules = {
+    biomorphologies: [
+        { name: "Glandes Surrénales Accélérées", desc: "Ajoutez 1\" à la caractéristique de Mouvement de cette unité. Si l'unité a l'aptitude AVANCE, ajoutez 1 à ses jets d'Avance.", biomassCost: 10, crusadePointCost: 1 },
+        { name: "Sacs à Toxines Virulents", desc: "Les armes de mêlée de cette unité (hors MONSTRE et VÉHICULE) gagnent l'aptitude [TOUCHES FATALES].", biomassCost: 15, crusadePointCost: 1 },
+        { name: "Carapace Chitineuse Renforcée", desc: "Améliorez de 1 la caractéristique de Sauvegarde de cette unité (jusqu'à un maximum de 3+).", biomassCost: 20, crusadePointCost: 1 },
+        { name: "Griffes et Dents Acérées", desc: "Améliorez de 1 la caractéristique de Pénétration d'Armure des armes de mêlée de cette unité.", biomassCost: 15, crusadePointCost: 1 },
+        { name: "Instincts de Prédateur Alpha", desc: "Une fois par bataille, cette unité peut être la cible du stratagème Intervention Héroïque pour 0 PC.", biomassCost: 10, crusadePointCost: 1 },
+        { name: "Camouflage Chéphalopodique", desc: "Les figurines de cette unité ont l'aptitude Discrétion.", biomassCost: 20, crusadePointCost: 1 },
+        { name: "Sang Acide", desc: "Chaque fois qu'une attaque de mêlée est allouée à une figurine de cette unité, après que l'unité attaquante a résolu ses attaques, pour chaque figurine détruite dans cette unité, jetez un D6. Sur 5+, l'unité attaquante subit 1 blessure mortelle.", biomassCost: 15, crusadePointCost: 1 }
+    ]
+};
+
 
 const crusadeRules = {
     battleTraits: {

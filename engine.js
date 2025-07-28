@@ -350,6 +350,12 @@ const loadData = () => {
             player.upgradeSupplyCost = 0;
             dataWasModified = true;
         }
+        // NOUVEAU : Migration pour les points de Biomasse
+        if (player.faction === 'Tyranids' && player.biomassPoints === undefined) {
+            player.biomassPoints = 0;
+            dataWasModified = true;
+            console.log(`Migration: Ajout de biomassPoints pour le joueur Tyranide ${player.name}`);
+        }
     });
 
     campaignData.systems.forEach(system => {

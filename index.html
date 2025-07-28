@@ -54,6 +54,12 @@
                     <button class="tally-btn" data-action="decrease-rp">-</button>
                     <button class="tally-btn" data-action="increase-rp">+</button>
                 </div>
+                <div id="biomass-box" class="info-box hidden">
+                    <strong>Points de Biomasse:</strong>
+                    <span id="biomass-points" class="stat-value"></span>
+                    <button class="tally-btn" data-action="decrease-biomass">-</button>
+                    <button class="tally-btn" data-action="increase-biomass">+</button>
+                </div>
                 <div class="info-box">
                     <strong>Éclats de Sombreroche:</strong>
                     <span id="sombreroche-points" class="stat-value"></span>
@@ -154,7 +160,7 @@
                     </optgroup>
                     <optgroup label="Xenos">
                         <option value="Aeldari">Aeldari</option>
-                        <option value="Drukhari">Drukhari</option>
+                        <option value: "Drukhari">Drukhari</option>
                         <option value="Genestealer Cults">Genestealer Cults</option>
                         <option value="Leagues of Votann">Leagues of Votann</option>
                         <option value="Necrons">Necrons</option>
@@ -180,37 +186,6 @@
                         <select id="unit-name" required>
                             <option value="" disabled selected>Choisir une unité...</option>
                         </select>
-                    </div>
-                </div>
-                <div class="unit-card-body">
-                    <div class="unit-card-column">
-                        <div class="form-group small">
-                            <label for="unit-role">Rôle :</label>
-                            <select id="unit-role">
-                                <option value="Personnage">Personnage</option>
-                                <option value="Hero Epique">Hero Epique</option>
-                                <option value="Infantrie">Infanterie</option>
-                                <option value="Cavalerie">Cavalerie</option>
-                                <option value="Monstre">Monstre</option>
-                                <option value="Vehicule">Véhicule</option>
-                                <option value="Bête">Bête</option>
-                                <option value="Fortification">Fortification</option>
-                                <option value="Titanesque">Titanesque</option>
-                                <option value="Nuée">Nuée</option>
-                            </select>
-                        </div>
-                        <div class="form-group small"><label for="unit-power">Coût en Points :</label><input type="number" id="unit-power" min="0" required></div>
-                        <div class="form-group small"><label for="unit-xp">XP :</label><input type="number" id="unit-xp" min="0"></div>
-                        <div class="form-group small"><label for="unit-crusade-points">Points de Croisade :</label><input type="number" id="unit-crusade-points" min="0"></div>
-                        <div class="form-group small"><strong>Rang:</strong> <span id="unit-rank-display"></span></div>
-                        <div class="form-group"><label for="unit-equipment">Équipement :</label><textarea id="unit-equipment" rows="5"></textarea></div>
-                        <div class="form-group"><label for="unit-warlord-trait">Trait de Seigneur de Guerre :</label><textarea id="unit-warlord-trait" rows="3"></textarea></div>
-                        <div class="form-group"><label for="unit-relic">Relique :</label><textarea id="unit-relic" rows="3"></textarea></div>
-                    </div>
-                    <div class="unit-card-column">
-                        <div class="form-group"><label for="unit-honours">Honneurs de Bataille :</label><textarea id="unit-honours" rows="5"></textarea></div>
-                        <div class="form-group"><label for="unit-scars">Cicatrices de Bataille :</label><textarea id="unit-scars" rows="5"></textarea></div>
-                        <div class="form-group"><label for="unit-marked-for-glory">Marqué pour la Gloire (unités détruites) :</label><input type="number" id="unit-marked-for-glory" min="0"></div>
                     </div>
                 </div>
 
@@ -265,6 +240,47 @@
                                 <button type="button" class="btn-secondary" id="add-sombreroche-relic-btn">Acheter</button>
                             </div>
                         </div>
+
+                        <div id="biomorphology-section" class="upgrade-control-group hidden">
+                            <label for="biomorphology-select">Biomorphologie (Biomasse)</label>
+                            <div class="input-group">
+                                <select id="biomorphology-select"><option>Choisir une adaptation...</option></select>
+                                <button type="button" class="btn-secondary" id="add-biomorphology-btn">Absorber</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="unit-card-body">
+                    <div class="unit-card-column">
+                        <div class="form-group small">
+                            <label for="unit-role">Rôle :</label>
+                            <select id="unit-role">
+                                <option value="Personnage">Personnage</option>
+                                <option value="Hero Epique">Hero Epique</option>
+                                <option value="Infantrie">Infanterie</option>
+                                <option value="Cavalerie">Cavalerie</option>
+                                <option value="Monstre">Monstre</option>
+                                <option value="Vehicule">Véhicule</option>
+                                <option value="Bête">Bête</option>
+                                <option value="Fortification">Fortification</option>
+                                <option value="Titanesque">Titanesque</option>
+                                <option value="Nuée">Nuée</option>
+                            </select>
+                        </div>
+                        <div class="form-group small"><label for="unit-power">Coût en Points :</label><input type="number" id="unit-power" min="0" required></div>
+                        <div class="form-group small"><label for="unit-xp">XP :</label><input type="number" id="unit-xp" min="0"></div>
+                        <div class="form-group small"><label for="unit-crusade-points">Points de Croisade :</label><input type="number" id="unit-crusade-points" min="0"></div>
+                        <div class="form-group small"><strong>Rang:</strong> <span id="unit-rank-display"></span></div>
+                        <div class="form-group"><label for="unit-equipment">Équipement :</label><textarea id="unit-equipment" rows="5"></textarea></div>
+                        <div class="form-group"><label for="unit-warlord-trait">Trait de Seigneur de Guerre :</label><textarea id="unit-warlord-trait" rows="3"></textarea></div>
+                        <div class="form-group"><label for="unit-relic">Relique :</label><textarea id="unit-relic" rows="3"></textarea></div>
+                    </div>
+                    <div class="unit-card-column">
+                        <div class="form-group"><label for="unit-honours">Honneurs de Bataille :</label><textarea id="unit-honours" rows="5"></textarea></div>
+                        <div class="form-group"><label for="unit-scars">Cicatrices de Bataille :</label><textarea id="unit-scars" rows="5"></textarea></div>
+                        <div class="form-group"><label for="unit-marked-for-glory">Marqué pour la Gloire (unités détruites) :</label><input type="number" id="unit-marked-for-glory" min="0"></div>
                     </div>
                 </div>
 

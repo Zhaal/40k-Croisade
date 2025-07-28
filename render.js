@@ -61,6 +61,16 @@ const renderPlayerDetail = () => {
     document.getElementById('crusade-faction').value = player.crusadeFaction || '';
     document.getElementById('pr-points').textContent = player.requisitionPoints;
     document.getElementById('sombreroche-points').textContent = player.sombrerochePoints || 0;
+    
+    // NOUVEAU : Affichage conditionnel de la boîte de Biomasse
+    const biomassBox = document.getElementById('biomass-box');
+    if (player.faction === 'Tyranids') {
+        biomassBox.classList.remove('hidden');
+        document.getElementById('biomass-points').textContent = player.biomassPoints || 0;
+    } else {
+        biomassBox.classList.add('hidden');
+    }
+
     document.getElementById('supply-limit').value = player.supplyLimit;
     document.getElementById('upgrade-supply-cost').value = player.upgradeSupplyCost || 0;
 

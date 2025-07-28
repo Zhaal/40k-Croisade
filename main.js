@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const newPlayerId = crypto.randomUUID();
             const newSystemId = crypto.randomUUID();
+            const faction = document.getElementById('player-faction-input').value.trim(); // Faction
             const DEFENSE_VALUES = [500, 1000, 1500, 2000];
             const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
             const numPlanets = 5;
@@ -146,16 +147,23 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             campaignData.systems.push(newSystem);
 
-            campaignData.players.push({
+            const newPlayer = {
                 id: newPlayerId, systemId: newSystemId, name: name,
-                faction: document.getElementById('player-faction-input').value.trim(),
+                faction: faction,
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
                 supplyLimit: 500,
                 upgradeSupplyCost: 0,
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
                 discoveredSystemIds: [newSystemId]
-            });
+            };
+
+            // NOUVEAU : Ajout des points de Biomasse si le joueur est Tyranide
+            if (faction === 'Tyranids') {
+                newPlayer.biomassPoints = 0;
+            }
+
+            campaignData.players.push(newPlayer);
         }
         saveData();
         renderPlayerList();
@@ -207,6 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
             player.requisitionPoints = Math.max(0, player.requisitionPoints + change);
         } else if (stat === 'sombreroche') {
             player.sombrerochePoints = Math.max(0, (player.sombrerochePoints || 0) + change);
+        } else if (stat === 'biomass') { // NOUVEAU : Gestion de la Biomasse
+            player.biomassPoints = Math.max(0, (player.biomassPoints || 0) + change);
         } else {
             const battleStat = stat === 'win' ? 'wins' : 'losses';
             if (change < 0 && (player.battles[battleStat] || 0) === 0) return;
@@ -272,6 +282,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         populateUnitSelector(); // MODIFICATION : Appel de la nouvelle fonction
         populateUpgradeSelectors();
+
+        // NOUVEAU : Logique d'affichage pour les Tyranides
+        const player = campaignData.players[activePlayerIndex];
+        const biomorphologySection = document.getElementById('biomorphology-section');
+        if (player && player.faction === 'Tyranids') {
+            biomorphologySection.classList.remove('hidden');
+            const biomorphologySelect = document.getElementById('biomorphology-select');
+            biomorphologySelect.innerHTML = '<option value="">Choisir une adaptation...</option>';
+            tyranidCrusadeRules.biomorphologies.forEach(morph => {
+                biomorphologySelect.innerHTML += `<option value="${morph.name}" data-biomass="${morph.biomassCost}" data-cp="${morph.crusadePointCost}">${morph.name} (${morph.biomassCost} Biomasse)</option>`;
+            });
+        } else {
+            biomorphologySection.classList.add('hidden');
+        }
+
         openModal(unitModal);
     };
 
@@ -610,6 +635,42 @@ document.addEventListener('DOMContentLoaded', () => {
         customTooltip.style.opacity = '0';
     });
     
+    // NOUVEAU : Listener pour le bouton d'ajout de Biomorphologie
+    document.getElementById('add-biomorphology-btn').addEventListener('click', async () => {
+        const select = document.getElementById('biomorphology-select');
+        const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption || !selectedOption.value) return;
+
+        const player = campaignData.players[activePlayerIndex];
+        const biomassCost = parseInt(selectedOption.dataset.biomass);
+        const cpCost = parseInt(selectedOption.dataset.cp);
+        const morphName = selectedOption.value;
+        const morph = tyranidCrusadeRules.biomorphologies.find(m => m.name === morphName);
+
+        if (!morph) return;
+
+        if (player.biomassPoints < biomassCost) {
+            showNotification(`Biomasse insuffisante (Requis: ${biomassCost}).`, 'error');
+            return;
+        }
+
+        const confirmText = `Voulez-vous dépenser <b>${biomassCost} Biomasse</b> pour faire évoluer cette unité avec <i>${morphName}</i>?<br><br>Coût: ${cpCost} PC<br>Solde Biomasse: ${player.biomassPoints} &rarr; ${player.biomassPoints - biomassCost}`;
+        
+        if (await showConfirm("Confirmer l'Évolution", confirmText)) {
+            player.biomassPoints -= biomassCost;
+            
+            addUpgradeToTextarea('unit-honours', `Biomorphologie: ${morph.name}`, morph.desc);
+            
+            const crusadePointsInput = document.getElementById('unit-crusade-points');
+            crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + cpCost;
+
+            saveData();
+            renderPlayerDetail(); // Mettre à jour l'affichage des points de biomasse
+            showNotification(`Évolution ${morphName} absorbée !`, 'success');
+            select.value = '';
+        }
+    });
+
     //======================================================================
     //  INITIALISATION
     //======================================================================
