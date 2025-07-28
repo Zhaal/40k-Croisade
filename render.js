@@ -62,7 +62,7 @@ const renderPlayerDetail = () => {
     document.getElementById('pr-points').textContent = player.requisitionPoints;
     document.getElementById('sombreroche-points').textContent = player.sombrerochePoints || 0;
     
-    // NOUVEAU : Affichage conditionnel de la boîte de Biomasse
+    // Affichage conditionnel de la boîte de Biomasse (Tyranids)
     const biomassBox = document.getElementById('biomass-box');
     if (player.faction === 'Tyranids') {
         biomassBox.classList.remove('hidden');
@@ -70,6 +70,16 @@ const renderPlayerDetail = () => {
     } else {
         biomassBox.classList.add('hidden');
     }
+
+    // NOUVEAU : Affichage conditionnel de la boîte Death Guard
+    const deathguardBox = document.getElementById('deathguard-box');
+    if (player.faction === 'Death Guard') {
+        deathguardBox.classList.remove('hidden');
+        document.getElementById('contagion-points').textContent = player.contagionPoints || 0;
+    } else {
+        deathguardBox.classList.add('hidden');
+    }
+
 
     document.getElementById('supply-limit').value = player.supplyLimit;
     document.getElementById('upgrade-supply-cost').value = player.upgradeSupplyCost || 0;

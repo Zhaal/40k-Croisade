@@ -60,6 +60,12 @@
                     <button class="tally-btn" data-action="decrease-biomass">-</button>
                     <button class="tally-btn" data-action="increase-biomass">+</button>
                 </div>
+                <div id="deathguard-box" class="info-box hidden">
+                    <strong>Points de Contagion:</strong>
+                    <span id="contagion-points" class="stat-value"></span>
+                    <button class="tally-btn" data-action="decrease-contagion">-</button>
+                    <button class="tally-btn" data-action="increase-contagion">+</button>
+                </div>
                 <div class="info-box">
                     <strong>Éclats de Sombreroche:</strong>
                     <span id="sombreroche-points" class="stat-value"></span>
@@ -246,6 +252,14 @@
                             <div class="input-group">
                                 <select id="biomorphology-select"><option>Choisir une adaptation...</option></select>
                                 <button type="button" class="btn-secondary" id="add-biomorphology-btn">Absorber</button>
+                            </div>
+                        </div>
+                        
+                        <div id="nurgle-boon-section" class="upgrade-control-group hidden">
+                            <label for="nurgle-boon-select">Bienfait de Nurgle (+1 PC)</label>
+                            <div class="input-group">
+                                <select id="nurgle-boon-select"><option>Choisir un bienfait...</option></select>
+                                <button type="button" class="btn-secondary" id="add-nurgle-boon-btn">Accorder</button>
                             </div>
                         </div>
 

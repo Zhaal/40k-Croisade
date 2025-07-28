@@ -346,6 +346,7 @@ const factionUnits = {
         { name: "Équipe de Brécheurs", cost: 100 },
         { name: "Équipe de Cibleurs", cost: 90 },
         { name: "Équipe de Tir Furtive", cost: 70 },
+        { name: "Équipe de Tir Furtive", cost: 80 },
         { name: "Éthéré", cost: 50 },
         { name: "Exo-armure Ghostkeel", cost: 160 },
         { name: "Exo-armure Riptide", cost: 190 },
@@ -1014,6 +1015,21 @@ const tyranidCrusadeRules = {
         { name: "Instincts de Prédateur Alpha", desc: "Une fois par bataille, cette unité peut être la cible du stratagème Intervention Héroïque pour 0 PC.", biomassCost: 10, crusadePointCost: 1 },
         { name: "Camouflage Chéphalopodique", desc: "Les figurines de cette unité ont l'aptitude Discrétion.", biomassCost: 20, crusadePointCost: 1 },
         { name: "Sang Acide", desc: "Chaque fois qu'une attaque de mêlée est allouée à une figurine de cette unité, après que l'unité attaquante a résolu ses attaques, pour chaque figurine détruite dans cette unité, jetez un D6. Sur 5+, l'unité attaquante subit 1 blessure mortelle.", biomassCost: 15, crusadePointCost: 1 }
+    ]
+};
+
+// NOUVEL AJOUT : Règles de croisade spécifiques à la Death Guard
+const deathGuardCrusadeRules = {
+    boonsOfNurgle: [
+        { name: "Vitalité Fébrile", roll: 11, desc: "Ajoutez 1 à la caractéristique de Points de Vie des figurines de cette unité." },
+        { name: "Membres Sinueux", roll: 12, desc: "Ajoutez 1 aux jets d'Avance et de Charge pour cette figurine." },
+        { name: "Tentacules Grouillants", roll: 13, desc: "Ajoutez 1 à la caractéristique d'Attaques des armes de mêlée dont cette figurine est équipée." },
+        { name: "Hideusement Enflé", roll: 21, desc: "Ajoutez 2 à la caractéristique de Points de Vie de cette figurine." },
+        { name: "Insensibilité Lépreuse", roll: 22, desc: "Cette figurine a l'aptitude Insensible à la Douleur 5+." },
+        { name: "Voile de Mouches", roll: 23, desc: "Les figurines de l'unité de cette figurine ont l'aptitude Discrétion." },
+        { name: "Contact Putréfiant", roll: 31, desc: "Améliorez de 1 la caractéristique de Pénétration d'Armure des armes de mêlée dont cette figurine est équipée." },
+        { name: "Pestevision", roll: 32, desc: "À chaque attaque de tir effectuée par cette figurine, ignorez les bonus que la cible reçoit pour son couvert." },
+        { name: "Tourbillon de Miasmes", roll: 33, desc: "Ajoutez D3\" à la portée de Contagion de cette figurine." }
     ]
 };
 

@@ -158,9 +158,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 discoveredSystemIds: [newSystemId]
             };
 
-            // NOUVEAU : Ajout des points de Biomasse si le joueur est Tyranide
+            // Ajout des points de Biomasse si le joueur est Tyranide
             if (faction === 'Tyranids') {
                 newPlayer.biomassPoints = 0;
+            }
+            // Ajout des points de Contagion si le joueur est Death Guard
+            if (faction === 'Death Guard') {
+                newPlayer.contagionPoints = 0;
             }
 
             campaignData.players.push(newPlayer);
@@ -215,8 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
             player.requisitionPoints = Math.max(0, player.requisitionPoints + change);
         } else if (stat === 'sombreroche') {
             player.sombrerochePoints = Math.max(0, (player.sombrerochePoints || 0) + change);
-        } else if (stat === 'biomass') { // NOUVEAU : Gestion de la Biomasse
+        } else if (stat === 'biomass') { 
             player.biomassPoints = Math.max(0, (player.biomassPoints || 0) + change);
+        } else if (stat === 'contagion') {
+            player.contagionPoints = Math.max(0, (player.contagionPoints || 0) + change);
         } else {
             const battleStat = stat === 'win' ? 'wins' : 'losses';
             if (change < 0 && (player.battles[battleStat] || 0) === 0) return;
@@ -253,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Événements de l'Ordre de Bataille et Unités ---
     
-    // NOUVELLE FONCTION : Remplit le sélecteur d'unité en fonction de la faction du joueur
     const populateUnitSelector = () => {
         if (activePlayerIndex < 0) return;
 
@@ -280,10 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('unit-marked-for-glory').value = 0;
         document.getElementById('unit-rank-display').textContent = getRankFromXp(0);
         
-        populateUnitSelector(); // MODIFICATION : Appel de la nouvelle fonction
+        populateUnitSelector(); 
         populateUpgradeSelectors();
 
-        // NOUVEAU : Logique d'affichage pour les Tyranides
         const player = campaignData.players[activePlayerIndex];
         const biomorphologySection = document.getElementById('biomorphology-section');
         if (player && player.faction === 'Tyranids') {
@@ -318,16 +322,35 @@ document.addEventListener('DOMContentLoaded', () => {
             unitForm.dataset.initialXp = unit.xp || 0;
             unitForm.dataset.initialGlory = unit.markedForGlory || 0;
             
+            // =================================================================
+            // BUG FIX START: Correctly populate all form fields from saved data
+            // The previous loop failed to populate fields where the data property name 
+            // (e.g., 'battleHonours') did not directly map to the element ID (e.g., 'unit-honours').
+            // This explicit approach is more robust and fixes the reported bug.
             Object.keys(unit).forEach(key => {
-                const elementId = `unit-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
+                // Generate the potential ID from the property key
+                let elementId = `unit-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
+
+                // Handle specific inconsistencies in naming between data model and HTML IDs
+                if (key === 'battleHonours') {
+                    elementId = 'unit-honours';
+                } else if (key === 'battleScars') {
+                    elementId = 'unit-scars';
+                }
+                
                 const element = document.getElementById(elementId);
                 if (element) {
-                     if (key === 'battleHonours') document.getElementById('unit-honours').value = unit[key] || '';
-                     else if (key === 'battleScars') document.getElementById('unit-scars').value = unit[key] || '';
-                     else if (element.type === 'checkbox') element.checked = unit[key];
-                     else element.value = unit[key];
+                    if (element.type === 'checkbox') {
+                        element.checked = unit[key];
+                    } else {
+                        // For all other elements, including textareas and inputs, set the value.
+                        element.value = unit[key] || '';
+                    }
                 }
             });
+            // BUG FIX END
+            // =================================================================
+
             document.getElementById('unit-id').value = editingUnitIndex;
             document.getElementById('unit-rank-display').textContent = getRankFromXp(unit.xp || 0);
             populateUpgradeSelectors();
@@ -345,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     unitForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = document.getElementById('unit-name').value; // .trim() n'est plus nécessaire pour un select
+        const name = document.getElementById('unit-name').value;
         if (!name) return;
     
         const player = campaignData.players[activePlayerIndex];
@@ -548,7 +571,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Améliorations d'unité & Logique spéciale ---
 
-    // NOUVEL ÉVÉNEMENT : Met à jour le coût en points quand une unité est choisie
     document.getElementById('unit-name').addEventListener('change', (e) => {
         const selectedOption = e.target.options[e.target.selectedIndex];
         if (selectedOption && selectedOption.dataset.cost) {
@@ -635,41 +657,47 @@ document.addEventListener('DOMContentLoaded', () => {
         customTooltip.style.opacity = '0';
     });
     
-    // NOUVEAU : Listener pour le bouton d'ajout de Biomorphologie
-    document.getElementById('add-biomorphology-btn').addEventListener('click', async () => {
-        const select = document.getElementById('biomorphology-select');
-        const selectedOption = select.options[select.selectedIndex];
-        if (!selectedOption || !selectedOption.value) return;
+document.getElementById('add-biomorphology-btn').addEventListener('click', async () => {
+    const select = document.getElementById('biomorphology-select');
+    const selectedOption = select.options[select.selectedIndex];
+    if (!selectedOption || !selectedOption.value) return;
 
-        const player = campaignData.players[activePlayerIndex];
-        const biomassCost = parseInt(selectedOption.dataset.biomass);
-        const cpCost = parseInt(selectedOption.dataset.cp);
-        const morphName = selectedOption.value;
-        const morph = tyranidCrusadeRules.biomorphologies.find(m => m.name === morphName);
+    const player = campaignData.players[activePlayerIndex];
+    const biomassCost = parseInt(selectedOption.dataset.biomass);
+    const cpCost = parseInt(selectedOption.dataset.cp);
+    const morphName = selectedOption.value;
+    const morph = tyranidCrusadeRules.biomorphologies.find(m => m.name === morphName);
 
-        if (!morph) return;
+    if (!morph) return;
 
-        if (player.biomassPoints < biomassCost) {
-            showNotification(`Biomasse insuffisante (Requis: ${biomassCost}).`, 'error');
-            return;
-        }
+    if (player.biomassPoints < biomassCost) {
+        showNotification(`Biomasse insuffisante (Requis: ${biomassCost}).`, 'error');
+        return;
+    }
 
-        const confirmText = `Voulez-vous dépenser <b>${biomassCost} Biomasse</b> pour faire évoluer cette unité avec <i>${morphName}</i>?<br><br>Coût: ${cpCost} PC<br>Solde Biomasse: ${player.biomassPoints} &rarr; ${player.biomassPoints - biomassCost}`;
+    const confirmText = `Voulez-vous dépenser <b>${biomassCost} Biomasse</b> pour faire évoluer cette unité avec <i>${morphName}</i>?<br><br>Coût: ${cpCost} PC<br>Solde Biomasse: ${player.biomassPoints} &rarr; ${player.biomassPoints - biomassCost}`;
+    
+    if (await showConfirm("Confirmer l'Évolution", confirmText)) {
+        const unit = player.units[editingUnitIndex];
+
+        // Mettre à jour les données du joueur et de l'unité
+        player.biomassPoints -= biomassCost;
         
-        if (await showConfirm("Confirmer l'Évolution", confirmText)) {
-            player.biomassPoints -= biomassCost;
-            
-            addUpgradeToTextarea('unit-honours', `Biomorphologie: ${morph.name}`, morph.desc);
-            
-            const crusadePointsInput = document.getElementById('unit-crusade-points');
-            crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + cpCost;
+        const textToAdd = `\n- Biomorphologie: ${morph.name}: ${morph.desc}`;
+        unit.battleHonours = (unit.battleHonours || '').trim() + textToAdd;
+        unit.crusadePoints = (unit.crusadePoints || 0) + cpCost;
+        
+        // Mettre à jour l'interface utilisateur
+        document.getElementById('unit-honours').value = unit.battleHonours;
+        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
+        select.value = '';
 
-            saveData();
-            renderPlayerDetail(); // Mettre à jour l'affichage des points de biomasse
-            showNotification(`Évolution ${morphName} absorbée !`, 'success');
-            select.value = '';
-        }
-    });
+        // Sauvegarder et notifier
+        saveData();
+        renderPlayerDetail(); 
+        showNotification(`Évolution ${morphName} absorbée !`, 'success');
+    }
+});
 
     //======================================================================
     //  INITIALISATION

@@ -72,13 +72,33 @@ const populateUpgradeSelectors = () => {
         });
     }
     sombrerocheRelicSelect.disabled = !isCharacter;
+
+    // Logique pour les Bienfaits de Nurgle
+    const player = campaignData.players[activePlayerIndex];
+    const nurgleBoonSection = document.getElementById('nurgle-boon-section');
+
+    if (player && player.faction === 'Death Guard' && isCharacter) {
+        nurgleBoonSection.classList.remove('hidden');
+        const nurgleBoonSelect = document.getElementById('nurgle-boon-select');
+        nurgleBoonSelect.innerHTML = '<option value="">Choisir un bienfait...</option>';
+        deathGuardCrusadeRules.boonsOfNurgle.forEach(boon => {
+            nurgleBoonSelect.innerHTML += `<option value="${boon.name}">${boon.name} (Jet: ${boon.roll})</option>`;
+        });
+    } else {
+        nurgleBoonSection.classList.add('hidden');
+    }
 };
 
-const addUpgradeToTextarea = (textareaId, upgradeName, upgradeDesc) => {
-    const textarea = document.getElementById(textareaId);
-    const textToAdd = `\n- ${upgradeName}: ${upgradeDesc}`;
-    textarea.value = (textarea.value || '').trim() + textToAdd;
+// **CORRIGÉ** : La fonction met à jour directement l'objet de données ET le champ de texte.
+const addUpgradeToUnitData = (unit, textareaId, upgradeName, upgradeDesc, prefix = '') => {
+    const textToAdd = `\n- ${prefix}${upgradeName}: ${upgradeDesc}`;
+    const key = textareaId.replace('unit-', ''); // 'honours' ou 'relic' ou 'scars'
+    const dataKey = key === 'honours' ? 'battleHonours' : (key === 'scars' ? 'battleScars' : key);
+
+    unit[dataKey] = (unit[dataKey] || '').trim() + textToAdd;
+    document.getElementById(textareaId).value = unit[dataKey];
 };
+
 
 async function handleRpPurchase(upgradeName, rpCost, onConfirm) {
     const player = campaignData.players[activePlayerIndex];
@@ -91,9 +111,9 @@ async function handleRpPurchase(upgradeName, rpCost, onConfirm) {
     
     if (await showConfirm("Confirmer Dépense de Réquisition", confirmText)) {
         player.requisitionPoints -= rpCost;
-        onConfirm();
+        onConfirm(); // Cette fonction va maintenant modifier l'objet campaignData
         document.getElementById('pr-points').textContent = player.requisitionPoints;
-        saveData();
+        saveData(); // Sauvegarde les changements sur le joueur ET l'unité
         showNotification(`${upgradeName} acheté !`, 'success');
     }
 }
@@ -108,9 +128,10 @@ document.getElementById('add-battle-trait-btn').addEventListener('click', () => 
     if (!trait) return;
     
     handleRpPurchase(`Trait: ${trait.name}`, 1, () => {
-        addUpgradeToTextarea('unit-honours', trait.name, trait.desc);
-        const crusadePointsInput = document.getElementById('unit-crusade-points');
-        crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + 1;
+        const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+        addUpgradeToUnitData(unit, 'unit-honours', trait.name, trait.desc);
+        unit.crusadePoints = (unit.crusadePoints || 0) + 1;
+        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
         select.value = '';
     });
 });
@@ -124,9 +145,10 @@ document.getElementById('add-weapon-mod-btn').addEventListener('click', () => {
     if (!mod) return;
 
     handleRpPurchase(`Mod. d'Arme: ${mod.name}`, 1, () => {
-        addUpgradeToTextarea('unit-honours', `Mod. d'Arme: ${mod.name}`, mod.desc);
-        const crusadePointsInput = document.getElementById('unit-crusade-points');
-        crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + 1;
+        const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+        addUpgradeToUnitData(unit, 'unit-honours', mod.name, mod.desc, "Mod. d'Arme: ");
+        unit.crusadePoints = (unit.crusadePoints || 0) + 1;
+        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
         select.value = '';
     });
 });
@@ -140,10 +162,11 @@ document.getElementById('add-relic-btn').addEventListener('click', () => {
     const relic = crusadeRules[category][type].find(r => r.name === selectedOption.value);
     if (!relic) return;
     
-    handleRpPurchase(`Relique: ${relic.name}`, 1, () => {
-        addUpgradeToTextarea('unit-relic', relic.name, relic.desc);
-        const crusadePointsInput = document.getElementById('unit-crusade-points');
-        crusadePointsInput.value = (parseInt(crusadePointsInput.value) || 0) + relic.cost;
+    handleRpPurchase(`Relique: ${relic.name}`, relic.cost, () => {
+        const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+        addUpgradeToUnitData(unit, 'unit-relic', relic.name, relic.desc);
+        unit.crusadePoints = (unit.crusadePoints || 0) + relic.cost;
+        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
         select.value = '';
     });
 });
@@ -154,7 +177,11 @@ document.getElementById('add-battle-scar-btn').addEventListener('click', () => {
     if (!scarName) return;
 
     const scar = crusadeRules.battleScars.find(s => s.name === scarName);
-    addUpgradeToTextarea('unit-scars', scar.name, scar.desc);
+    const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+
+    addUpgradeToUnitData(unit, 'unit-scars', scar.name, scar.desc);
+    saveData(); // Sauvegarde immédiate car il n'y a pas de coût
+    
     select.value = '';
     showNotification("Cicatrice de Bataille ajoutée.", 'info');
 });
@@ -177,11 +204,13 @@ document.getElementById('add-sombreroche-honour-btn').addEventListener('click', 
 
     if(await showConfirm("Confirmer l'Achat", confirmText)) {
         player.sombrerochePoints -= cost;
-        addUpgradeToTextarea('unit-honours', `Honneur de Sombreroche: ${honour.name}`, honour.desc);
+        const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+        addUpgradeToUnitData(unit, 'unit-honours', honour.name, honour.desc, "Honneur de Sombreroche: ");
+        
         select.value = '';
         document.getElementById('sombreroche-points').textContent = player.sombrerochePoints;
-        showNotification("Honneur de Sombreroche acheté !", 'success');
         saveData();
+        showNotification("Honneur de Sombreroche acheté !", 'success');
     }
 });
 
@@ -203,10 +232,32 @@ document.getElementById('add-sombreroche-relic-btn').addEventListener('click', a
 
     if (await showConfirm("Confirmer l'Achat", confirmText)) {
         player.sombrerochePoints -= cost;
-        addUpgradeToTextarea('unit-relic', `Relique de Sombreroche: ${relic.name}`, relic.desc);
+        const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+        addUpgradeToUnitData(unit, 'unit-relic', relic.name, relic.desc, "Relique de Sombreroche: ");
+
         select.value = '';
         document.getElementById('sombreroche-points').textContent = player.sombrerochePoints;
-        showNotification("Relique de Sombreroche achetée !", 'success');
         saveData();
+        showNotification("Relique de Sombreroche achetée !", 'success');
     }
+});
+
+// Listener pour les Bienfaits de Nurgle
+document.getElementById('add-nurgle-boon-btn').addEventListener('click', () => {
+    const select = document.getElementById('nurgle-boon-select');
+    const boonName = select.value;
+    if (!boonName) return;
+
+    const boon = deathGuardCrusadeRules.boonsOfNurgle.find(b => b.name === boonName);
+    if (!boon) return;
+    
+    const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
+    addUpgradeToUnitData(unit, 'unit-honours', boon.name, boon.desc, "Bienfait de Nurgle: ");
+    
+    unit.crusadePoints = (unit.crusadePoints || 0) + 1;
+    document.getElementById('unit-crusade-points').value = unit.crusadePoints;
+
+    saveData();
+    showNotification(`Le Bienfait "${boon.name}" a été accordé.`, 'success');
+    select.value = '';
 });

@@ -356,6 +356,14 @@ const loadData = () => {
             dataWasModified = true;
             console.log(`Migration: Ajout de biomassPoints pour le joueur Tyranide ${player.name}`);
         }
+        // NOUVEAU : Migration pour les points de Contagion (Death Guard)
+        if (player.faction === 'Death Guard') {
+            if (player.contagionPoints === undefined) {
+                player.contagionPoints = 0;
+                dataWasModified = true;
+                console.log(`Migration: Ajout de contagionPoints pour le joueur Death Guard ${player.name}`);
+            }
+        }
     });
 
     campaignData.systems.forEach(system => {
