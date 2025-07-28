@@ -301,6 +301,18 @@ const renderGalacticMap = () => {
 
     mapContainer.appendChild(viewport);
 
+    // MODIFIED: Create SVG overlay for curved lines
+    const svgOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgOverlay.style.position = 'absolute';
+    svgOverlay.style.top = '0';
+    svgOverlay.style.left = '0';
+    svgOverlay.style.width = '100%';
+    svgOverlay.style.height = '100%';
+    svgOverlay.style.pointerEvents = 'none';
+    svgOverlay.style.zIndex = '8'; // Position between regular lines and nodes
+    viewport.appendChild(svgOverlay);
+
+
     const drawnConnections = new Set();
     systemsToDisplay.forEach(system => {
         const pos1 = system.position;
@@ -343,18 +355,26 @@ const renderGalacticMap = () => {
             const pos1 = system1.position;
             const pos2 = system2.position;
             
-            const line = document.createElement('div');
-            line.className = 'gateway-line';
-            const deltaX = pos2.x - pos1.x;
-            const deltaY = pos2.y - pos1.y;
-            const distance = Math.hypot(deltaX, deltaY);
-            const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+            // MODIFIED: Draw a curved SVG path instead of a div
+            const midX = (pos1.x + pos2.x) / 2;
+            const midY = (pos1.y + pos2.y) / 2;
+            const dx = pos2.x - pos1.x;
+            const dy = pos2.y - pos1.y;
+            const dist = Math.hypot(dx, dy);
             
-            line.style.left = `${pos1.x}px`;
-            line.style.top = `${pos1.y}px`;
-            line.style.width = `${distance}px`;
-            line.style.transform = `rotate(${angle}deg)`;
-            viewport.appendChild(line);
+            // Offset the control point perpendicularly to the line for the curve
+            const curveAmount = 170; // A fixed pixel value for the curve height
+            const controlX = midX - curveAmount * (dy / dist);
+            const controlY = midY + curveAmount * (dx / dist);
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute('d', `M ${pos1.x},${pos1.y} Q ${controlX},${controlY} ${pos2.x},${pos2.y}`);
+            path.setAttribute('stroke', 'var(--gateway-color)');
+            path.setAttribute('stroke-width', '3');
+            path.setAttribute('stroke-dasharray', '8, 6'); // Dashed line for visual effect
+            path.setAttribute('fill', 'none');
+            
+            svgOverlay.appendChild(path);
             drawnGatewayLinks.add(key);
         }
     });

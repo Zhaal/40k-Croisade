@@ -536,6 +536,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const deadWorldSelect = document.getElementById('dead-world-link-select');
             deadWorldSelect.innerHTML = '';
             
+            // MODIFIED: Reset button state every time modal is opened
+            document.getElementById('link-dead-world-btn').disabled = false;
+
             if (planet.type === 'Monde Mort' && planet.owner !== 'neutral') {
                 const ownerId = planet.owner;
                 const potentialDestinations = [];
@@ -545,11 +548,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     s.planets.forEach(p => {
                         if (p.id !== planet.id && p.type === 'Monde Mort' && p.owner === ownerId) {
-                            potentialDestinations.push({
-                                systemId: s.id,
-                                systemName: s.name,
-                                planetName: p.name
-                            });
+                            // Check if a link doesn't already exist
+                            const linkExists = (campaignData.gatewayLinks || []).some(link => 
+                                (link.systemId1 === systemId && link.systemId2 === s.id) ||
+                                (link.systemId1 === s.id && link.systemId2 === systemId)
+                            );
+                            if (!linkExists) {
+                                potentialDestinations.push({
+                                    systemId: s.id,
+                                    systemName: s.name,
+                                    planetName: p.name
+                                });
+                            }
                         }
                     });
                 });
@@ -563,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     deadWorldContainer.classList.remove('hidden');
                 } else {
-                    deadWorldSelect.innerHTML = '<option disabled>Aucune autre Monde Mort possédé</option>';
+                    deadWorldSelect.innerHTML = '<option disabled>Aucune autre Monde Mort possédé ou tous sont déjà liés.</option>';
                     deadWorldContainer.classList.remove('hidden');
                 }
             } else {
@@ -673,9 +683,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    document.getElementById('link-dead-world-btn').addEventListener('click', async () => {
+    document.getElementById('link-dead-world-btn').addEventListener('click', async (e) => {
         const sourceSystemId = document.getElementById('planet-system-id').value;
         const targetSystemId = document.getElementById('dead-world-link-select').value;
+        const linkButton = e.target;
 
         if (!targetSystemId) {
             showNotification("Veuillez sélectionner une destination.", 'warning');
@@ -699,7 +710,15 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignData.gatewayLinks.push({ systemId1: sourceSystemId, systemId2: targetSystemId });
             saveData();
             showNotification("Portail du Monde Mort activé !", 'success');
-            closeModal(planetTypeModal);
+            
+            // MODIFIED: Disable the button after successful activation
+            linkButton.disabled = true;
+
+            // Optional: Close modal after a short delay to see the disabled button
+            setTimeout(() => {
+                closeModal(planetTypeModal);
+            }, 800);
+
             if (!mapModal.classList.contains('hidden')) {
                 renderGalacticMap();
             }
