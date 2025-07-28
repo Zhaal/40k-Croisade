@@ -664,6 +664,7 @@ label {
     border: 3px solid var(--danger-color); /* Default/Contested */
     box-shadow: 0 0 15px var(--danger-color);
     display: flex;
+    flex-direction: column; /* CHANGEMENT ICI */
     justify-content: center;
     align-items: center;
     text-align: center;

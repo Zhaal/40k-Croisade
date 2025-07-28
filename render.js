@@ -406,10 +406,8 @@ const renderGalacticMap = () => {
             return `${player ? player.name.split(' ')[0] : '???'}: ${count}`;
         }).join(', ');
 
-        const ownerInfo = `${text}<br><small>${breakdownText || 'Inexploré'}</small>`;
-
-        node.innerHTML = `<span>${system.name}</span><small>${ownerInfo}</small>`;
-        node.title = `${system.name}\n${ownerInfo.replace(/<br>/g, '\n').replace(/<small>|<\/small>/g, '')}`;
+        node.innerHTML = `<span>${system.name}</span><small>${text}<br>${breakdownText || 'Inexploré'}</small>`;
+        node.title = `${system.name}\n${text}\n${breakdownText || 'Inexploré'}`;
 
         node.style.left = `${pos.x}px`;
         node.style.top = `${pos.y}px`;
