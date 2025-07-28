@@ -33,7 +33,7 @@ let startX, scrollLeftStart;
 let startY, scrollTopStart;
 
 const STEP_DISTANCE = 250;
-const GALAXY_SIZE = 3;
+const GALAXY_SIZE = 4;
 
 //======================================================================
 //  SYSTÈME DE NOTIFICATION, CONFIRMATION ET MODALES
