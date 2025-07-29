@@ -250,7 +250,7 @@ const handleExploration = async (direction) => {
             return;
         }
         
-        if (await showConfirm("Connexion PNJ", `Vous avez déjà sondé le système PNJ "<b>${probedInfo.name}</b>".<br>Voulez-vous établir une connexion permanente ?`)) {
+        if (await showConfirm("Connexion", `Vous avez détecté une sonde. Voulez-vous établir une connexion permanente ?`)) {
             currentSystem.connections[direction] = probedSystem.id;
             probedSystem.connections[oppositeDirection] = currentSystem.id;
             currentSystem.probedConnections[direction] = null;
@@ -297,8 +297,44 @@ const handleExploration = async (direction) => {
         );
 
         if (hasEnemyPlanetInTarget) {
+            // Logique pour le joueur qui sonde (Joueur A)
             showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
             currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact' };
+
+            // =================================================================
+            // NOUVELLE LOGIQUE : Alerter le(s) joueur(s) sondé(s) (Joueur B)
+            // =================================================================
+            const oppositeDir = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
+            
+            // On met à jour le système sondé pour qu'il sache qu'une sonde a été détectée
+            if (!discoveredSystem.probedConnections) {
+                discoveredSystem.probedConnections = { up: null, down: null, left: null, right: null };
+            }
+            discoveredSystem.probedConnections[oppositeDir] = { id: currentSystem.id, status: 'probe_detected' };
+
+            // On identifie tous les joueurs ennemis dans le système cible
+            const enemyPlayerIds = new Set(
+                discoveredSystem.planets
+                    .map(p => p.owner)
+                    .filter(ownerId => ownerId !== 'neutral' && ownerId !== viewingPlayer.id)
+            );
+            
+            // On crée une notification pour chaque joueur ennemi
+            enemyPlayerIds.forEach(enemyId => {
+                const enemyPlayer = campaignData.players.find(p => p.id === enemyId);
+                if (enemyPlayer) {
+                    if (!campaignData.pendingNotifications) campaignData.pendingNotifications = [];
+                    campaignData.pendingNotifications.push({
+                        playerId: enemyId,
+                        message: `<b>ALERTE:</b> Des lectures énergétiques inhabituelles, typiques d'une sonde Augure, ont été détectées dans votre système <b>${discoveredSystem.name}</b> !`,
+                        type: 'warning'
+                    });
+                }
+            });
+            // =================================================================
+            // FIN DE LA NOUVELLE LOGIQUE
+            // =================================================================
+
         } else { 
             showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'info', 8000);
             currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact' };

@@ -11,7 +11,8 @@ let campaignData = {
     players: [],
     systems: [],
     isGalaxyGenerated: false,
-    gatewayLinks: [] 
+    gatewayLinks: [],
+    pendingNotifications: [] // NOUVEL AJOUT
 };
 
 let mapModal;
@@ -130,6 +131,25 @@ function showExplorationChoice(title, text) {
 
 const openModal = (modal) => modal.classList.remove('hidden');
 const closeModal = (modal) => modal.classList.add('hidden');
+
+function displayPendingNotifications() {
+    if (!mapViewingPlayerId) return;
+
+    const notificationsForPlayer = campaignData.pendingNotifications.filter(notif => notif.playerId === mapViewingPlayerId);
+
+    if (notificationsForPlayer.length > 0) {
+        setTimeout(() => { // Léger délai pour s'assurer que le joueur voit bien la notification
+            notificationsForPlayer.forEach(notif => {
+                showNotification(notif.message, notif.type || 'warning', 12000);
+            });
+
+            // Une fois affichées, on les retire de la liste d'attente
+            campaignData.pendingNotifications = campaignData.pendingNotifications.filter(notif => notif.playerId !== mapViewingPlayerId);
+            saveData();
+        }, 1000);
+    }
+}
+
 
 //========================================
 // Contenu de systems
@@ -362,6 +382,11 @@ const loadData = () => {
 
     if (campaignData.isGalaxyGenerated === undefined) {
         campaignData.isGalaxyGenerated = false;
+        dataWasModified = true;
+    }
+
+    if (campaignData.pendingNotifications === undefined) {
+        campaignData.pendingNotifications = [];
         dataWasModified = true;
     }
     

@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backToSystemBtn.classList.add('hidden');
             renderPlayerDetail();
             switchView('detail');
+            displayPendingNotifications(); // AJOUT ICI
         } else if (target.matches('.world-btn')) {
             const playerIndex = parseInt(target.dataset.index);
             const player = campaignData.players[playerIndex];
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mapViewingPlayerId = player.id;
                 openModal(worldModal);
                 setTimeout(() => renderPlanetarySystem(player.systemId), 50);
+                displayPendingNotifications(); // AJOUT ICI
             } else {
                 showNotification("Erreur : ce joueur n'a pas de système assigné.", 'error');
             }
@@ -812,6 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentlyViewedSystemId && !worldModal.classList.contains('hidden')) {
             renderPlanetarySystem(currentlyViewedSystemId);
         }
+        displayPendingNotifications(); // AJOUT ICI
     });
 
     // --- Améliorations d'unité & Logique spéciale ---
@@ -1248,4 +1251,8 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     loadData();
     renderPlayerList();
+    if (campaignData.players.length > 0) {
+        mapViewingPlayerId = campaignData.players[0].id;
+        displayPendingNotifications(); // AJOUT ICI
+    }
 });

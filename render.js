@@ -477,12 +477,20 @@ const updateExplorationArrows = (currentSystem) => {
                 arrow.title = `Erreur: La connexion est rompue.`;
             }
         } else if (probedInfo) {
-            if (probedInfo.status === 'player_contact') {
+            // NOUVELLE CONDITION : Le joueur actuel a détecté une sonde
+            if (probedInfo.status === 'probe_detected') {
+                arrow.style.borderColor = colors.yellow;
+                arrow.style.color = colors.yellow;
+                label = `<span class="arrow-symbol" style="font-size: 20px;">!</span><small>SONDE<br>DÉTECTÉE</small>`;
+                arrow.title = `Une sonde ennemie a été détectée depuis cette direction.`;
+            }
+            // Logique existante pour le joueur qui a envoyé la sonde
+            else if (probedInfo.status === 'player_contact') {
                 arrow.style.borderColor = colors.red;
                 arrow.style.color = colors.red;
                 label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>JOUEUR<br>HOSTILE</small>`;
                 arrow.title = `Sonde a détecté une présence hostile ! Cliquez pour tenter d'établir une connexion.`;
-            } else {
+            } else { // npc_contact
                 arrow.style.borderColor = colors.blue;
                 arrow.style.color = colors.blue;
                 label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>SONDÉ<br>${probedInfo.name}</small>`;
