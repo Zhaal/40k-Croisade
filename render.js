@@ -469,12 +469,24 @@ const renderGalacticMap = () => {
         viewport.appendChild(node);
     });
 
-    const centerSystem = systemsToDisplay.find(s => s.id === currentlyViewedSystemId);
-    if (centerSystem && centerSystem.position) {
-        mapContainer.scrollLeft = centerSystem.position.x * currentMapScale - mapContainer.clientWidth / 2;
-        mapContainer.scrollTop = centerSystem.position.y * currentMapScale - mapContainer.clientHeight / 2;
-    }
+    // MODIFICATION : Nouvelle logique de centrage de la carte
+    // Calcule le centre de la masse des systèmes affichés
+    const galaxyMinX = Math.min(...allX);
+    const galaxyMaxX = Math.max(...allX);
+    const galaxyMinY = Math.min(...allY);
+    const galaxyMaxY = Math.max(...allY);
+
+    const galaxyCenterX = (galaxyMinX + galaxyMaxX) / 2;
+    const galaxyCenterY = (galaxyMinY + galaxyMaxY) / 2;
+
+    // Centre la vue du conteneur sur ce point central.
+    // Un léger délai garantit que le navigateur a calculé les dimensions du conteneur.
+    setTimeout(() => {
+        mapContainer.scrollLeft = galaxyCenterX * currentMapScale - mapContainer.clientWidth / 2;
+        mapContainer.scrollTop = galaxyCenterY * currentMapScale - mapContainer.clientHeight / 2;
+    }, 0);
 };
+
 
 const updateExplorationArrows = (currentSystem) => {
     const directions = ['up', 'down', 'left', 'right'];
