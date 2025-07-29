@@ -728,6 +728,18 @@ label {
     box-shadow: 0 0 5px #000;
 }
 
+/* NOUVELLE RÈGLE */
+.probe-connection-line {
+    position: absolute;
+    background-color: transparent;
+    border-top: 2px dashed var(--probed-color);
+    height: 0;
+    transform-origin: 0 0;
+    z-index: 5;
+    opacity: 0.8;
+}
+
+
 .gateway-line {
     position: absolute;
     height: 3px;

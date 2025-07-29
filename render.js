@@ -346,6 +346,44 @@ const renderGalacticMap = () => {
         });
     });
 
+    // NOUVEAU : Dessiner les lignes de sonde en pointillé
+    const drawnProbeLines = new Set();
+    systemsToDisplay.forEach(system => {
+        const pos1 = system.position;
+        if (!pos1 || !system.probedConnections) return;
+
+        Object.values(system.probedConnections).forEach(probedInfo => {
+            if (probedInfo && probedInfo.id) {
+                const connectedId = probedInfo.id;
+                
+                if (visibleSystemIds.has(connectedId)) {
+                    const key = [system.id, connectedId].sort().join('-');
+                    if (drawnProbeLines.has(key)) return;
+
+                    const connectedSystem = campaignData.systems.find(s => s.id === connectedId);
+                    const pos2 = connectedSystem?.position;
+                    
+                    const isFullyConnected = Object.values(system.connections).includes(connectedId);
+
+                    if (pos2 && !isFullyConnected) {
+                        const line = document.createElement('div');
+                        line.className = 'probe-connection-line'; // Nouvelle classe CSS
+                        const deltaX = pos2.x - pos1.x;
+                        const deltaY = pos2.y - pos1.y;
+                        const distance = Math.hypot(deltaX, deltaY);
+                        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+                        line.style.left = `${pos1.x}px`;
+                        line.style.top = `${pos1.y}px`;
+                        line.style.width = `${distance}px`;
+                        line.style.transform = `rotate(${angle}deg)`;
+                        viewport.appendChild(line);
+                        drawnProbeLines.add(key);
+                    }
+                }
+            }
+        });
+    });
+
     const drawnGatewayLinks = new Set();
     (campaignData.gatewayLinks || []).forEach(link => {
         const key = [link.systemId1, link.systemId2].sort().join('-');
