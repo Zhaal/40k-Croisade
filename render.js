@@ -69,6 +69,8 @@ const renderPlayerDetail = () => {
     document.getElementById('player-faction-display').textContent = player.faction;
     document.getElementById('crusade-faction').value = player.crusadeFaction || '';
     document.getElementById('pr-points').textContent = player.requisitionPoints;
+    // MODIFIÉ : Affichage des sondes gratuites
+    document.getElementById('free-probes-points').textContent = player.freeProbes || 0;
     document.getElementById('sombreroche-points').textContent = player.sombrerochePoints || 0;
     
     // Affichage conditionnel de la boîte de Biomasse (Tyranids)
@@ -263,6 +265,48 @@ const renderPlanetarySystem = (systemId) => {
         colonizationSpan.textContent = '';
     }
 
+    // --- LOGIQUE POUR LE BOUTON "REJOINDRE LA CARTE" ---
+    const modalContent = document.getElementById('world-modal').querySelector('.modal-content');
+    const existingJoinButton = document.getElementById('join-map-btn');
+    if (existingJoinButton) {
+        existingJoinButton.remove();
+    }
+
+    if (viewingPlayer) {
+        const isPlayerHomeSystem = system.owner === viewingPlayer.id;
+        const isOffTheMap = !system.position;
+        const allPlanetsControlled = system.planets.every(p => p.owner === viewingPlayer.id);
+        const hasPlanets = system.planets && system.planets.length > 0;
+
+        if (isPlayerHomeSystem && isOffTheMap && hasPlanets && allPlanetsControlled) {
+            const joinMapBtn = document.createElement('button');
+            joinMapBtn.id = 'join-map-btn';
+            joinMapBtn.className = 'btn-primary';
+            joinMapBtn.textContent = 'Unifier & Rejoindre la Carte Galactique';
+            joinMapBtn.style.marginBottom = '15px';
+            joinMapBtn.style.marginTop = '15px';
+            joinMapBtn.style.width = '100%';
+            joinMapBtn.style.backgroundColor = 'var(--friendly-color)';
+            joinMapBtn.style.borderColor = '#2b8a5a';
+            
+            joinMapBtn.addEventListener('click', () => {
+                // Cette fonction est définie dans engine.js et gère toute la logique
+                placePlayerSystemOnMap(viewingPlayer.id);
+            });
+
+            const editOrderBtn = modalContent.querySelector('#edit-crusade-order-btn');
+            if (editOrderBtn) {
+                editOrderBtn.insertAdjacentElement('afterend', joinMapBtn);
+            } else {
+                // Fallback si le bouton n'est pas trouvé
+                const titleElement = modalContent.querySelector('#world-modal-title');
+                titleElement.insertAdjacentElement('afterend', joinMapBtn);
+            }
+        }
+    }
+    // --- FIN DE LA LOGIQUE DU BOUTON ---
+
+
     updateExplorationArrows(system);
 };
 
@@ -368,7 +412,12 @@ const renderGalacticMap = () => {
 
                     if (pos2 && !isFullyConnected) {
                         const line = document.createElement('div');
-                        line.className = 'probe-connection-line'; // Nouvelle classe CSS
+                        line.className = 'probe-connection-line'; // Classe par défaut
+                        
+                        if (probedInfo.status === 'player_contact') {
+                            line.classList.add('probe-connection-line--hostile');
+                        }
+                        
                         const deltaX = pos2.x - pos1.x;
                         const deltaY = pos2.y - pos1.y;
                         const distance = Math.hypot(deltaX, deltaY);
@@ -438,7 +487,15 @@ const renderGalacticMap = () => {
 
         if (isProbedOnly) {
             node.classList.add('probed-only');
-            // MODIFICATION: Affiche uniquement le nombre de planètes pour les systèmes sondés
+
+            // MODIFICATION : Vérifier si le système sondé est hostile et ajouter une classe
+            const hasEnemyPlanet = system.planets.some(
+                p => p.owner !== 'neutral' && p.owner !== mapViewingPlayerId
+            );
+            if (hasEnemyPlanet) {
+                node.classList.add('hostile-probe');
+            }
+            
             const planetCount = system.planets.length;
             const planetCountText = `${planetCount} planète${planetCount > 1 ? 's' : ''}`;
             node.innerHTML = `<span>Système Inconnu</span><small>Contact Sonde<br>${planetCountText}</small>`;

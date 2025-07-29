@@ -28,12 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetCampaignBtn = document.getElementById('reset-campaign-btn');
     mapModal = document.getElementById('map-modal');
     const mapContainer = document.getElementById('galactic-map-container');
+    const npcCombatModal = document.getElementById('npc-combat-modal');
     
     // NOUVEAUX ÉLÉMENTS POUR LE JOURNAL D'ACTIONS
     const actionLogContainer = document.getElementById('action-log-container');
     const actionLogHeader = document.getElementById('action-log-header');
     const actionLogEntries = document.getElementById('action-log-entries');
     const toggleLogBtn = document.getElementById('toggle-log-btn');
+
+    // NOUVEAUX ÉLÉMENTS POUR L'HISTORIQUE COMPLET
+    const fullHistoryModal = document.getElementById('full-history-modal');
+    const historyDateFilter = document.getElementById('history-date-filter');
+    const clearHistoryFilterBtn = document.getElementById('clear-history-filter-btn');
+    const fullHistoryEntries = document.getElementById('full-history-entries');
 
 
     // Infobulle personnalisée
@@ -180,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 crusadeFaction: '', requisitionPoints: 5, sombrerochePoints: 0,
                 supplyLimit: 500,
                 upgradeSupplyCost: 0,
+                freeProbes: 0, // MODIFIÉ : Ajout de la nouvelle propriété
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
                 discoveredSystemIds: [newSystemId],
@@ -256,6 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
             player.biomassPoints = Math.max(0, (player.biomassPoints || 0) + change);
         } else if (stat === 'contagion') {
             player.deathGuardData.contagionPoints = Math.max(0, (player.deathGuardData.contagionPoints || 0) + change);
+        } else if (stat === 'free-probes') { // MODIFIÉ : Ajout de la logique pour les sondes gratuites
+            player.freeProbes = Math.max(0, (player.freeProbes || 0) + change);
         } else {
             const battleStat = stat === 'win' ? 'wins' : 'losses';
             if (change < 0 && (player.battles[battleStat] || 0) === 0) return;
@@ -558,6 +568,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const system = campaignData.systems.find(s => s.id === systemId);
             const planet = system.planets[planetIndex];
 
+            // Reset and lock admin section on open
+            const adminControls = document.getElementById('admin-controls');
+            const adminSectionDetails = document.getElementById('admin-section');
+            const adminPasswordInput = document.getElementById('admin-password');
+            const unlockBtn = document.getElementById('unlock-admin-btn');
+            const lockBtn = document.getElementById('lock-admin-btn');
+            const adminPasswordGroup = adminPasswordInput.parentElement;
+
+            adminControls.classList.add('hidden');
+            adminPasswordInput.value = '';
+            if (adminSectionDetails) {
+                adminSectionDetails.open = false;
+            }
+            adminPasswordGroup.classList.remove('hidden');
+            unlockBtn.classList.remove('hidden');
+            lockBtn.classList.add('hidden');
+
+
             document.getElementById('planet-system-id').value = systemId;
             document.getElementById('planet-index').value = planetIndex;
             document.getElementById('planet-name-input').value = planet.name;
@@ -570,8 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             ownerSelect.value = planet.owner;
             document.getElementById('planet-defense-input').value = planet.defense || 0;
-            document.getElementById('planet-type-modal-title').textContent = `Modifier ${planet.name}`;
-            document.getElementById('halve-defense-btn').classList.toggle('hidden', planet.owner !== 'neutral' || planet.defense === 0);
+            document.getElementById('planet-type-modal-title').textContent = `Détails de ${planet.name} (${planet.type})`;
 
             const deadWorldContainer = document.getElementById('dead-world-link-container');
             const deadWorldSelect = document.getElementById('dead-world-link-select');
@@ -625,6 +652,31 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 deadWorldContainer.classList.add('hidden');
             }
+            
+            // Logique pour le bouton Combattre / Saboter
+            const actionsContainer = document.getElementById('planet-actions-container');
+            actionsContainer.innerHTML = ''; // Nettoyer les anciens boutons
+            if (planet.owner === 'neutral') {
+                // Bouton Saboter
+                const halveDefenseBtn = document.createElement('button');
+                halveDefenseBtn.type = 'button';
+                halveDefenseBtn.id = 'halve-defense-btn';
+                halveDefenseBtn.className = 'btn-secondary';
+                halveDefenseBtn.textContent = 'Saboter Défenses (1 RP)';
+                halveDefenseBtn.classList.toggle('hidden', planet.defense === 0);
+                halveDefenseBtn.addEventListener('click', halvePlanetDefense);
+                actionsContainer.appendChild(halveDefenseBtn);
+                
+                // Bouton Combattre
+                const fightBtn = document.createElement('button');
+                fightBtn.type = 'button';
+                fightBtn.id = 'fight-npc-btn';
+                fightBtn.className = 'btn-primary';
+                fightBtn.textContent = `Combattre (${planet.defense || 0} pts)`;
+                fightBtn.addEventListener('click', () => openNpcCombatModal(planet.id));
+                actionsContainer.appendChild(fightBtn);
+
+            }
 
             ownerSelect.dispatchEvent(new Event('change'));
             openModal(planetTypeModal);
@@ -668,6 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
             openModal(mapModal);
             currentMapScale = 1;
             setTimeout(renderGalacticMap, 50);
+        } else if (e.target.id === 'show-history-btn') {
+            openFullHistoryModal();
         } else if (e.target.id === 'edit-crusade-order-btn') {
             const system = campaignData.systems.find(s => s.id === currentlyViewedSystemId);
             if (system && system.owner !== 'npc') {
@@ -716,6 +770,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    document.getElementById('unlock-admin-btn').addEventListener('click', () => {
+        const passwordInput = document.getElementById('admin-password');
+        const adminControls = document.getElementById('admin-controls');
+        const unlockBtn = document.getElementById('unlock-admin-btn');
+        const lockBtn = document.getElementById('lock-admin-btn');
+        const adminPasswordGroup = passwordInput.parentElement;
+    
+        if (passwordInput.value === 'warp') {
+            adminControls.classList.remove('hidden');
+            adminPasswordGroup.classList.add('hidden');
+            unlockBtn.classList.add('hidden');
+            lockBtn.classList.remove('hidden');
+            showNotification('Paramètres administratifs déverrouillés.', 'success');
+            passwordInput.value = ''; // Clear password after successful entry
+        } else {
+            showNotification('Mot de passe incorrect.', 'error');
+            adminControls.classList.add('hidden');
+        }
+    });
+    
+    document.getElementById('lock-admin-btn').addEventListener('click', () => {
+        const adminControls = document.getElementById('admin-controls');
+        const passwordInput = document.getElementById('admin-password');
+        const unlockBtn = document.getElementById('unlock-admin-btn');
+        const lockBtn = document.getElementById('lock-admin-btn');
+        const adminPasswordGroup = passwordInput.parentElement;
+    
+        adminControls.classList.add('hidden');
+        adminPasswordGroup.classList.remove('hidden');
+        unlockBtn.classList.remove('hidden');
+        lockBtn.classList.add('hidden');
+        showNotification('Paramètres administratifs verrouillés.', 'info');
+    });
+
     document.getElementById('randomize-planet-btn').addEventListener('click', async () => {
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (!viewingPlayer) { showNotification("Erreur : Joueur actif introuvable.", 'error'); return; }
@@ -780,7 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('halve-defense-btn').addEventListener('click', async () => {
+    async function halvePlanetDefense() {
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (!viewingPlayer) { showNotification("Erreur : Joueur actif introuvable.", 'error'); return; }
         if (viewingPlayer.requisitionPoints < 1) { showNotification("Pas assez de Points de Réquisition (1 RP requis).", 'warning'); return; }
@@ -802,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal(planetTypeModal);
             showNotification(`Sabotage réussi ! Défenses réduites à <b>${newDefense}</b>.`, 'success');
         }
-    });
+    }
 
     systemContainer.addEventListener('click', (e) => {
         const arrow = e.target.closest('.explore-arrow');
@@ -905,19 +993,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     resetCampaignBtn.addEventListener('click', async () => {
-        const confirmReset = await showConfirm(
-            "Réinitialiser la Campagne ?",
-            "Êtes-vous sûr ? Cette action va générer une <b>nouvelle carte galactique</b> et réinitialiser la position de TOUS les joueurs. Leurs fiches de personnage (unités, points, etc.) seront conservées."
+        const confirmReset = await showPasswordConfirm(
+            "Réinitialiser la Campagne (Explosion du Warp)",
+            "Êtes-vous sûr ? Cette action va générer une <b>nouvelle carte galactique</b> et réinitialiser la position de TOUS les joueurs. Leurs fiches de personnage (unités, points, etc.) seront conservées.<br><br><b>Pour confirmer, entrez le mot de passe ci-dessous.</b>"
         );
         if (confirmReset) {
             generateGalaxy();
             const playerSystems = [];
     
-            // CORRIGÉ : Réinitialiser les journaux d'actions avant de créer les nouveaux systèmes
             campaignData.sessionLog = [];
     
             campaignData.players.forEach((player) => {
-                player.actionLog = []; // Réinitialise l'historique personnel
+                player.actionLog = []; 
     
                 const newSystemId = crypto.randomUUID();
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
@@ -1060,7 +1147,91 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     
-    // --- NOUVELLES FONCTIONS DE LOGIQUE POUR LA DEATH GUARD ---
+    // --- NOUVELLES FONCTIONS DE LOGIQUE POUR LA DEATH GUARD ET COMBAT PNJ ---
+    function openNpcCombatModal(planetId) {
+        const attacker = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        if (!attacker) return;
+    
+        closeModal(planetTypeModal);
+    
+        document.getElementById('npc-combat-attacker-name').textContent = attacker.name;
+        const defenderSelect = document.getElementById('npc-combat-defender-select');
+        defenderSelect.innerHTML = '<option value="" disabled selected>Sélectionner un défenseur...</option>';
+    
+        campaignData.players.forEach(p => {
+            if (p.id !== attacker.id) {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.name;
+                defenderSelect.appendChild(option);
+            }
+        });
+    
+        npcCombatModal.dataset.planetId = planetId;
+        openModal(npcCombatModal);
+    }
+    
+    document.getElementById('finish-npc-combat-btn').addEventListener('click', async () => {
+        const attacker = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        const defenderId = document.getElementById('npc-combat-defender-select').value;
+        const planetId = npcCombatModal.dataset.planetId;
+    
+        if (!attacker || !defenderId || !planetId) {
+            showNotification("Veuillez sélectionner un défenseur.", "warning");
+            return;
+        }
+    
+        const defender = campaignData.players.find(p => p.id === defenderId);
+        const system = campaignData.systems.find(s => s.planets.some(p => p.id === planetId));
+        const planet = system.planets.find(p => p.id === planetId);
+    
+        // --- DÉBUT DES MODIFICATIONS ---
+    
+        const okBtn = document.getElementById('confirm-modal-ok-btn');
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        const originalOkText = okBtn.textContent;
+        const originalCancelText = cancelBtn.textContent;
+    
+        try {
+            // Change le texte des boutons pour ce dialogue spécifique
+            okBtn.textContent = "Victoire";
+            cancelBtn.textContent = "Défaite";
+    
+            const hasWon = await showConfirm("Résultat du Combat", `L'attaquant, <b>${attacker.name}</b>, a-t-il remporté la bataille contre les PNJ défendus par <b>${defender.name}</b> ?`);
+            
+            // La logique existante est déplacée ici, à l'intérieur du bloc try
+            if (hasWon) {
+                attacker.battles.wins = (attacker.battles.wins || 0) + 1;
+                attacker.requisitionPoints++;
+                planet.owner = attacker.id;
+                planet.defense = 0;
+                logAction(attacker.id, `<b>Victoire !</b> A conquis la planète PNJ <b>${planet.name}</b> (défendue par ${defender.name}). +1 PR.`, 'conquest', '🏆');
+            } else {
+                attacker.battles.losses = (attacker.battles.losses || 0) + 1;
+                attacker.requisitionPoints++;
+                logAction(attacker.id, `<b>Défaite</b> contre les PNJ sur <b>${planet.name}</b> (défendus par ${defender.name}). +1 PR.`, 'info', '⚔️');
+            }
+        
+            defender.freeProbes = (defender.freeProbes || 0) + 1;
+            logAction(defender.id, `A reçu <b>1 Sonde Gratuite</b> pour avoir incarné les PNJ contre <b>${attacker.name}</b>.`, 'info', '🛰️');
+        
+            saveData();
+            closeModal(npcCombatModal);
+            renderPlanetarySystem(system.id);
+            
+            if (!playerDetailView.classList.contains('hidden') && activePlayerIndex === campaignData.players.findIndex(p => p.id === attacker.id)) {
+                renderPlayerDetail();
+            }
+            showNotification("Résultat de la bataille enregistré.", "success");
+    
+        } finally {
+            // Restaure le texte original des boutons pour les autres utilisations de la modale
+            okBtn.textContent = originalOkText;
+            cancelBtn.textContent = originalCancelText;
+        }
+        // --- FIN DES MODIFICATIONS ---
+    });
+    
     function infectPlanet(planetId) {
         const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
         const cost = deathGuardCrusadeRules.intents.SEMER_LES_GRAINES.cost;
@@ -1326,6 +1497,73 @@ document.addEventListener('DOMContentLoaded', () => {
             probeBtn.textContent = originalProbeText;
             probeBtn.className = originalProbeClass;
         }
+    });
+
+    /**
+     * NOUVEAU : Ouvre la modale de l'historique complet pour le joueur consulté.
+     */
+    function openFullHistoryModal() {
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        if (!viewingPlayer) {
+            showNotification("Aucun joueur n'est actuellement consulté.", 'warning');
+            return;
+        }
+        
+        document.getElementById('full-history-modal-title').textContent = `Historique Complet pour ${viewingPlayer.name}`;
+        historyDateFilter.value = ''; // Reset filter
+        renderFullHistory();
+        openModal(fullHistoryModal);
+    }
+
+    /**
+     * NOUVEAU : Affiche l'historique complet (et filtré) d'un joueur.
+     * @param {string|null} filterDate - La date de filtre au format YYYY-MM-DD.
+     */
+    function renderFullHistory(filterDate = null) {
+        fullHistoryEntries.innerHTML = '';
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        if (!viewingPlayer || !viewingPlayer.actionLog || viewingPlayer.actionLog.length === 0) {
+            fullHistoryEntries.innerHTML = `<p style="padding: 10px; color: var(--text-muted-color); text-align: center;">Aucune action enregistrée pour ce joueur.</p>`;
+            return;
+        }
+
+        let logsToDisplay = viewingPlayer.actionLog;
+
+        if (filterDate) {
+            logsToDisplay = viewingPlayer.actionLog.filter(entry => {
+                return entry.timestamp.startsWith(filterDate);
+            });
+        }
+
+        if (logsToDisplay.length === 0) {
+            fullHistoryEntries.innerHTML = `<p style="padding: 10px; color: var(--text-muted-color); text-align: center;">Aucune action trouvée pour cette date.</p>`;
+            return;
+        }
+
+        logsToDisplay.forEach(entry => {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-type-${entry.type}`;
+            const timestamp = new Date(entry.timestamp);
+            const formattedDateTime = timestamp.toLocaleString('fr-FR', {
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            logItem.innerHTML = `
+                <span class="log-icon" style="font-size: 1.2em;">${entry.icon}</span>
+                <span class="log-message" style="flex-grow: 1;">${entry.message}</span>
+                <span class="log-timestamp">${formattedDateTime}</span>
+            `;
+            fullHistoryEntries.appendChild(logItem);
+        });
+    }
+
+    historyDateFilter.addEventListener('change', (e) => {
+        renderFullHistory(e.target.value);
+    });
+
+    clearHistoryFilterBtn.addEventListener('click', () => {
+        historyDateFilter.value = '';
+        renderFullHistory();
     });
 
     //======================================================================

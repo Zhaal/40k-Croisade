@@ -83,7 +83,7 @@ function logAction(playerId, message, type, icon = '📜') {
         return;
     }
 
-    const LOG_LIMIT = 50;
+    const LOG_LIMIT = 500;
     const newEntry = {
         timestamp: new Date().toISOString(),
         message,
@@ -160,6 +160,58 @@ function showConfirm(title, text) {
         confirmModalOkBtn.addEventListener('click', okListener, { once: true });
         confirmModalCancelBtn.addEventListener('click', cancelListener, { once: true });
         confirmModal.querySelector('.close-btn').addEventListener('click', closeBtnListener, { once: true });
+    });
+}
+
+function showPasswordConfirm(title, text) {
+    return new Promise(resolve => {
+        const confirmModal = document.getElementById('password-confirm-modal');
+        const confirmModalTitle = document.getElementById('password-confirm-modal-title');
+        const confirmModalText = document.getElementById('password-confirm-modal-text');
+        const confirmModalInput = document.getElementById('password-confirm-input');
+        const confirmModalOkBtn = document.getElementById('password-confirm-modal-ok-btn');
+        const confirmModalCancelBtn = document.getElementById('password-confirm-modal-cancel-btn');
+
+        confirmModalTitle.textContent = title;
+        confirmModalText.innerHTML = text;
+        confirmModalInput.value = ''; // Clear previous input
+        openModal(confirmModal);
+
+        const closeAndResolve = (value) => {
+            closeModal(confirmModal);
+            // Clean up listeners
+            confirmModalOkBtn.removeEventListener('click', okListener);
+            confirmModalCancelBtn.removeEventListener('click', cancelListener);
+            confirmModal.querySelector('.close-btn').removeEventListener('click', cancelListener);
+            confirmModalInput.removeEventListener('keydown', keydownListener);
+            resolve(value);
+        };
+
+        const okListener = () => {
+            if (confirmModalInput.value.toLowerCase() === 'warp') {
+                closeAndResolve(true);
+            } else {
+                showNotification('Mot de passe incorrect.', 'error');
+                // Don't close the modal, let the user try again.
+            }
+        };
+        
+        const cancelListener = () => closeAndResolve(false);
+
+        const keydownListener = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                okListener();
+            }
+        };
+
+        confirmModalOkBtn.addEventListener('click', okListener);
+        confirmModalCancelBtn.addEventListener('click', cancelListener);
+        confirmModal.querySelector('.close-btn').addEventListener('click', cancelListener);
+        confirmModalInput.addEventListener('keydown', keydownListener);
+
+        // Focus the input field when the modal opens
+        setTimeout(() => confirmModalInput.focus(), 100);
     });
 }
 
@@ -436,7 +488,7 @@ const placePlayerSystemOnMap = async (playerId) => {
     }
 
     showNotification("<b>Tête de pont établie !</b> Votre système est maintenant connecté à la carte galactique. Vous pouvez explorer !", 'success', 8000);
-    logAction(player.id, `<b>${player.name}</b> a connecté son système natal à la carte en remplaçant <b>${targetNpcSystem.name}</b>.`, 'conquest', '🌍');
+    logAction(player.id, `<b>${player.name}</b> a connecté son système natal à la carte galactique.`, 'conquest', '🌍');
     saveData();
     renderPlayerList();
     if (!mapModal.classList.contains('hidden')) renderGalacticMap();
@@ -525,6 +577,11 @@ const loadData = () => {
     campaignData.players.forEach(player => {
         if (player.actionLog === undefined) { // Ajoute le journal d'actions personnel s'il n'existe pas
             player.actionLog = [];
+            dataWasModified = true;
+        }
+        // MODIFIÉ : Ajout de la migration pour les sondes gratuites
+        if (player.freeProbes === undefined) {
+            player.freeProbes = 0;
             dataWasModified = true;
         }
         (player.units || []).forEach(unit => {

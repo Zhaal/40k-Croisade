@@ -53,6 +53,10 @@
                     <button class="tally-btn" data-action="decrease-rp">-</button>
                     <button class="tally-btn" data-action="increase-rp">+</button>
                 </div>
+                <div class="info-box" id="free-probes-box">
+                    <strong>Sondes Gratuites:</strong>
+                    <span id="free-probes-points" class="stat-value">0</span>
+                </div>
                 <div id="biomass-box" class="info-box hidden">
                     <strong>Points de Biomasse:</strong>
                     <span id="biomass-points" class="stat-value"></span>
@@ -379,6 +383,7 @@
         <div class="modal-content x-large">
             <span class="close-btn">&times;</span>
             <h3 id="world-modal-title" class="crusade-card-title">Système Planétaire</h3>
+            <button id="show-history-btn" class="btn-secondary" style="margin-bottom: 15px;">Historique Complet</button>
             <button id="show-map-btn" class="btn-secondary" style="margin-bottom: 15px;">Voir la Carte Galactique</button>
             <button id="edit-crusade-order-btn" class="btn-primary" style="margin-bottom: 15px;">Éditer l'Ordre de Croisade</button>
             <div id="system-container">
@@ -404,44 +409,62 @@
     <div id="planet-type-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <h3 id="planet-type-modal-title">Définir le type de la planète</h3>
+            <h3 id="planet-type-modal-title">Détails de la Planète</h3>
             <form id="planet-type-form">
                 <input type="hidden" id="planet-system-id">
                 <input type="hidden" id="planet-index">
+    
                 <div class="form-group">
                     <label for="planet-name-input">Nom de la planète:</label>
                     <input type="text" id="planet-name-input">
                 </div>
-                <div class="form-group">
-                    <label for="planet-type-select">Type de Monde :</label>
-                    <select id="planet-type-select">
-                        <option value="Monde Mort">Monde Mort</option>
-                        <option value="Monde Sauvage">Monde Sauvage</option>
-                        <option value="Agri-monde">Agri-monde</option>
-                        <option value="Monde Forge">Monde Forge</option>
-                        <option value="Monde Ruche">Monde Ruche</option>
-                        <option value="Monde Saint (relique)">Monde Saint (relique)</option>
-                    </select>
-                </div>
-                 <div class="form-group">
-                    <label for="planet-owner-select">Propriétaire :</label>
-                    <select id="planet-owner-select">
-                        </select>
-                </div>
-                <div class="form-group" id="planet-defense-container">
-                    <label for="planet-defense-input">Points de Défense (PNJ):</label>
-                    <input type="number" id="planet-defense-input" min="0" step="50">
-                </div>
-                
+    
+                <details id="admin-section">
+                    <summary style="cursor: pointer; font-family: 'Cinzel', serif; color: var(--primary-color);">Paramètres Administratifs (Protégé)</summary>
+                    <div class="admin-unlock-panel" style="padding: 15px 0 0 0;">
+                        <div class="form-group">
+                            <label for="admin-password">Mot de passe :</label>
+                            <input type="password" id="admin-password" placeholder="Mdp est : warp">
+                        </div>
+                        <button type="button" id="unlock-admin-btn" class="btn-secondary">Déverrouiller</button>
+                        <button type="button" id="lock-admin-btn" class="btn-secondary hidden">Verrouiller</button>
+    
+                        <div id="admin-controls" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                            <div class="form-group">
+                                <label for="planet-type-select">Type de Monde :</label>
+                                <select id="planet-type-select">
+                                    <option value="Monde Mort">Monde Mort</option>
+                                    <option value="Monde Sauvage">Monde Sauvage</option>
+                                    <option value="Agri-monde">Agri-monde</option>
+                                    <option value="Monde Forge">Monde Forge</option>
+                                    <option value="Monde Ruche">Monde Ruche</option>
+                                    <option value="Monde Saint (relique)">Monde Saint (relique)</option>
+                                </select>
+                            </div>
+                             <div class="form-group">
+                                <label for="planet-owner-select">Propriétaire :</label>
+                                <select id="planet-owner-select"></select>
+                            </div>
+                            <div class="form-group" id="planet-defense-container">
+                                <label for="planet-defense-input">Points de Défense (PNJ):</label>
+                                <input type="number" id="planet-defense-input" min="0" step="50">
+                            </div>
+                            <hr>
+                            <button type="submit" class="btn-primary">Valider les Changements</button>
+                            <button type="button" id="randomize-planet-btn" class="btn-secondary" style="margin-left: 10px;">Randomiser Planète (2 RP)</button>
+                        </div>
+                    </div>
+                </details>
+    
+                <hr>
+    
                 <div class="form-group hidden" id="dead-world-link-container">
                     <label for="dead-world-link-select">Créer un portail vers un autre Monde Mort :</label>
                     <select id="dead-world-link-select"></select>
                     <button type="button" id="link-dead-world-btn" class="btn-primary" style="margin-top: 10px;">Activer le Portail</button>
                 </div>
-
-                <button type="submit" class="btn-primary">Valider</button>
-                <button type="button" id="randomize-planet-btn" class="btn-secondary">Randomiser Planète (2 RP)</button>
-                <button type="button" id="halve-defense-btn" class="btn-secondary hidden">Saboter Défenses (1 RP)</button>
+                
+                <div id="planet-actions-container"></div>
             </form>
         </div>
     </div>
@@ -512,6 +535,29 @@
         </div>
     </div>
 
+    <div id="npc-combat-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 class="crusade-card-title">Combat Planétaire PNJ</h3>
+            <div class="npc-combat-details">
+                <p><strong>Attaquant :</strong> <span id="npc-combat-attacker-name"></span></p>
+                <div class="form-group">
+                    <label for="npc-combat-defender-select">Choisir le joueur incarnant les PNJ :</label>
+                    <select id="npc-combat-defender-select">
+                        <option value="" disabled selected>Sélectionner un défenseur...</option>
+                    </select>
+                </div>
+                <p class="combat-reward-info">
+                    Le défenseur recevra <strong>1 Sonde Gratuite</strong> pour sa participation, quel que soit le résultat.
+                </p>
+            </div>
+            <div class="modal-actions">
+                <button id="finish-npc-combat-btn" class="btn-primary">Combat Terminé</button>
+            </div>
+        </div>
+    </div>
+
+
     <div id="notification-container"></div>
     
     <div id="action-log-container" class="action-log">
@@ -567,6 +613,22 @@
         </div>
     </div>
 
+    <div id="password-confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="password-confirm-modal-title">Confirmation</h3>
+            <p id="password-confirm-modal-text" style="line-height: 1.6;"></p>
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="password-confirm-input">Mot de passe de confirmation :</label>
+                <input type="password" id="password-confirm-input" placeholder="Mdp est : warp">
+            </div>
+            <div class="modal-actions">
+                <button id="password-confirm-modal-cancel-btn" class="btn-secondary">Annuler</button>
+                <button id="password-confirm-modal-ok-btn" class="btn-danger">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="plague-management-modal" class="modal hidden">
         <div class="modal-content large">
             <span class="close-btn">&times;</span>
@@ -591,6 +653,20 @@
                 <p>Le Total de Peste est la somme des 3 scores combinés ci-dessus.</p>
                 <p>Un score de <b>7+</b> est nécessaire pour tenter de Concrétiser la Peste.</p>
                 <button id="conquer-plague-btn" class="btn-primary" disabled>Concrétiser la Peste (1 PR)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="full-history-modal" class="modal hidden">
+        <div class="modal-content large">
+            <span class="close-btn">&times;</span>
+            <h3 id="full-history-modal-title">Historique Complet</h3>
+            <div class="history-filters" style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                <label for="history-date-filter" style="margin-bottom: 0;">Filtrer par date :</label>
+                <input type="date" id="history-date-filter" style="width: auto;">
+                <button id="clear-history-filter-btn" class="btn-secondary">Réinitialiser</button>
+            </div>
+            <div id="full-history-entries" style="overflow-y: auto; height: 60vh; background-color: #1e1e1e; padding: 10px; border: 1px solid var(--border-color);">
             </div>
         </div>
     </div>
