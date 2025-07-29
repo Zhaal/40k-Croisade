@@ -209,59 +209,78 @@ const handleExploration = async (direction) => {
 
     const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[direction] : null;
 
-    if (probedInfo && probedInfo.status === 'player_contact') {
-        const confirmed = await showConfirm(
-            "Établir un Contact Hostile",
-            `Vos sondes confirment la présence d'un autre joueur. Voulez-vous établir une connexion permanente ?<br><br><b>Attention :</b> Cette action est irréversible et révèlera immédiatement votre position à cet adversaire.`
-        );
-
-        if (confirmed) {
+    if (probedInfo) {
+        // Calculate time since last probe
+        const now = Date.now();
+        const lastProbeTime = probedInfo.timestamp || now; // Fallback for old saves
+        const elapsedMs = now - lastProbeTime;
+        const days = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((elapsedMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
+        const timerText = `Dernière sonde envoyée il y a : ${days} jour(s), ${hours}h, ${minutes}min.`;
+    
+        const title = probedInfo.status === 'player_contact' ? "Établir un Contact Hostile" : "Confirmer la Connexion";
+        const mainText = probedInfo.status === 'player_contact' 
+            ? `Vos sondes confirment la présence d'un autre joueur. Voulez-vous établir une connexion permanente ?<br><br><b>Attention :</b> Cette action est irréversible et révèlera immédiatement votre position à cet adversaire.`
+            : `Vous avez sondé le système. Voulez-vous établir une connexion permanente ?`;
+        
+        const outcome = await showProbeActionChoice(title, mainText, timerText);
+    
+        if (outcome === 'cancel') {
+            return;
+        }
+    
+        if (outcome === 'rescan') {
+            if (viewingPlayer.requisitionPoints < 1) {
+                showNotification("Points de Réquisition insuffisants pour relancer une sonde (1 RP requis).", 'warning');
+                return;
+            }
+            viewingPlayer.requisitionPoints--;
+            probedInfo.timestamp = Date.now();
+            saveData();
+    
+            if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) {
+                renderPlayerDetail();
+            }
+            
+            showNotification(`Sonde relancée vers le système. Informations temporelles mises à jour.`, 'info');
+            updateExplorationArrows(currentSystem);
+            return;
+        }
+    
+        if (outcome === 'establish') {
             currentSystem.connections[direction] = discoveredSystem.id;
             discoveredSystem.connections[oppositeDirection] = currentSystem.id;
             currentSystem.probedConnections[direction] = null;
-
+    
             if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
                 viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
             }
-
-            const discoveredPlayer = campaignData.players.find(p => p.id === discoveredSystem.owner);
-            if (discoveredPlayer) {
-                if (!discoveredPlayer.discoveredSystemIds) discoveredPlayer.discoveredSystemIds = [];
-                if (!discoveredPlayer.discoveredSystemIds.includes(currentSystem.id)) {
-                    discoveredPlayer.discoveredSystemIds.push(currentSystem.id);
-                    showNotification(`Le joueur <b>${discoveredPlayer.name}</b> a été alerté de votre présence.`, 'warning');
+            
+            if (viewingPlayer.probedSystemIds) {
+                const index = viewingPlayer.probedSystemIds.indexOf(discoveredSystem.id);
+                if (index > -1) viewingPlayer.probedSystemIds.splice(index, 1);
+            }
+    
+            if (probedInfo.status === 'player_contact') {
+                const discoveredPlayer = campaignData.players.find(p => p.id === discoveredSystem.owner);
+                if (discoveredPlayer) {
+                    if (!discoveredPlayer.discoveredSystemIds.includes(currentSystem.id)) {
+                        discoveredPlayer.discoveredSystemIds.push(currentSystem.id);
+                         if (!campaignData.pendingNotifications) campaignData.pendingNotifications = [];
+                         campaignData.pendingNotifications.push({
+                            playerId: discoveredPlayer.id,
+                            message: `<b>CONNEXION ÉTABLIE:</b> Une flotte du joueur <b>${viewingPlayer.name}</b> a établi un lien permanent avec votre système <b>${discoveredSystem.name}</b> !`,
+                            type: 'error'
+                        });
+                        showNotification(`Le joueur <b>${discoveredPlayer.name}</b> a été alerté de votre présence.`, 'warning');
+                    }
                 }
             }
             
             saveData();
-            showNotification(`Connexion établie vers le système hostile !`, 'success');
+            showNotification(`Connexion établie vers le système ${discoveredSystem.name} !`, 'success');
             renderPlanetarySystem(discoveredSystem.id);
-        }
-        return;
-    }
-
-    if (probedInfo) {
-        const probedSystem = campaignData.systems.find(s => s.id === probedInfo.id);
-        if (!probedSystem) {
-            showNotification("Erreur: Le système sondé n'a pas été retrouvé.", 'error');
-            currentSystem.probedConnections[direction] = null;
-            saveData();
-            updateExplorationArrows(currentSystem);
-            return;
-        }
-        
-        if (await showConfirm("Connexion", `Vous avez détecté une sonde. Voulez-vous établir une connexion permanente ?`)) {
-            currentSystem.connections[direction] = probedSystem.id;
-            probedSystem.connections[oppositeDirection] = currentSystem.id;
-            currentSystem.probedConnections[direction] = null;
-            
-            if (!viewingPlayer.discoveredSystemIds.includes(probedSystem.id)) {
-                viewingPlayer.discoveredSystemIds.push(probedSystem.id);
-            }
-            
-            saveData();
-            renderPlanetarySystem(probedSystem.id);
-            showNotification(`Connexion établie avec ${probedSystem.name}`, 'success');
         }
         return;
     }
@@ -292,58 +311,44 @@ const handleExploration = async (direction) => {
         }
         viewingPlayer.requisitionPoints--;
         
+        if (!viewingPlayer.probedSystemIds) viewingPlayer.probedSystemIds = [];
+        if (!viewingPlayer.probedSystemIds.includes(discoveredSystem.id)) {
+            viewingPlayer.probedSystemIds.push(discoveredSystem.id);
+        }
+        
         const hasEnemyPlanetInTarget = discoveredSystem.planets.some(
             p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id
         );
 
         if (hasEnemyPlanetInTarget) {
-            // Logique pour le joueur qui sonde (Joueur A)
             showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
-            currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact' };
+            currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact', timestamp: Date.now() };
 
-            // =================================================================
-            // NOUVELLE LOGIQUE : Alerter le(s) joueur(s) sondé(s) (Joueur B)
-            // =================================================================
             const oppositeDir = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
-            
-            // On met à jour le système sondé pour qu'il sache qu'une sonde a été détectée
-            if (!discoveredSystem.probedConnections) {
-                discoveredSystem.probedConnections = { up: null, down: null, left: null, right: null };
-            }
-            discoveredSystem.probedConnections[oppositeDir] = { id: currentSystem.id, status: 'probe_detected' };
+            if (!discoveredSystem.probedConnections) discoveredSystem.probedConnections = { up: null, down: null, left: null, right: null };
+            discoveredSystem.probedConnections[oppositeDir] = { id: currentSystem.id, status: 'probe_detected', timestamp: Date.now() };
 
-            // On identifie tous les joueurs ennemis dans le système cible
-            const enemyPlayerIds = new Set(
-                discoveredSystem.planets
-                    .map(p => p.owner)
-                    .filter(ownerId => ownerId !== 'neutral' && ownerId !== viewingPlayer.id)
-            );
-            
-            // On crée une notification pour chaque joueur ennemi
+            const enemyPlayerIds = new Set(discoveredSystem.planets.map(p => p.owner).filter(o => o !== 'neutral' && o !== viewingPlayer.id));
             enemyPlayerIds.forEach(enemyId => {
-                const enemyPlayer = campaignData.players.find(p => p.id === enemyId);
-                if (enemyPlayer) {
-                    if (!campaignData.pendingNotifications) campaignData.pendingNotifications = [];
-                    campaignData.pendingNotifications.push({
-                        playerId: enemyId,
-                        message: `<b>ALERTE:</b> Des lectures énergétiques inhabituelles, typiques d'une sonde Augure, ont été détectées dans votre système <b>${discoveredSystem.name}</b> !`,
-                        type: 'warning'
-                    });
-                }
+                if (!campaignData.pendingNotifications) campaignData.pendingNotifications = [];
+                campaignData.pendingNotifications.push({
+                    playerId: enemyId,
+                    message: `<b>ALERTE:</b> Des lectures énergétiques inhabituelles, typiques d'une sonde Augure, ont été détectées dans votre système <b>${discoveredSystem.name}</b> !`,
+                    type: 'warning'
+                });
             });
-            // =================================================================
-            // FIN DE LA NOUVELLE LOGIQUE
-            // =================================================================
 
         } else { 
             showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'info', 8000);
-            currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact' };
+            currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact', timestamp: Date.now() };
         }
 
-        showNotification("Information enregistrée. Cliquez à nouveau sur la flèche pour agir.", 'info', 8000);
+        showNotification("Information enregistrée. Le système a été ajouté à vos cartes en tant que contact de sonde.", 'info', 8000);
         saveData();
         if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
+        if (!mapModal.classList.contains('hidden')) renderGalacticMap();
         updateExplorationArrows(currentSystem);
+
     } else if (explorationChoice === 'blind_jump') {
         showNotification("Saut à l'aveugle initié...", 'info', 3000);
 
@@ -352,6 +357,11 @@ const handleExploration = async (direction) => {
 
         if (!viewingPlayer.discoveredSystemIds.includes(discoveredSystem.id)) {
             viewingPlayer.discoveredSystemIds.push(discoveredSystem.id);
+        }
+
+        if (viewingPlayer.probedSystemIds) {
+            const index = viewingPlayer.probedSystemIds.indexOf(discoveredSystem.id);
+            if (index > -1) viewingPlayer.probedSystemIds.splice(index, 1);
         }
 
         const hasEnemyInTarget = discoveredSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id);
@@ -365,7 +375,6 @@ const handleExploration = async (direction) => {
                 if (enemyPlayer && !enemyPlayer.discoveredSystemIds.includes(currentSystem.id)) {
                      if (!enemyPlayer.discoveredSystemIds) enemyPlayer.discoveredSystemIds = [];
                      enemyPlayer.discoveredSystemIds.push(currentSystem.id);
-                     console.log(`Player ${enemyPlayer.name} has been alerted to system ${currentSystem.name}`);
                 }
             });
         } else {

@@ -262,6 +262,9 @@ const renderPlanetarySystem = (systemId) => {
     updateExplorationArrows(system);
 };
 
+
+
+
 const renderGalacticMap = () => {
     const mapContainer = document.getElementById('galactic-map-container');
     mapContainer.innerHTML = '';
@@ -389,25 +392,39 @@ const renderGalacticMap = () => {
         const node = document.createElement('div');
         node.className = 'system-node';
         node.dataset.systemId = system.id;
+        
+        const isProbedOnly = viewingPlayer.probedSystemIds &&
+                             viewingPlayer.probedSystemIds.includes(system.id) &&
+                             !viewingPlayer.discoveredSystemIds.includes(system.id);
 
-        const { status, text } = getSystemStatusForPlayer(system, mapViewingPlayerId);
-        const { controlBreakdown } = getSystemControlInfo(system);
+        if (isProbedOnly) {
+            node.classList.add('probed-only');
+            // MODIFICATION: Affiche uniquement le nombre de planètes pour les systèmes sondés
+            const planetCount = system.planets.length;
+            const planetCountText = `${planetCount} planète${planetCount > 1 ? 's' : ''}`;
+            node.innerHTML = `<span>Système Inconnu</span><small>Contact Sonde<br>${planetCountText}</small>`;
+            node.title = `Système Inconnu\nDonnées de sonde uniquement.\nÉtablissez une connexion pour voyager.`;
+        } else {
+            const { status, text } = getSystemStatusForPlayer(system, mapViewingPlayerId);
+            const { controlBreakdown } = getSystemControlInfo(system);
 
-        node.classList.remove('player-controlled', 'contested', 'fully-neutral');
-        switch (status) {
-            case 'friendly': node.classList.add('player-controlled'); break;
-            case 'hostile': node.classList.add('contested'); break;
-            case 'neutral': node.classList.add('fully-neutral'); break;
+            node.classList.remove('player-controlled', 'contested', 'fully-neutral');
+            switch (status) {
+                case 'friendly': node.classList.add('player-controlled'); break;
+                case 'hostile': node.classList.add('contested'); break;
+                case 'neutral': node.classList.add('fully-neutral'); break;
+            }
+
+            let breakdownText = Object.entries(controlBreakdown).map(([ownerId, count]) => {
+                if (ownerId === 'neutral') return `PNJ: ${count}`;
+                const player = campaignData.players.find(p => p.id === ownerId);
+                return `${player ? player.name.split(' ')[0] : '???'}: ${count}`;
+            }).join(', ');
+
+            node.innerHTML = `<span>${system.name}</span><small>${text}<br>${breakdownText || 'Inexploré'}</small>`;
+            node.title = `${system.name}\n${text}\n${breakdownText || 'Inexploré'}`;
         }
 
-        let breakdownText = Object.entries(controlBreakdown).map(([ownerId, count]) => {
-            if (ownerId === 'neutral') return `PNJ: ${count}`;
-            const player = campaignData.players.find(p => p.id === ownerId);
-            return `${player ? player.name.split(' ')[0] : '???'}: ${count}`;
-        }).join(', ');
-
-        node.innerHTML = `<span>${system.name}</span><small>${text}<br>${breakdownText || 'Inexploré'}</small>`;
-        node.title = `${system.name}\n${text}\n${breakdownText || 'Inexploré'}`;
 
         node.style.left = `${pos.x}px`;
         node.style.top = `${pos.y}px`;
@@ -445,6 +462,9 @@ const updateExplorationArrows = (currentSystem) => {
         const arrow = document.getElementById(`explore-${dir}`);
         arrow.classList.toggle('hidden', isOffMap);
         if (isOffMap) return;
+        
+        // MODIFICATION : Suppression de toutes les infobulles (attribut title)
+        arrow.title = ''; 
 
         const connectedSystemId = currentSystem.connections[dir];
         const probedInfo = currentSystem.probedConnections ? currentSystem.probedConnections[dir] : null;
@@ -453,7 +473,6 @@ const updateExplorationArrows = (currentSystem) => {
         arrow.style.borderColor = colors.default;
         arrow.style.color = colors.default;
         arrow.style.cursor = 'pointer';
-        arrow.title = `Explorer vers ${dir}`;
 
         if (connectedSystemId && viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) {
             const connectedSystem = campaignData.systems.find(s => s.id === connectedSystemId);
@@ -468,33 +487,26 @@ const updateExplorationArrows = (currentSystem) => {
                 arrow.style.borderColor = borderColor;
                 arrow.style.color = borderColor;
                 label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>${connectedSystem.name}<br>${text}</small>`;
-                arrow.title = `Voyager vers ${connectedSystem.name} (${text})`;
             } else {
                 label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>LIEN BRISÉ</small>`;
                 arrow.style.borderColor = colors.red;
                 arrow.style.color = colors.red;
                 arrow.style.cursor = 'not-allowed';
-                arrow.title = `Erreur: La connexion est rompue.`;
             }
         } else if (probedInfo) {
-            // NOUVELLE CONDITION : Le joueur actuel a détecté une sonde
             if (probedInfo.status === 'probe_detected') {
                 arrow.style.borderColor = colors.yellow;
                 arrow.style.color = colors.yellow;
                 label = `<span class="arrow-symbol" style="font-size: 20px;">!</span><small>SONDE<br>DÉTECTÉE</small>`;
-                arrow.title = `Une sonde ennemie a été détectée depuis cette direction.`;
             }
-            // Logique existante pour le joueur qui a envoyé la sonde
             else if (probedInfo.status === 'player_contact') {
                 arrow.style.borderColor = colors.red;
                 arrow.style.color = colors.red;
                 label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>JOUEUR<br>HOSTILE</small>`;
-                arrow.title = `Sonde a détecté une présence hostile ! Cliquez pour tenter d'établir une connexion.`;
             } else { // npc_contact
                 arrow.style.borderColor = colors.blue;
                 arrow.style.color = colors.blue;
-                label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>SONDÉ<br>${probedInfo.name}</small>`;
-                arrow.title = `Route sondée vers ${probedInfo.name}. Cliquez pour établir la connexion.`;
+                label = `<span class="arrow-symbol">${arrowSymbols[dir]}</span><small>SONDÉ<br>Contact PNJ</small>`;
             }
         } else {
             const parentPos = currentSystem.position;
@@ -509,7 +521,6 @@ const updateExplorationArrows = (currentSystem) => {
                 arrow.style.borderColor = '#333';
                 arrow.style.color = '#555';
                 arrow.style.cursor = 'not-allowed';
-                arrow.title = 'Bord de la galaxie connue';
                 label = `<span class="arrow-symbol" style="opacity: 0.5;">${arrowSymbols[dir]}</span>`;
             }
         }

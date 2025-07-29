@@ -522,6 +522,22 @@
         </div>
     </div>
 
+    <div id="probe-action-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="probe-action-title">Confirmer la Connexion</h3>
+            <p id="probe-action-text" style="line-height: 1.6;"></p>
+            <p id="probe-action-timer" style="line-height: 1.6; color: var(--text-muted-color); font-style: italic;"></p>
+            <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap;">
+                <button id="probe-action-rescan-btn" class="btn-secondary">Relancer une sonde (1 RP)</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="probe-action-cancel-btn" class="btn-secondary">Annuler</button>
+                    <button id="probe-action-establish-btn" class="btn-primary">Établir le lien</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="plague-management-modal" class="modal hidden">
         <div class="modal-content large">
             <span class="close-btn">&times;</span>

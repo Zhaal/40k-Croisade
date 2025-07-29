@@ -701,6 +701,20 @@ label {
     background: radial-gradient(circle, #666, #333);
 }
 
+.system-node.probed-only {
+    border-color: var(--probed-color);
+    border-style: dotted;
+    box-shadow: 0 0 15px var(--probed-color);
+    background: radial-gradient(circle, #4a5a6a, #222);
+    opacity: 0.75;
+    cursor: help;
+}
+
+.system-node.probed-only:hover {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+}
+
 
 .system-node span { font-weight: bold; font-family: 'Cinzel', serif; }
 .system-node small { display: block; font-size: 0.8em; color: #ccc; }

@@ -158,7 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 upgradeSupplyCost: 0,
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
-                discoveredSystemIds: [newSystemId]
+                discoveredSystemIds: [newSystemId],
+                probedSystemIds: []
             };
 
             if (faction === 'Tyranids') {
@@ -801,6 +802,12 @@ document.addEventListener('DOMContentLoaded', () => {
     mapContainer.addEventListener('click', (e) => {
         if (wasDragged) return;
         const systemNode = e.target.closest('.system-node');
+
+        if (systemNode && systemNode.classList.contains('probed-only')) {
+            showNotification("Ce système a seulement été sondé. Établissez une connexion depuis un système adjacent pour y voyager.", "info");
+            return;
+        }
+        
         if (systemNode && systemNode.dataset.systemId) {
             closeModal(mapModal);
             openModal(worldModal);

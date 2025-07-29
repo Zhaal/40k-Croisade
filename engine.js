@@ -129,6 +129,42 @@ function showExplorationChoice(title, text) {
     });
 }
 
+function showProbeActionChoice(title, text, timerText) {
+    return new Promise(resolve => {
+        const choiceModal = document.getElementById('probe-action-modal');
+        const choiceTitle = document.getElementById('probe-action-title');
+        const choiceText = document.getElementById('probe-action-text');
+        const choiceTimer = document.getElementById('probe-action-timer');
+        const cancelBtn = document.getElementById('probe-action-cancel-btn');
+        const establishBtn = document.getElementById('probe-action-establish-btn');
+        const rescanBtn = document.getElementById('probe-action-rescan-btn');
+
+        choiceTitle.textContent = title;
+        choiceText.innerHTML = text;
+        choiceTimer.textContent = timerText;
+        openModal(choiceModal);
+
+        const closeAndResolve = (value) => {
+            closeModal(choiceModal);
+            // Clean up all listeners to avoid memory leaks
+            cancelBtn.removeEventListener('click', cancelListener);
+            establishBtn.removeEventListener('click', establishListener);
+            rescanBtn.removeEventListener('click', rescanListener);
+            choiceModal.querySelector('.close-btn').removeEventListener('click', cancelListener);
+            resolve(value);
+        };
+
+        const cancelListener = () => closeAndResolve('cancel');
+        const establishListener = () => closeAndResolve('establish');
+        const rescanListener = () => closeAndResolve('rescan');
+
+        cancelBtn.addEventListener('click', cancelListener, { once: true });
+        establishBtn.addEventListener('click', establishListener, { once: true });
+        rescanBtn.addEventListener('click', rescanListener, { once: true });
+        choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener, { once: true });
+    });
+}
+
 const openModal = (modal) => modal.classList.remove('hidden');
 const closeModal = (modal) => modal.classList.add('hidden');
 
@@ -228,11 +264,11 @@ const getReachableSystemsForPlayer = (playerId) => {
         return new Set();
     }
     
-    if (!player.discoveredSystemIds) {
-        player.discoveredSystemIds = [player.systemId];
-    }
-
-    return new Set(player.discoveredSystemIds);
+    // On combine les systèmes découverts ET les systèmes seulement sondés
+    const visibleIds = new Set(player.discoveredSystemIds || [player.systemId]);
+    (player.probedSystemIds || []).forEach(id => visibleIds.add(id));
+    
+    return visibleIds;
 };
 
 const isPlayerDiscoverable = (playerId) => {
@@ -425,6 +461,12 @@ const loadData = () => {
                 dataWasModified = true;
             }
         });
+        
+        // NOUVELLE MIGRATION : Ajoute la liste des systèmes sondés si elle n'existe pas
+        if (player.probedSystemIds === undefined) {
+            player.probedSystemIds = [];
+            dataWasModified = true;
+        }
 
         if (player.discoveredSystemIds === undefined) {
             const visibleSystems = oldGetReachableSystems(player.systemId);
@@ -486,6 +528,14 @@ const loadData = () => {
         if (!system.probedConnections) {
             system.probedConnections = { up: null, down: null, left: null, right: null };
             dataWasModified = true;
+        } else { // NEW: Check for timestamps within existing probed connections
+            for (const dir in system.probedConnections) {
+                const probeInfo = system.probedConnections[dir];
+                if (probeInfo && typeof probeInfo.timestamp === 'undefined') {
+                    probeInfo.timestamp = Date.now(); // Add a timestamp to old probes
+                    dataWasModified = true;
+                }
+            }
         }
         if (!system.connections) {
             system.connections = { up: null, down: null, left: null, right: null };
