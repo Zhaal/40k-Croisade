@@ -25,8 +25,7 @@
             </p>
             <div class="management-controls">
                 <button id="reset-campaign-btn" class="btn-danger">Explosion du Warp (Réinitialiser)</button>
-                <button id="campaign-info-btn" class="btn-secondary">Informations de la campagne</button>
-            </div>
+                </div>
         </header>
 
         <main id="player-list-view">
@@ -451,63 +450,79 @@
         <div class="modal-content large">
             <span class="close-btn">&times;</span>
             <h3 class="crusade-card-title">Carte Galactique</h3>
-            <div class="map-controls">
-                <label for="map-player-view-select">Point de vue :</label>
-                <select id="map-player-view-select"></select>
-            </div>
-            <div id="galactic-map-container">
-            </div>
-        </div>
-    </div>
 
-    <div id="info-modal" class="modal hidden">
-        <div class="modal-content info-panel">
-            <span class="close-btn">&times;</span>
-            <h3 class="info-title">Briefing de la Croisade Nexus</h3>
-            <div class="info-body">
-                <h4>Déploiement Initial et Zone de Rassemblement</h4>
-                <p>Votre glorieuse croisade débute dans un secteur isolé de la galaxie, à l'abri des tempêtes Warp et des yeux indiscrets de vos rivaux. Ce système natal est votre sanctuaire et votre terrain d'entraînement. Il est entièrement immunisé et ne peut être découvert ou attaqué par d'autres commandants tant qu'il n'est pas connecté à la carte principale.</p>
-                <p>Pour rejoindre le théâtre de la guerre galactique, une condition doit être remplie :</p>
-                <ul>
-                    <li><b>Unification du Système Natal :</b> Vous devez purger et prendre le contrôle de <b>toutes</b> les planètes de votre système de départ.</li>
-                </ul>
-                <p>Ce n'est qu'après avoir établi votre suprématie que votre système remplacera un système PNJ non découvert sur la carte galactique, vous reliant ainsi au reste du conflit.</p>
+            <div class="map-modal-tabs">
+                <button class="tab-link active" data-tab="map-content-panel">Carte</button>
+                <button class="tab-link" data-tab="info-content-panel">Règles d'Exploration</button>
+            </div>
 
-                <h4>Naviguer dans le Vide</h4>
-                <p>Une fois votre tête de pont établie, deux méthodes s'offrent à vous pour étendre votre influence à travers les étoiles :</p>
-                <ul>
-                    <li><b>Le Saut à l'Aveugle :</b> Une transition périlleuse et gratuite dans l'inconnu. Un tel saut établit immédiatement une route permanente. S'il vous mène dans un système occupé par un adversaire, votre présence et la localisation de votre système d'origine sont instantanément révélées à ce joueur.</li>
-                    <li><b>La Sonde Augure (1 PR) :</b> Un risque calculé. Pour un Point de Réquisition, lancez une sonde qui rapportera des informations vitales.
+            <div id="map-content-panel" class="map-modal-content-panel active">
+                <div class="map-controls">
+                    <label for="map-player-view-select">Point de vue :</label>
+                    <select id="map-player-view-select"></select>
+                </div>
+                <div id="galactic-map-container">
+                </div>
+            </div>
+
+            <div id="info-content-panel" class="map-modal-content-panel hidden">
+                <div class="info-panel" style="border: none; box-shadow: none; background: transparent; color: var(--text-color); max-width: 100%;">
+                    <div class="info-body" style="color: var(--text-color);">
+                        <h4 style="color: var(--primary-color);">Déploiement Initial et Zone de Rassemblement</h4>
+                        <p>Votre glorieuse croisade débute dans un secteur isolé de la galaxie, à l'abri des tempêtes Warp et des yeux indiscrets de vos rivaux. Ce système natal est votre sanctuaire et votre terrain d'entraînement. Il est entièrement immunisé et ne peut être découvert ou attaqué par d'autres commandants tant qu'il n'est pas connecté à la carte principale.</p>
+                        <p>Pour rejoindre le théâtre de la guerre galactique, une condition doit être remplie :</p>
                         <ul>
-                            <li><b>Contact PNJ :</b> La sonde révèle un système neutre, mûr pour la conquête.</li>
-                            <li><b>Contact Hostile :</b> La sonde détecte la présence d'une autre flotte de croisade. Le joueur dans ce système sera notifié que ses positions ont été sondées.</li>
+                            <li><b>Unification du Système Natal :</b> Vous devez purger et prendre le contrôle de <b>toutes</b> les planètes de votre système de départ.</li>
                         </ul>
-                        Une route sondée n'est pas un passage direct. Vous devez interagir à nouveau pour confirmer et établir une connexion permanente.
-                    </li>
-                </ul>
-
-                <h4>Règles d'Engagement et Logistique</h4>
-                <ul>
-                    <li><b>Ligne de Ravitaillement :</b> Pour pouvoir explorer depuis un système, celui-ci doit être connecté à votre système natal par une chaîne ininterrompue de systèmes où vous contrôlez au moins une planète. Les portails de Monde Mort comptent pour cette connexion. Si la ligne est rompue, aucune exploration n'est possible depuis le système isolé.</li>
-                    <li><b>Établir une Tête de Pont :</b> Pour poursuivre votre avancée, vous devez contrôler au moins une planète dans un système afin de l'utiliser comme base de départ pour de futures explorations.</li>
-                    <li><b>Blocus de Système :</b> Vous ne pouvez pas lancer de flottes d'exploration <b>depuis</b> un système où une présence ennemie est établie (c'est-à-dire où un autre joueur contrôle une planète). Vous devez d'abord purger la menace rivale.</li>
-                    <li><b>Contact Hostile :</b> Lorsque vous décidez d'établir un lien permanent vers un système hostile (que ce soit par un saut à l'aveugle ou en confirmant une route sondée), l'action est irréversible et à double sens. Votre adversaire est immédiatement alerté et votre système d'origine lui est révélé.</li>
-                    <li><b>Portails de Monde Mort :</b> Si vous contrôlez un "Monde Mort" dans deux systèmes différents qui ne sont pas déjà liés par un portail, vous pouvez activer un portail permanent et irréversible entre eux, créant une nouvelle voie de déplacement stratégique.</li>
-                </ul>
-                
-                <h4>La Fureur du Maelström (Explosion du Warp)</h4>
-                <p>Le protocole "Explosion du Warp" est une mesure de dernier recours. L'activer redessine la galaxie :</p>
-                <ul>
-                    <li>La carte galactique est entièrement et aléatoirement recréée.</li>
-                    <li>Toutes les connexions entre systèmes sont rompues.</li>
-                    <li>Vos forces de croisade (unités, expérience, ressources) sont préservées.</li>
-                    <li>Tous les joueurs sont rejetés dans un nouveau système natal isolé, forcés de recommencer la conquête.</li>
-                </ul>
+                        <p>Ce n'est qu'après avoir établi votre suprématie que votre système remplacera un système PNJ non découvert sur la carte galactique, vous reliant ainsi au reste du conflit.</p>
+        
+                        <h4 style="color: var(--primary-color);">Naviguer dans le Vide</h4>
+                        <p>Une fois votre tête de pont établie, deux méthodes s'offrent à vous pour étendre votre influence à travers les étoiles :</p>
+                        <ul>
+                            <li><b>Le Saut à l'Aveugle :</b> Une transition périlleuse et gratuite dans l'inconnu. Un tel saut établit immédiatement une route permanente. S'il vous mène dans un système occupé par un adversaire, votre présence et la localisation de votre système d'origine sont instantanément révélées à ce joueur.</li>
+                            <li><b>La Sonde Augure (1 PR) :</b> Un risque calculé. Pour un Point de Réquisition, lancez une sonde qui rapportera des informations vitales.
+                                <ul>
+                                    <li><b>Contact PNJ :</b> La sonde révèle un système neutre, mûr pour la conquête.</li>
+                                    <li><b>Contact Hostile :</b> La sonde détecte la présence d'une autre flotte de croisade. Le joueur dans ce système sera notifié que ses positions ont été sondées.</li>
+                                </ul>
+                                Une route sondée n'est pas un passage direct. Vous devez interagir à nouveau pour confirmer et établir une connexion permanente.
+                            </li>
+                        </ul>
+        
+                        <h4 style="color: var(--primary-color);">Règles d'Engagement et Logistique</h4>
+                        <ul>
+                            <li><b>Ligne de Ravitaillement :</b> Pour pouvoir explorer depuis un système, celui-ci doit être connecté à votre système natal par une chaîne ininterrompue de systèmes où vous contrôlez au moins une planète. Les portails de Monde Mort comptent pour cette connexion. Si la ligne est rompue, aucune exploration n'est possible depuis le système isolé.</li>
+                            <li><b>Établir une Tête de Pont :</b> Pour poursuivre votre avancée, vous devez contrôler au moins une planète dans un système afin de l'utiliser comme base de départ pour de futures explorations.</li>
+                            <li><b>Blocus de Système :</b> Vous ne pouvez pas lancer de flottes d'exploration <b>depuis</b> un système où une présence ennemie est établie (c'est-à-dire où un autre joueur contrôle une planète). Vous devez d'abord purger la menace rivale.</li>
+                            <li><b>Contact Hostile :</b> Lorsque vous décidez d'établir un lien permanent vers un système hostile (que ce soit par un saut à l'aveugle ou en confirmant une route sondée), l'action est irréversible et à double sens. Votre adversaire est immédiatement alerté et votre système d'origine lui est révélé.</li>
+                            <li><b>Portails de Monde Mort :</b> Si vous contrôlez un "Monde Mort" dans deux systèmes différents qui ne sont pas déjà liés par un portail, vous pouvez activer un portail permanent et irréversible entre eux, créant une nouvelle voie de déplacement stratégique.</li>
+                        </ul>
+                        
+                        <h4 style="color: var(--primary-color);">La Fureur du Maelström (Explosion du Warp)</h4>
+                        <p>Le protocole "Explosion du Warp" est une mesure de dernier recours. L'activer redessine la galaxie :</p>
+                        <ul>
+                            <li>La carte galactique est entièrement et aléatoirement recréée.</li>
+                            <li>Toutes les connexions entre systèmes sont rompues.</li>
+                            <li>Vos forces de croisade (unités, expérience, ressources) sont préservées.</li>
+                            <li>Tous les joueurs sont rejetés dans un nouveau système natal isolé, forcés de recommencer la conquête.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
+
     <div id="notification-container"></div>
+    
+    <div id="action-log-container" class="action-log">
+        <div id="action-log-header">
+            <h4>Historique des Actions</h4>
+            <button id="toggle-log-btn" title="Réduire/Agrandir">_</button>
+        </div>
+        <div id="action-log-entries">
+            </div>
+    </div>
+
 
     <div id="confirm-modal" class="modal hidden">
         <div class="modal-content">

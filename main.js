@@ -28,8 +28,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetCampaignBtn = document.getElementById('reset-campaign-btn');
     mapModal = document.getElementById('map-modal');
     const mapContainer = document.getElementById('galactic-map-container');
-    const campaignInfoBtn = document.getElementById('campaign-info-btn');
-    const infoModal = document.getElementById('info-modal');
+    
+    // NOUVEAUX ÉLÉMENTS POUR LE JOURNAL D'ACTIONS
+    const actionLogContainer = document.getElementById('action-log-container');
+    const actionLogHeader = document.getElementById('action-log-header');
+    const actionLogEntries = document.getElementById('action-log-entries');
+    const toggleLogBtn = document.getElementById('toggle-log-btn');
+
 
     // Infobulle personnalisée
     const customTooltip = document.createElement('div');
@@ -44,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     exportBtn.addEventListener('click', handleExport);
     importBtn.addEventListener('click', () => importFile.click());
     importFile.addEventListener('change', handleImport);
-    campaignInfoBtn.addEventListener('click', () => openModal(infoModal));
     backToListBtn.addEventListener('click', () => switchView('list'));
 
     backToSystemBtn.addEventListener('click', () => {
@@ -55,12 +59,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    /**
+     * CORRIGÉ : Gère la fermeture d'une modale et met à jour le contexte de l'historique.
+     * @param {HTMLElement} modal L'élément de la modale à fermer.
+     */
+    function handleModalClose(modal) {
+        closeModal(modal);
+    
+        // Le contexte du joueur (mapViewingPlayerId) est réinitialisé uniquement
+        // si l'utilisateur ferme la fenêtre du système planétaire (worldModal),
+        // ce qui signifie qu'il retourne à la liste principale.
+        // Fermer la carte galactique (mapModal) ne réinitialise plus le contexte.
+        if (modal === worldModal) {
+            mapViewingPlayerId = null; // Réinitialise l'ID du joueur consulté
+            renderActionLog(); // Met à jour l'historique pour afficher le journal de session global
+        }
+    }
+
     // --- Fermeture des modales ---
     document.querySelectorAll('.modal .close-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => closeModal(e.target.closest('.modal')));
+        btn.addEventListener('click', (e) => handleModalClose(e.target.closest('.modal')));
     });
     window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) closeModal(e.target);
+        if (e.target.classList.contains('modal')) handleModalClose(e.target);
     });
 
     // --- Gestion des joueurs ---
@@ -88,19 +109,22 @@ document.addEventListener('DOMContentLoaded', () => {
             openModal(playerModal);
         } else if (target.matches('.player-name-link')) {
             activePlayerIndex = parseInt(target.dataset.index);
+            // NOUVEAU : Met à jour le joueur pour l'affichage de l'historique
+            mapViewingPlayerId = campaignData.players[activePlayerIndex].id;
             backToSystemBtn.classList.add('hidden');
             renderPlayerDetail();
             switchView('detail');
-            displayPendingNotifications(); // AJOUT ICI
+            displayPendingNotifications();
         } else if (target.matches('.world-btn')) {
             const playerIndex = parseInt(target.dataset.index);
             const player = campaignData.players[playerIndex];
             if (player.systemId) {
                 activePlayerIndex = playerIndex;
-                mapViewingPlayerId = player.id;
+                mapViewingPlayerId = player.id; // L'ID du joueur pour la vue est défini ici
                 openModal(worldModal);
                 setTimeout(() => renderPlanetarySystem(player.systemId), 50);
-                displayPendingNotifications(); // AJOUT ICI
+                displayPendingNotifications();
+                renderActionLog(); // MISE À JOUR : Affiche l'historique de ce joueur
             } else {
                 showNotification("Erreur : ce joueur n'a pas de système assigné.", 'error');
             }
@@ -159,7 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 battles: { wins: 0, losses: 0 },
                 goalsNotes: '', units: [],
                 discoveredSystemIds: [newSystemId],
-                probedSystemIds: []
+                probedSystemIds: [],
+                actionLog: [] // NOUVEAU : Initialisation du journal d'actions personnel
             };
 
             if (faction === 'Tyranids') {
@@ -198,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (targetId === 'supply-limit') {
             player.supplyLimit = parseInt(value) || 0;
-            updateSupplyDisplay(); // Mise à jour directe
+            updateSupplyDisplay();
         } else if (targetId === 'crusade-faction') {
             player.crusadeFaction = value;
         }
@@ -236,8 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (change < 0 && (player.battles[battleStat] || 0) === 0) return;
             if (!player.battles) player.battles = { wins: 0, losses: 0 };
             player.battles[battleStat] = Math.max(0, (player.battles[battleStat] || 0) + change);
-            if (change > 0) player.requisitionPoints++;
-            else player.requisitionPoints = Math.max(0, player.requisitionPoints - 1);
+            if (change > 0) {
+                 player.requisitionPoints++;
+                 const type = battleStat === 'wins' ? 'Victoire' : 'Défaite';
+                 logAction(player.id, `Enregistrement d'une <b>${type}</b>. +1 Point de Réquisition.`, 'info', '⚔️');
+            }
+            else {
+                player.requisitionPoints = Math.max(0, player.requisitionPoints - 1);
+            }
         }
         saveData();
         renderPlayerDetail();
@@ -259,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirmed) {
             player.requisitionPoints -= cost;
             player.supplyLimit += increase;
+            logAction(player.id, `Limite de ravitaillement augmentée à <b>${player.supplyLimit}</b> pour 1 PR.`, 'info', '📦');
             saveData();
             renderPlayerDetail();
             showNotification(`Limite de ravitaillement augmentée à ${player.supplyLimit} PL !`, 'success');
@@ -286,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (change > 0) {
                     const currentSuffering = player.sainthood.trials.souffrance || 0;
                     player.sainthood.trials.souffrance = Math.min(10, currentSuffering + 3);
+                    logAction(player.id, "Point de Martyre gagné (+3 à l'Épreuve de Souffrance).", 'info', '⚜️');
                     showNotification("Point de Martyre gagné ! +3 points pour l'Épreuve de Souffrance.", "info");
                 }
             }
@@ -302,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 player.requisitionPoints--;
+                logAction(player.id, "Changement de Sainte Potentia pour 1 PR.", 'info', '⚜️');
             }
 
             const characters = player.units.filter(u => u.role === 'Personnage' || u.role === 'Hero Epique');
@@ -327,6 +361,8 @@ document.addEventListener('DOMContentLoaded', () => {
             selectionModal.querySelectorAll('button[data-id]').forEach(btn => {
                 btn.onclick = () => {
                     player.sainthood.potentiaUnitId = btn.dataset.id;
+                    const potentia = player.units.find(u => u.id === btn.dataset.id);
+                    logAction(player.id, `<b>${potentia.name}</b> a été désignée Sainte Potentia.`, 'info', '⚜️');
                     saveData();
                     renderPlayerDetail();
                     selectionModal.remove();
@@ -441,11 +477,13 @@ document.addEventListener('DOMContentLoaded', () => {
             populateUpgradeSelectors();
         } else if (target.classList.contains('delete-unit-btn')) {
             const index = parseInt(target.dataset.index);
-            const unitName = campaignData.players[activePlayerIndex].units[index].name;
+            const player = campaignData.players[activePlayerIndex];
+            const unitName = player.units[index].name;
             if (await showConfirm("Supprimer l'unité", `Supprimer l'unité "<b>${unitName}</b>" de l'ordre de bataille ?`)) {
-                campaignData.players[activePlayerIndex].units.splice(index, 1);
+                player.units.splice(index, 1);
                 saveData();
-                renderPlayerDetail(); // MODIFICATION: Recalcule le coût total des optimisations
+                renderPlayerDetail();
+                logAction(player.id, `Unité <b>${unitName}</b> retirée de l'ordre de bataille.`, 'info', '🗑️');
                 showNotification(`Unité <b>${unitName}</b> supprimée.`, 'info');
             }
         }
@@ -472,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const existingUnit = player.units[editingUnitIndex];
         player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
         saveData();
-        renderPlayerDetail(); // Mise à jour en temps réel de la fiche joueur
+        renderPlayerDetail();
     };
 
     unitForm.addEventListener('submit', (e) => {
@@ -500,13 +538,13 @@ document.addEventListener('DOMContentLoaded', () => {
             player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
         } else {
             unitData.id = crypto.randomUUID();
-            // NOUVEAU : Initialisation de la structure pour les optimisations
             unitData.detachmentUpgrades = [];
             player.units.push(unitData);
+            logAction(player.id, `Nouvelle unité ajoutée à l'ordre de bataille : <b>${unitData.name}</b>.`, 'info', '➕');
         }
     
         saveData();
-        renderPlayerDetail(); // MODIFICATION: Appelle la fonction principale pour tout rafraîchir
+        renderPlayerDetail();
         closeModal(unitModal);
     });
 
@@ -539,14 +577,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const deadWorldSelect = document.getElementById('dead-world-link-select');
             const linkButton = document.getElementById('link-dead-world-btn');
 
-            // Reset state
             deadWorldSelect.innerHTML = '';
             linkButton.disabled = false;
             linkButton.textContent = 'Activer le Portail';
 
             if (planet.type === 'Monde Mort' && planet.owner !== 'neutral') {
                 const ownerId = planet.owner;
-
                 const isSourceSystemLinked = (campaignData.gatewayLinks || []).some(link =>
                     link.systemId1 === systemId || link.systemId2 === systemId
                 );
@@ -558,17 +594,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const potentialDestinations = [];
                     campaignData.systems.forEach(s => {
                         if (!s.position || s.id === systemId) return;
-
                         const isDestinationSystemLinked = (campaignData.gatewayLinks || []).some(link =>
                             link.systemId1 === s.id || link.systemId2 === s.id
                         );
-
                         if (isDestinationSystemLinked) return;
-
-                        const hasQualifyingPlanet = s.planets.some(p =>
-                            p.type === 'Monde Mort' && p.owner === ownerId
-                        );
-
+                        const hasQualifyingPlanet = s.planets.some(p => p.type === 'Monde Mort' && p.owner === ownerId);
                         if (hasQualifyingPlanet) {
                             const destPlanet = s.planets.find(p => p.type === 'Monde Mort' && p.owner === ownerId);
                             potentialDestinations.push({
@@ -662,22 +692,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const planetIndex = document.getElementById('planet-index').value;
         const system = campaignData.systems.find(s => s.id === systemId);
         const planet = system.planets[planetIndex];
-
-        const newOwner = document.getElementById('planet-owner-select').value;
+        const oldOwner = planet.owner;
+    
+        const newOwnerId = document.getElementById('planet-owner-select').value;
         planet.type = document.getElementById('planet-type-select').value;
         planet.name = document.getElementById('planet-name-input').value.trim() || planet.name;
-        planet.owner = newOwner;
+        planet.owner = newOwnerId;
         planet.defense = (planet.owner === 'neutral') ? parseInt(document.getElementById('planet-defense-input').value) || 0 : 0;
-
+    
+        if (oldOwner === 'neutral' && newOwnerId !== 'neutral') {
+            const newOwnerPlayer = campaignData.players.find(p => p.id === newOwnerId);
+            if (newOwnerPlayer) {
+                logAction(newOwnerPlayer.id, `A conquis la planète <b>${planet.name}</b> dans le système <b>${system.name}</b>.`, 'conquest', '🪐');
+            }
+        }
+    
         saveData();
         renderPlanetarySystem(systemId);
         closeModal(planetTypeModal);
-
-        if (newOwner !== 'neutral') {
-            placePlayerSystemOnMap(newOwner);
+    
+        if (newOwnerId !== 'neutral') {
+            placePlayerSystemOnMap(newOwnerId);
         }
     });
-
+    
     document.getElementById('randomize-planet-btn').addEventListener('click', async () => {
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (!viewingPlayer) { showNotification("Erreur : Joueur actif introuvable.", 'error'); return; }
@@ -691,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (await showConfirm("Randomiser la planète", "Cette action coûtera <b>2 Points de Réquisition</b>. Continuer ?")) {
             viewingPlayer.requisitionPoints -= 2;
             planet.type = getWeightedRandomPlanetType();
+            logAction(viewingPlayer.id, `A randomisé la planète <b>${planet.name}</b> pour 2 PR. Nouveau type : ${planet.type}.`, 'info', '🎲');
             saveData();
             renderPlanetarySystem(system.id);
             if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
@@ -703,8 +742,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const sourceSystemId = document.getElementById('planet-system-id').value;
         const targetSystemId = document.getElementById('dead-world-link-select').value;
         const linkButton = e.target;
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
 
-        if (!targetSystemId) {
+        if (!targetSystemId || !viewingPlayer) {
             showNotification("Veuillez sélectionner une destination.", 'warning');
             return;
         }
@@ -724,13 +764,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             campaignData.gatewayLinks.push({ systemId1: sourceSystemId, systemId2: targetSystemId });
+            logAction(viewingPlayer.id, `Un portail de <b>Monde Mort</b> a été activé entre <b>${sourceSystem.name}</b> et <b>${targetSystem.name}</b>.`, 'info', '🌀');
             saveData();
             showNotification("Portail du Monde Mort activé !", 'success');
             
-            // MODIFIED: Disable the button after successful activation
             linkButton.disabled = true;
 
-            // Optional: Close modal after a short delay to see the disabled button
             setTimeout(() => {
                 closeModal(planetTypeModal);
             }, 800);
@@ -756,6 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (await showConfirm("Saboter les défenses", `Cette action coûtera <b>1 Point de Réquisition</b>. La défense passera de <b>${oldDefense}</b> à <b>${newDefense}</b>. Continuer ?`)) {
             viewingPlayer.requisitionPoints--;
             planet.defense = newDefense;
+            logAction(viewingPlayer.id, `A saboté les défenses de <b>${planet.name}</b> pour 1 PR, les réduisant à ${newDefense}.`, 'info', '💣');
             saveData();
             renderPlanetarySystem(system.id);
             if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) renderPlayerDetail();
@@ -821,8 +861,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentlyViewedSystemId && !worldModal.classList.contains('hidden')) {
             renderPlanetarySystem(currentlyViewedSystemId);
         }
-        displayPendingNotifications(); // AJOUT ICI
+        displayPendingNotifications();
+        renderActionLog(); // MODIFIÉ : Met à jour l'historique pour le nouveau joueur
     });
+
+    document.querySelector('.map-modal-tabs').addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-link')) {
+            const targetTab = e.target.dataset.tab;
+
+            document.querySelectorAll('#map-modal .tab-link').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('#map-modal .map-modal-content-panel').forEach(panel => panel.classList.add('hidden'));
+            
+            e.target.classList.add('active');
+            document.getElementById(targetTab).classList.remove('hidden');
+        }
+    });
+
 
     // --- Améliorations d'unité & Logique spéciale ---
 
@@ -858,7 +912,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirmReset) {
             generateGalaxy();
             const playerSystems = [];
+    
+            // CORRIGÉ : Réinitialiser les journaux d'actions avant de créer les nouveaux systèmes
+            campaignData.sessionLog = [];
+    
             campaignData.players.forEach((player) => {
+                player.actionLog = []; // Réinitialise l'historique personnel
+    
                 const newSystemId = crypto.randomUUID();
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
                 const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
@@ -880,13 +940,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 player.systemId = newSystemId;
                 player.discoveredSystemIds = [newSystemId]; 
             });
+    
             campaignData.systems.push(...playerSystems);
+            logGlobalAction(`<b>EXPLOSION DU WARP !</b> Une nouvelle galaxie a été générée.`, 'alert', '💥');
             saveData();
             switchView('list');
             renderPlayerList();
             showNotification("Le Warp a tout consumé ! Une nouvelle galaxie a été générée.", 'success', 8000);
         }
     });
+    
+    actionLogHeader.addEventListener('click', () => {
+        actionLogEntries.classList.toggle('hidden');
+        toggleLogBtn.textContent = actionLogEntries.classList.contains('hidden') ? '+' : '_';
+    });
+
 
     // --- LOGIQUE D'AMÉLIORATION ---
     const upgradesSection = document.getElementById('unit-upgrades-section');
@@ -942,6 +1010,8 @@ document.addEventListener('DOMContentLoaded', () => {
             unit.battleHonours = (unit.battleHonours || '').trim() + textToAdd;
             unit.crusadePoints = (unit.crusadePoints || 0) + cpCost;
             
+            logAction(player.id, `L'unité <b>${unit.name}</b> absorbe l'évolution <i>${morph.name}</i> pour ${biomassCost} Biomasse.`, 'info', '🧬');
+            
             document.getElementById('unit-honours').value = unit.battleHonours;
             document.getElementById('unit-crusade-points').value = unit.crusadePoints;
             select.value = '';
@@ -952,7 +1022,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NOUVEL ÉVÉNEMENT : Gère l'ajout d'une optimisation de détachement
     document.getElementById('add-detachment-upgrade-btn').addEventListener('click', async () => {
         const select = document.getElementById('detachment-upgrade-select');
         const selectedOption = select.options[select.selectedIndex];
@@ -962,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const unit = player.units[editingUnitIndex];
         const upgradeName = selectedOption.value;
         const upgradeCost = parseInt(selectedOption.dataset.cost);
-        const requisitionCost = 1; // Toujours 1 PR pour une optimisation
+        const requisitionCost = 1;
 
         if (player.requisitionPoints < requisitionCost) {
             showNotification(`Points de Réquisition insuffisants (coût: ${requisitionCost} PR).`, 'error');
@@ -971,24 +1040,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const confirmText = `Voulez-vous dépenser <b>${requisitionCost} PR</b> pour donner l'optimisation <i>${upgradeName}</i> (${upgradeCost} pts) à cette unité ?<br><br>Le coût en points sera ajouté automatiquement à votre total.`;
         if (await showConfirm("Acheter une Optimisation", confirmText)) {
-            // Déduire le coût en PR
             player.requisitionPoints -= requisitionCost;
 
-            // Ajouter l'optimisation à la liste de l'unité
             if (!unit.detachmentUpgrades) {
                 unit.detachmentUpgrades = [];
             }
             unit.detachmentUpgrades.push({ name: upgradeName, cost: upgradeCost });
 
-            // Ajouter une note dans les honneurs
             addUpgradeToUnitData(unit, 'unit-honours', upgradeName, `(${upgradeCost} pts)`, "Optimisation: ");
 
-            // Sauvegarder et rafraîchir
+            logAction(player.id, `Achète l'optimisation <i>${upgradeName}</i> pour <b>${unit.name}</b> (1 PR).`, 'info', '⚙️');
+            
             saveData();
             renderPlayerDetail();
             showNotification(`Optimisation "${upgradeName}" ajoutée !`, 'success');
 
-            // Réinitialiser le sélecteur
             select.value = '';
         }
     });
@@ -1024,6 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         planet.vulnerability = Math.ceil(Math.random() * 6);
                     }
                 }
+                logAction(player.id, `A infecté la planète <b>${planet.name}</b> pour ${cost} PC.`, 'info', '☣️');
                 break; 
             }
         }
@@ -1111,6 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(unit && boon) {
                     addUpgradeToUnitData(unit, 'unit-honours', boon.name, boon.desc, "Bienfait de Nurgle: ");
                     unit.crusadePoints = (unit.crusadePoints || 0) + 1;
+                    logAction(player.id, `<b>${unit.name}</b> a reçu le bienfait de Nurgle : <i>${boon.name}</i>.`, 'info', '☣️');
                     showNotification(`${unit.name} a reçu le bienfait : ${boon.name} !`, 'success');
                 }
                 closeModalFunc();
@@ -1142,10 +1210,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (await showConfirm("Confirmer la Mutation", `Cette amélioration coûtera <b>${cost} Points de Contagion</b>. Continuer ?`)) {
             player.deathGuardData.contagionPoints -= cost;
+            let logMessage = "";
             
             if (isPowerUpgrade) {
                 player.deathGuardData.pathogenPower++;
                 const newPower = player.deathGuardData.pathogenPower;
+                logMessage = `A augmenté sa <b>Puissance du Pathogène</b> à ${newPower} pour ${cost} PC.`;
                 const newBlessing = deathGuardCrusadeRules.plagueBlessings[newPower];
                 const newCurse = deathGuardCrusadeRules.plagueBlessings[-newPower];
                 if (newBlessing) showNotification(`Nouvelle Propriété débloquée : ${newBlessing.name}!`, 'info', 6000);
@@ -1153,8 +1223,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 player.deathGuardData.plagueStats[upgradeId]++;
+                const statName = {reproduction: 'Reproduction', survival: 'Survie', adaptability: 'Adaptabilité'}[upgradeId];
+                logMessage = `A augmenté son <b>${statName}</b> pour ${cost} PC.`;
             }
 
+            logAction(player.id, logMessage, 'info', '☣️');
             saveData();
             renderPlayerDetail();
             showNotification("La Peste a muté avec succès !", 'success');
@@ -1234,12 +1307,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
             if (outcome === 'blind_jump') {
                 const xpGained = Math.ceil(Math.random() * 3) + 3;
+                logAction(player.id, `<b>Succès !</b> La peste s'est concrétisée. Gain de ${xpGained} XP et d'un Bienfait de Nurgle.`, 'success', '☣️');
                 await showConfirm("Succès !", `La peste c'est concrétiser !<br><br>Une de vos unités gagne <b>${xpGained} XP</b>.<br>De plus, vous pouvez choisir un <b>Bienfait de Nurgle</b> pour un de vos personnages.`);
                 await selectNurgleBoonForCharacter(player);
                 showNotification(`N'oubliez pas d'assigner les ${xpGained} XP à l'une de vos unités ayant participé à la bataille !`, 'info', 10000);
             } else if (outcome === 'probe') {
                 const pointsLost = Math.ceil(player.deathGuardData.contagionPoints / 2);
                 player.deathGuardData.contagionPoints -= pointsLost;
+                logAction(player.id, `<b>Échec...</b> La peste n'a pas pu se concrétiser. Perte de ${pointsLost} PC.`, 'error', '☣️');
                 await showConfirm("Échec...", `La Peste n'a pas pu être concrétisée.<br><br>Vous perdez la moitié de vos Points de Contagion (-${pointsLost} PC).`);
             }
     
@@ -1258,8 +1333,9 @@ document.addEventListener('DOMContentLoaded', () => {
     //======================================================================
     loadData();
     renderPlayerList();
+    renderActionLog();
     if (campaignData.players.length > 0) {
         mapViewingPlayerId = campaignData.players[0].id;
-        displayPendingNotifications(); // AJOUT ICI
+        displayPendingNotifications();
     }
 });

@@ -2,7 +2,7 @@
 // Contenu de engine.js
 //========================================
 
-const APP_VERSION = "0.1.2"; // Version avec correction de la logique d'amélioration
+const APP_VERSION = "0.1.4"; // Version avec historique d'actions par joueur
 
 //======================================================================
 //  ÉTAT DE L'APPLICATION (STATE)
@@ -12,14 +12,15 @@ let campaignData = {
     systems: [],
     isGalaxyGenerated: false,
     gatewayLinks: [],
-    pendingNotifications: [] // NOUVEL AJOUT
+    pendingNotifications: [],
+    sessionLog: [] // MODIFIÉ : Remplace l'ancien actionLog global
 };
 
 let mapModal;
 let worldModal;
 let playerListView;
 let playerDetailView;
-let plagueManagementModal; 
+let plagueManagementModal;
 
 let activePlayerIndex = -1;
 let editingPlayerIndex = -1;
@@ -37,7 +38,7 @@ const STEP_DISTANCE = 250;
 const GALAXY_SIZE = 4;
 
 //======================================================================
-//  SYSTÈME DE NOTIFICATION, CONFIRMATION ET MODALES
+//  SYSTÈME DE NOTIFICATION, CONFIRMATION, LOG & MODALES
 //======================================================================
 
 function showNotification(message, type = 'info', duration = 5000) {
@@ -67,6 +68,73 @@ function showNotification(message, type = 'info', duration = 5000) {
         hideNotif();
     });
 }
+
+/**
+ * MODIFIÉ : Enregistre une action dans l'historique personnel d'un joueur.
+ * @param {string} playerId - L'ID du joueur pour qui enregistrer l'action.
+ * @param {string} message - Le message à afficher dans le journal.
+ * @param {string} type - Le type d'événement (ex: 'explore', 'conquest', 'alert').
+ * @param {string} [icon='📜'] - L'icône emoji à afficher.
+ */
+function logAction(playerId, message, type, icon = '📜') {
+    const player = campaignData.players.find(p => p.id === playerId);
+    if (!player) {
+        console.error(`Tentative de log pour un joueur inexistant: ${playerId}`);
+        return;
+    }
+
+    const LOG_LIMIT = 50;
+    const newEntry = {
+        timestamp: new Date().toISOString(),
+        message,
+        type,
+        icon
+    };
+
+    if (!player.actionLog) {
+        player.actionLog = [];
+    }
+
+    player.actionLog.unshift(newEntry);
+
+    if (player.actionLog.length > LOG_LIMIT) {
+        player.actionLog = player.actionLog.slice(0, LOG_LIMIT);
+    }
+
+    // NOUVEAU : Enregistre une entrée de session générique
+    const today = new Date().toISOString().slice(0, 10); // Format YYYY-MM-DD
+    const sessionExists = campaignData.sessionLog.some(
+        s => s.playerId === playerId && s.timestamp.startsWith(today)
+    );
+
+    if (!sessionExists) {
+        campaignData.sessionLog.unshift({
+            playerId: player.id,
+            playerName: player.name,
+            timestamp: new Date().toISOString()
+        });
+        if (campaignData.sessionLog.length > LOG_LIMIT * campaignData.players.length) {
+             campaignData.sessionLog = campaignData.sessionLog.slice(0, 50);
+        }
+    }
+
+
+    saveData();
+
+    if (typeof renderActionLog === 'function') {
+        renderActionLog();
+    }
+}
+
+/**
+ * NOUVELLE FONCTION : Enregistre une action pour TOUS les joueurs (ex: réinitialisation).
+ */
+function logGlobalAction(message, type, icon = '💥') {
+    campaignData.players.forEach(player => {
+        logAction(player.id, message, type, icon);
+    });
+}
+
 
 function showConfirm(title, text) {
     return new Promise(resolve => {
@@ -146,7 +214,6 @@ function showProbeActionChoice(title, text, timerText) {
 
         const closeAndResolve = (value) => {
             closeModal(choiceModal);
-            // Clean up all listeners to avoid memory leaks
             cancelBtn.removeEventListener('click', cancelListener);
             establishBtn.removeEventListener('click', establishListener);
             rescanBtn.removeEventListener('click', rescanListener);
@@ -171,15 +238,14 @@ const closeModal = (modal) => modal.classList.add('hidden');
 function displayPendingNotifications() {
     if (!mapViewingPlayerId) return;
 
-    const notificationsForPlayer = campaignData.pendingNotifications.filter(notif => notif.playerId === mapViewingPlayerId);
+    const notificationsForPlayer = (campaignData.pendingNotifications || []).filter(notif => notif.playerId === mapViewingPlayerId);
 
     if (notificationsForPlayer.length > 0) {
-        setTimeout(() => { // Léger délai pour s'assurer que le joueur voit bien la notification
+        setTimeout(() => {
             notificationsForPlayer.forEach(notif => {
                 showNotification(notif.message, notif.type || 'warning', 12000);
             });
 
-            // Une fois affichées, on les retire de la liste d'attente
             campaignData.pendingNotifications = campaignData.pendingNotifications.filter(notif => notif.playerId !== mapViewingPlayerId);
             saveData();
         }, 1000);
@@ -264,7 +330,6 @@ const getReachableSystemsForPlayer = (playerId) => {
         return new Set();
     }
     
-    // On combine les systèmes découverts ET les systèmes seulement sondés
     const visibleIds = new Set(player.discoveredSystemIds || [player.systemId]);
     (player.probedSystemIds || []).forEach(id => visibleIds.add(id));
     
@@ -286,14 +351,11 @@ const getRankFromXp = (xp) => {
     return 'Paré au Combat';
 };
 
-// NOUVELLE FONCTION : Calcule le coût total des optimisations de détachement pour un joueur
 const calculateDetachmentUpgradeCost = (player) => {
     if (!player || !player.units) {
         return 0;
     }
-    // Itère sur toutes les unités du joueur
     return (player.units || []).reduce((total, unit) => {
-        // Pour chaque unité, itère sur ses optimisations et additionne leurs coûts
         const unitUpgradesCost = (unit.detachmentUpgrades || []).reduce((subTotal, upgrade) => {
             return subTotal + (upgrade.cost || 0);
         }, 0);
@@ -374,6 +436,7 @@ const placePlayerSystemOnMap = async (playerId) => {
     }
 
     showNotification("<b>Tête de pont établie !</b> Votre système est maintenant connecté à la carte galactique. Vous pouvez explorer !", 'success', 8000);
+    logAction(player.id, `<b>${player.name}</b> a connecté son système natal à la carte en remplaçant <b>${targetNpcSystem.name}</b>.`, 'conquest', '🌍');
     saveData();
     renderPlayerList();
     if (!mapModal.classList.contains('hidden')) renderGalacticMap();
@@ -406,7 +469,6 @@ const loadData = () => {
         }
     }
 
-    // --- Logique de migration des anciennes versions ---
     let dataWasModified = false;
     if (!campaignData.players) campaignData.players = [];
     if (!campaignData.systems) campaignData.systems = [];
@@ -415,14 +477,22 @@ const loadData = () => {
         campaignData.gatewayLinks = [];
         dataWasModified = true;
     }
-
     if (campaignData.isGalaxyGenerated === undefined) {
         campaignData.isGalaxyGenerated = false;
         dataWasModified = true;
     }
-
     if (campaignData.pendingNotifications === undefined) {
         campaignData.pendingNotifications = [];
+        dataWasModified = true;
+    }
+
+    // NOUVELLE LOGIQUE DE MIGRATION POUR L'HISTORIQUE
+    if (campaignData.actionLog) { // Si l'ancienne structure globale existe
+        delete campaignData.actionLog; // On la supprime
+        dataWasModified = true;
+    }
+    if (campaignData.sessionLog === undefined) { // On ajoute la nouvelle structure de session
+        campaignData.sessionLog = [];
         dataWasModified = true;
     }
     
@@ -453,26 +523,24 @@ const loadData = () => {
     };
 
     campaignData.players.forEach(player => {
-        // Migration pour les unités de chaque joueur
+        if (player.actionLog === undefined) { // Ajoute le journal d'actions personnel s'il n'existe pas
+            player.actionLog = [];
+            dataWasModified = true;
+        }
         (player.units || []).forEach(unit => {
-            // NOUVELLE MIGRATION : Ajoute la propriété pour les optimisations de détachement si elle n'existe pas
             if (unit.detachmentUpgrades === undefined) {
                 unit.detachmentUpgrades = [];
                 dataWasModified = true;
             }
         });
-        
-        // NOUVELLE MIGRATION : Ajoute la liste des systèmes sondés si elle n'existe pas
         if (player.probedSystemIds === undefined) {
             player.probedSystemIds = [];
             dataWasModified = true;
         }
-
         if (player.discoveredSystemIds === undefined) {
             const visibleSystems = oldGetReachableSystems(player.systemId);
             player.discoveredSystemIds = Array.from(visibleSystems);
             dataWasModified = true;
-            console.log(`Migration des systèmes découverts pour le joueur ${player.name}`);
         }
         if (player.sombrerochePoints === undefined) {
             player.sombrerochePoints = 0;
@@ -485,42 +553,27 @@ const loadData = () => {
         if (player.faction === 'Tyranids' && player.biomassPoints === undefined) {
             player.biomassPoints = 0;
             dataWasModified = true;
-            console.log(`Migration: Ajout de biomassPoints pour le joueur Tyranide ${player.name}`);
         }
-        
         if (player.faction === 'Death Guard') {
             if (typeof player.deathGuardData === 'undefined') {
-                console.log(`Migration: Ajout de deathGuardData pour le joueur ${player.name}`);
                 player.deathGuardData = {
                     contagionPoints: player.contagionPoints || 0,
                     pathogenPower: 1,
                     corruptedPlanetIds: [], 
-                    plagueStats: {
-                        reproduction: 1,
-                        survival: 1,
-                        adaptability: 1
-                    }
+                    plagueStats: { reproduction: 1, survival: 1, adaptability: 1 }
                 };
                 delete player.contagionPoints;
                 dataWasModified = true;
             }
         }
-
         if (player.faction === 'Adepta Sororitas' && player.sainthood === undefined) {
             player.sainthood = {
                 potentiaUnitId: null,
                 activeTrial: 'foi',
-                trials: {
-                    foi: 0,
-                    souffrance: 0,
-                    purete: 0,
-                    vertu: 0,
-                    vaillance: 0
-                },
+                trials: { foi: 0, souffrance: 0, purete: 0, vertu: 0, vaillance: 0 },
                 martyrdomPoints: 0
             };
             dataWasModified = true;
-            console.log(`Migration: Ajout des données de Sainteté pour la joueuse Sororitas ${player.name}`);
         }
     });
 
@@ -528,11 +581,11 @@ const loadData = () => {
         if (!system.probedConnections) {
             system.probedConnections = { up: null, down: null, left: null, right: null };
             dataWasModified = true;
-        } else { // NEW: Check for timestamps within existing probed connections
+        } else {
             for (const dir in system.probedConnections) {
                 const probeInfo = system.probedConnections[dir];
                 if (probeInfo && typeof probeInfo.timestamp === 'undefined') {
-                    probeInfo.timestamp = Date.now(); // Add a timestamp to old probes
+                    probeInfo.timestamp = Date.now();
                     dataWasModified = true;
                 }
             }
@@ -551,7 +604,7 @@ const loadData = () => {
     if (lastVersion !== APP_VERSION) {
         setTimeout(() => {
             showNotification(
-                `<b>Mise à jour v${APP_VERSION} !</b> Sonde et intégration Codex Death Guard / Sororitas / Tyranid.`,
+                `<b>Mise à jour v${APP_VERSION} !</b> L'historique est désormais personnel à chaque joueur.`,
                 'info',
                 10000
             );

@@ -236,6 +236,7 @@ const handleExploration = async (direction) => {
                 return;
             }
             viewingPlayer.requisitionPoints--;
+            logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a relancé une sonde vers le système <b>${discoveredSystem.name}</b>.`, 'explore', '🛰️');
             probedInfo.timestamp = Date.now();
             saveData();
     
@@ -262,6 +263,7 @@ const handleExploration = async (direction) => {
                 if (index > -1) viewingPlayer.probedSystemIds.splice(index, 1);
             }
     
+            logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a établi une connexion permanente entre <b>${currentSystem.name}</b> et <b>${discoveredSystem.name}</b>.`, 'info', '🔗');
             if (probedInfo.status === 'player_contact') {
                 const discoveredPlayer = campaignData.players.find(p => p.id === discoveredSystem.owner);
                 if (discoveredPlayer) {
@@ -273,6 +275,7 @@ const handleExploration = async (direction) => {
                             message: `<b>CONNEXION ÉTABLIE:</b> Une flotte du joueur <b>${viewingPlayer.name}</b> a établi un lien permanent avec votre système <b>${discoveredSystem.name}</b> !`,
                             type: 'error'
                         });
+                        logAction(viewingPlayer.id, `La position de <b>${viewingPlayer.name}</b> a été révélée à <b>${discoveredPlayer.name}</b> suite au contact.`, 'alert', '💥');
                         showNotification(`Le joueur <b>${discoveredPlayer.name}</b> a été alerté de votre présence.`, 'warning');
                     }
                 }
@@ -292,6 +295,7 @@ const handleExploration = async (direction) => {
         );
         if (confirmDiscovery) {
             viewingPlayer.discoveredSystemIds.push(connectedSystemId);
+            logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a cartographié une route existante vers le système <b>${discoveredSystem.name}</b>.`, 'info', '🗺️');
             saveData();
             renderPlanetarySystem(connectedSystemId);
             showNotification(`Nouvelle route cartographiée vers le système <b>${discoveredSystem.name}</b>.`, 'success');
@@ -310,6 +314,7 @@ const handleExploration = async (direction) => {
             return;
         }
         viewingPlayer.requisitionPoints--;
+        logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a envoyé une sonde depuis <b>${currentSystem.name}</b> vers un système inconnu.`, 'explore', '🛰️');
         
         if (!viewingPlayer.probedSystemIds) viewingPlayer.probedSystemIds = [];
         if (!viewingPlayer.probedSystemIds.includes(discoveredSystem.id)) {
@@ -322,6 +327,7 @@ const handleExploration = async (direction) => {
 
         if (hasEnemyPlanetInTarget) {
             showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
+            logAction(viewingPlayer.id, `Sonde de <b>${viewingPlayer.name}</b> a détecté une présence hostile dans le système <b>${discoveredSystem.name}</b> !`, 'alert', '⚠️');
             currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact', timestamp: Date.now() };
 
             const oppositeDir = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
@@ -340,6 +346,7 @@ const handleExploration = async (direction) => {
 
         } else { 
             showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'info', 8000);
+            logAction(viewingPlayer.id, `Sonde de <b>${viewingPlayer.name}</b> a découvert le système PNJ <b>${discoveredSystem.name}</b>.`, 'explore', '📡');
             currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact', timestamp: Date.now() };
         }
 
@@ -351,6 +358,7 @@ const handleExploration = async (direction) => {
 
     } else if (explorationChoice === 'blind_jump') {
         showNotification("Saut à l'aveugle initié...", 'info', 3000);
+        logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a initié un saut à l'aveugle depuis <b>${currentSystem.name}</b>.`, 'explore', '🚀');
 
         currentSystem.connections[direction] = discoveredSystem.id;
         discoveredSystem.connections[oppositeDirection] = currentSystem.id;
@@ -368,6 +376,7 @@ const handleExploration = async (direction) => {
 
         if (hasEnemyInTarget) {
             showNotification(`<b>Contact hostile !</b> Le saut à l'aveugle vous a mené dans le système <b>${discoveredSystem.name}</b>. Votre arrivée a été détectée !`, 'error', 8000);
+            logAction(viewingPlayer.id, `CONTACT HOSTILE ! Le saut de <b>${viewingPlayer.name}</b> l'a mené au système <b>${discoveredSystem.name}</b>.`, 'combat', '💥');
             
             const enemyPlayerIds = new Set(discoveredSystem.planets.map(p => p.owner).filter(o => o !== 'neutral' && o !== viewingPlayer.id));
             enemyPlayerIds.forEach(enemyId => {
@@ -379,6 +388,7 @@ const handleExploration = async (direction) => {
             });
         } else {
             showNotification(`Saut à l'aveugle réussi ! Vous avez découvert le système PNJ "<b>${discoveredSystem.name}</b>".`, 'success', 8000);
+            logAction(viewingPlayer.id, `Saut réussi ! <b>${viewingPlayer.name}</b> a découvert <b>${discoveredSystem.name}</b>.`, 'explore', '✅');
         }
         
         saveData();

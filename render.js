@@ -17,6 +17,10 @@ const switchView = (view) => {
         playerDetailView.classList.add('hidden');
         activePlayerIndex = -1;
         backToSystemBtn.classList.add('hidden');
+        
+        // CORRECTION : Réinitialise l'ID du joueur consulté et rafraîchit l'historique
+        mapViewingPlayerId = null;
+        renderActionLog();
     }
 };
 
@@ -45,7 +49,7 @@ const renderPlayerList = () => {
             <div class="player-card-actions">
                 <button class="btn-secondary edit-player-btn" data-index="${index}">Modifier</button>
                 <button class="btn-danger delete-player-btn" data-index="${index}">Supprimer</button>
-                <button class="btn-secondary world-btn" data-index="${index}">Système</button>
+                <button class="btn-secondary world-btn" data-index="${index}">JOUER</button>
             </div>
         `;
         playerListDiv.appendChild(card);
@@ -261,9 +265,6 @@ const renderPlanetarySystem = (systemId) => {
 
     updateExplorationArrows(system);
 };
-
-
-
 
 const renderGalacticMap = () => {
     const mapContainer = document.getElementById('galactic-map-container');
@@ -668,4 +669,56 @@ const renderDeathGuardBox = (player) => {
     document.getElementById('plague-reproduction').textContent = player.deathGuardData.plagueStats.reproduction || 1;
     document.getElementById('plague-survival').textContent = player.deathGuardData.plagueStats.survival || 1;
     document.getElementById('plague-adaptability').textContent = player.deathGuardData.plagueStats.adaptability || 1;
+};
+
+/**
+ * MODIFIÉ : Affiche l'historique des actions en fonction du contexte (joueur ou global).
+ */
+const renderActionLog = () => {
+    const logEntriesContainer = document.getElementById('action-log-entries');
+    if (!logEntriesContainer) return;
+    logEntriesContainer.innerHTML = '';
+
+    // Si un joueur est en cours de consultation, afficher son journal personnel.
+    if (mapViewingPlayerId) {
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        if (!viewingPlayer || !viewingPlayer.actionLog || viewingPlayer.actionLog.length === 0) {
+            const playerName = viewingPlayer ? ` pour ${viewingPlayer.name}` : '';
+            logEntriesContainer.innerHTML = `<p style="padding: 10px; color: var(--text-muted-color); text-align: center;">Aucune action enregistrée${playerName}.</p>`;
+            return;
+        }
+
+        viewingPlayer.actionLog.forEach(entry => {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-type-${entry.type}`;
+            const timestamp = new Date(entry.timestamp);
+            const formattedTime = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
+            logItem.innerHTML = `
+                <span class="log-icon">${entry.icon}</span>
+                <span class="log-message">${entry.message}</span>
+                <span class="log-timestamp">${formattedTime}</span>
+            `;
+            logEntriesContainer.appendChild(logItem);
+        });
+
+    // Sinon, afficher le journal de session global.
+    } else {
+        if (!campaignData.sessionLog || campaignData.sessionLog.length === 0) {
+            logEntriesContainer.innerHTML = `<p style="padding: 10px; color: var(--text-muted-color); text-align: center;">Aucune activité récente dans la campagne.</p>`;
+            return;
+        }
+
+        campaignData.sessionLog.forEach(entry => {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-type-info`; // Type générique pour la session
+            const timestamp = new Date(entry.timestamp);
+            const formattedTime = `${timestamp.toLocaleDateString()} ${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
+            logItem.innerHTML = `
+                <span class="log-icon">👤</span>
+                <span class="log-message"><b>${entry.playerName}</b> a été actif/active.</span>
+                <span class="log-timestamp">${formattedTime}</span>
+            `;
+            logEntriesContainer.appendChild(logItem);
+        });
+    }
 };

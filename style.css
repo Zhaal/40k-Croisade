@@ -296,9 +296,11 @@ label {
     max-width: 500px;
     max-height: 95vh;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
-.modal-content.large { max-width: 900px; }
-.modal-content.x-large { max-width: 1100px; }
+.modal-content.large { max-width: 90vw; }
+.modal-content.x-large { max-width: 95vw; }
 
 
 .close-btn {
@@ -392,39 +394,10 @@ label {
 }
 
 
-/* --- Style pour la modale d'information --- */
-.modal-content.info-panel {
-    background: url('https://wow.zamimg.com/images/textures/parchment/parchment-noise.png') #fcf5e5;
-    background-size: cover;
-    color: #3a2e1c;
-    border: 10px solid transparent;
-    border-image: url('https://wow.zamimg.com/images/border-art/simple-brown/simple-brown-border.png') 30 round;
-    box-shadow: 0 0 25px rgba(0,0,0,0.8);
-    max-width: 700px;
-}
-
-.info-panel .info-title {
-    font-family: 'Cinzel', serif;
-    color: #5a2a0a; /* Brun foncé */
-    text-align: center;
-    font-size: 1.8em;
-    text-shadow: 1px 1px 1px #e4d1b1;
-    margin-bottom: 20px;
-}
-
-.info-panel .info-body h4 {
-    font-family: 'Cinzel', serif;
-    color: #7a3a1a;
-    border-bottom: 2px solid #c8b79a;
-    padding-bottom: 5px;
-    margin-top: 20px;
-    font-size: 1.2em;
-}
-
+/* --- Styles pour le panneau d'information dans la modale --- */
 .info-panel .info-body p, .info-panel .info-body li {
     font-family: Georgia, 'Times New Roman', Times, serif;
     line-height: 1.6;
-    text-shadow: 1px 1px 1px #fff;
 }
 
 .info-panel .info-body ul {
@@ -434,19 +407,7 @@ label {
 }
 
 .info-panel .info-body b {
-    color: #5a2a0a;
-}
-
-.info-panel .close-btn {
-    color: #7a3a1a;
-    font-size: 35px;
-    text-shadow: 0 0 5px white;
-    top: 5px;
-    right: 20px;
-}
-
-.info-panel .close-btn:hover {
-    color: #5a2a0a;
+    color: var(--primary-color);
 }
 
 
@@ -622,17 +583,57 @@ label {
 .explore-arrow small { font-size: 0.7em; display: block; margin-top: 2px; text-transform: uppercase; }
 
 /* --- Styles Carte Galactique --- */
-#map-modal .modal-content { max-width: 95vw; height: 90vh; }
+#map-modal .modal-content {
+    max-width: 95vw;
+    height: 90vh;
+}
+
+/* NOUVEAUX STYLES POUR LES ONGLETS DE LA MODALE */
+.map-modal-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 15px;
+    flex-shrink: 0;
+}
+
+.tab-link {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-muted-color);
+    font-size: 1.1em;
+    margin-bottom: -2px;
+}
+
+.tab-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.map-modal-content-panel {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+#info-content-panel {
+    padding: 0 15px;
+}
+/* FIN DES NOUVEAUX STYLES POUR LES ONGLETS */
+
 
 #galactic-map-container {
     position: relative;
     width: 100%;
     height: 100%;
-    min-height: 75vh;
     background: #111 url('https://www.transparenttextures.com/patterns/stardust.png');
     border: 1px solid var(--border-color);
     overflow: auto;
     cursor: grab;
+    flex-grow: 1;
 }
 
 .map-viewport { position: relative; width: 2000px; height: 2000px; }
@@ -642,6 +643,7 @@ label {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .map-controls label {
@@ -844,6 +846,95 @@ label {
     color: var(--primary-color);
 }
 
+/* --- NOUVEAUX STYLES : Historique des actions --- */
+#action-log-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 380px;
+    max-height: 40vh;
+    background-color: rgba(30, 30, 30, 0.9);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 199;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-color);
+    backdrop-filter: blur(5px);
+}
+
+#action-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+#action-log-header h4 {
+    margin: 0;
+    font-size: 1em;
+    color: var(--text-muted-color);
+}
+
+#toggle-log-btn {
+    background: none;
+    border: 1px solid var(--text-muted-color);
+    color: var(--text-muted-color);
+    padding: 0px 8px;
+    font-size: 1.2em;
+    line-height: 1;
+    border-radius: 4px;
+}
+#toggle-log-btn:hover {
+    background-color: var(--border-color);
+    color: white;
+}
+
+
+#action-log-entries {
+    overflow-y: auto;
+    padding: 5px 12px;
+    flex-grow: 1;
+    transition: all 0.3s ease-in-out;
+}
+
+.log-item {
+    padding: 8px 5px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 3px solid transparent;
+}
+.log-item:last-child {
+    border-bottom: none;
+}
+.log-item .log-timestamp {
+    font-size: 0.8em;
+    color: var(--text-muted-color);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.log-item .log-icon {
+    flex-shrink: 0;
+}
+.log-item b {
+    color: var(--primary-color);
+}
+/* Types de log */
+.log-item.log-type-explore { border-left-color: var(--probed-color); }
+.log-item.log-type-conquest { border-left-color: var(--friendly-color); }
+.log-item.log-type-alert { border-left-color: var(--warning-color); }
+.log-item.log-type-combat { border-left-color: var(--danger-color); }
+.log-item.log-type-info { border-left-color: #666; }
+
+
 /* --- NOUVEAU : Infobulle personnalisée --- */
 #custom-tooltip {
     position: fixed;
@@ -941,6 +1032,12 @@ label {
 @media (max-width: 768px) {
     body { padding: 10px; }
     #system-container { transform: scale(0.8); }
+    #action-log-container {
+        width: 95vw;
+        max-height: 30vh;
+        left: 2.5vw;
+        bottom: 10px;
+    }
 }
 @media (max-width: 480px) {
     h1 { font-size: 1.5em; }
