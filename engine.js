@@ -2,7 +2,7 @@
 // Contenu de engine.js
 //========================================
 
-const APP_VERSION = "0.1.1"; // Version avec correction de la logique d'amélioration
+const APP_VERSION = "0.1.2"; // Version avec correction de la logique d'amélioration
 
 //======================================================================
 //  ÉTAT DE L'APPLICATION (STATE)
@@ -551,7 +551,7 @@ const loadData = () => {
     if (lastVersion !== APP_VERSION) {
         setTimeout(() => {
             showNotification(
-                `<b>Mise à jour v${APP_VERSION} !</b> La logique des coûts d'amélioration est corrigée.`,
+                `<b>Mise à jour v${APP_VERSION} !</b> Sonde et intégration Codex Death Guard / Sororitas / Tyranid.`,
                 'info',
                 10000
             );
