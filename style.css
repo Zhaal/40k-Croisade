@@ -899,6 +899,7 @@ label {
     flex-direction: column;
     color: var(--text-color);
     backdrop-filter: blur(5px);
+    transition: all 0.3s ease-in-out;
 }
 
 #action-log-header {
@@ -1091,4 +1092,45 @@ label {
         width: 100%;
         max-width: 100%;
     }
+}
+
+/* Styles for minimized action log */
+#action-log-container.minimized {
+    width: auto;
+    max-height: 40px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+#action-log-container.minimized #action-log-header {
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+#action-log-container.minimized #toggle-log-btn {
+    background-color: var(--surface-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* Style for selected system on galactic map */
+.system-node.selected-for-action {
+    border-width: 5px;
+    border-style: double;
+    transform: translate(-50%, -50%) scale(1.15) !important;
+    box-shadow: 0 0 25px #fff, 0 0 40px var(--primary-color);
+}
+
+/* Visibility for map probe controls */
+#map-probe-controls.visible {
+    display: flex !important;
+    align-items: center;
+}
+
+#map-probe-controls button {
+    padding: 5px 10px;
+    font-size: 1.2em;
+    line-height: 1.2;
 }

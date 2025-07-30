@@ -27,6 +27,7 @@ let editingPlayerIndex = -1;
 let editingUnitIndex = -1;
 let currentlyViewedSystemId = null;
 let mapViewingPlayerId = null;
+let selectedSystemOnMapId = null; // NEW: Tracks selected system for map actions
 let currentMapScale = 1;
 
 let isPanning = false;
@@ -35,7 +36,7 @@ let startX, scrollLeftStart;
 let startY, scrollTopStart;
 
 const STEP_DISTANCE = 250;
-const GALAXY_SIZE = 4;
+const GALAXY_SIZE = 9;
 
 //======================================================================
 //  SYSTÈME DE NOTIFICATION, CONFIRMATION, LOG & MODALES

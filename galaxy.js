@@ -88,7 +88,7 @@ const generateGalaxy = () => {
 };
 
 /**
- * Vérifie s'il existe un chemin de systèmes contrôlés par le joueur jusqu'à son système d'origine.
+ * CORRIGÉ : Vérifie s'il existe un chemin de systèmes contrôlés (via des liens permanents OU sondés) par le joueur jusqu'à son système d'origine.
  * @param {string} startSystemId - L'ID du système de départ de la vérification.
  * @param {string} playerId - L'ID du joueur effectuant la vérification.
  * @returns {boolean} - True si une ligne de ravitaillement existe, sinon false.
@@ -96,9 +96,9 @@ const generateGalaxy = () => {
 const hasSupplyLine = (startSystemId, playerId) => {
     const player = campaignData.players.find(p => p.id === playerId);
     if (!player) return false;
-    
+
     const homeSystemId = player.systemId;
-    if (startSystemId === homeSystemId) return true; // On peut toujours agir depuis son système natal
+    if (startSystemId === homeSystemId) return true;
 
     const queue = [startSystemId];
     const visited = new Set([startSystemId]);
@@ -106,32 +106,42 @@ const hasSupplyLine = (startSystemId, playerId) => {
     while (queue.length > 0) {
         const currentId = queue.shift();
         const currentSystem = campaignData.systems.find(s => s.id === currentId);
-
         if (!currentSystem) continue;
 
-        // Étape 1 : Récupérer les connexions normales
-        const neighborIds = Object.values(currentSystem.connections).filter(id => id !== null);
-        
-        // Étape 2 : AJOUTER les connexions via portail (gateway)
-        (campaignData.gatewayLinks || []).forEach(link => {
-            if (link.systemId1 === currentId) {
-                neighborIds.push(link.systemId2);
-            }
-            if (link.systemId2 === currentId) {
-                neighborIds.push(link.systemId1);
-            }
+        // Utilise un Set pour rassembler les voisins uniques de toutes les sources
+        const allNeighborIds = new Set();
+
+        // 1. Connexions permanentes
+        Object.values(currentSystem.connections).forEach(id => {
+            if (id) allNeighborIds.add(id);
         });
 
-        for (const neighborId of neighborIds) {
+        // 2. Connexions sondées (si le joueur a entièrement découvert la destination)
+        if (currentSystem.probedConnections) {
+            Object.values(currentSystem.probedConnections).forEach(probeInfo => {
+                if (probeInfo && probeInfo.id && player.discoveredSystemIds.includes(probeInfo.id)) {
+                    allNeighborIds.add(probeInfo.id);
+                }
+            });
+        }
+
+        // 3. Liens de portail
+        (campaignData.gatewayLinks || []).forEach(link => {
+            if (link.systemId1 === currentId) allNeighborIds.add(link.systemId2);
+            if (link.systemId2 === currentId) allNeighborIds.add(link.systemId1);
+        });
+
+        // Itère sur l'ensemble des voisins
+        for (const neighborId of allNeighborIds) {
             if (visited.has(neighborId)) continue;
             
             const neighborSystem = campaignData.systems.find(s => s.id === neighborId);
             if (!neighborSystem) continue;
 
-            // La ligne est coupée si le système voisin n'est pas contrôlé par le joueur
+            // Une ligne de ravitaillement ne peut passer que par des systèmes où le joueur a un pied-à-terre
             const isControlledByPlayer = neighborSystem.planets.some(p => p.owner === playerId);
-            if (!isControlledByPlayer) {
-                continue; // Ne pas explorer plus loin via ce chemin
+            if (!isControlledByPlayer && neighborId !== homeSystemId) {
+                continue;
             }
 
             if (neighborId === homeSystemId) {
@@ -145,6 +155,67 @@ const hasSupplyLine = (startSystemId, playerId) => {
 
     return false; // Aucun chemin trouvé
 };
+
+
+// NEW ASYNC HELPER FUNCTION
+const performProbe = async (sourceSystem, targetSystem, direction, viewingPlayer) => {
+    const hasFreeProbe = viewingPlayer.freeProbes && viewingPlayer.freeProbes > 0;
+    if (!hasFreeProbe && viewingPlayer.requisitionPoints < 1) {
+        showNotification("Points de Réquisition ou Sondes Gratuites insuffisants !", 'warning');
+        return false; // Indicate failure
+    }
+
+    let costMessage = "";
+    if (hasFreeProbe) {
+        viewingPlayer.freeProbes--;
+        costMessage = "en utilisant une <b>Sonde Gratuite</b>";
+    } else {
+        viewingPlayer.requisitionPoints--;
+        costMessage = "pour <b>1 PR</b>";
+    }
+
+    logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a envoyé une sonde vers un système inconnu ${costMessage}.`, 'explore', '🛰️');
+
+    if (!viewingPlayer.probedSystemIds) viewingPlayer.probedSystemIds = [];
+    if (!viewingPlayer.probedSystemIds.includes(targetSystem.id)) {
+        viewingPlayer.probedSystemIds.push(targetSystem.id);
+    }
+
+    const hasEnemyPlanetInTarget = targetSystem.planets.some(
+        p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id
+    );
+
+    if (hasEnemyPlanetInTarget) {
+        showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
+        logAction(viewingPlayer.id, `Sonde de <b>${viewingPlayer.name}</b> a détecté une présence hostile dans un système voisin !`, 'alert', '⚠️');
+        sourceSystem.probedConnections[direction] = { id: targetSystem.id, status: 'player_contact', timestamp: Date.now() };
+
+        const oppositeDir = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
+        if (!targetSystem.probedConnections) targetSystem.probedConnections = { up: null, down: null, left: null, right: null };
+        targetSystem.probedConnections[oppositeDir] = { id: sourceSystem.id, status: 'probe_detected', timestamp: Date.now() };
+
+        const enemyPlayerIds = new Set(targetSystem.planets.map(p => p.owner).filter(o => o !== 'neutral' && o !== viewingPlayer.id));
+        enemyPlayerIds.forEach(enemyId => {
+            if (!campaignData.pendingNotifications) campaignData.pendingNotifications = [];
+            campaignData.pendingNotifications.push({
+                playerId: enemyId,
+                message: `<b>ALERTE:</b> Des lectures énergétiques inhabituelles, typiques d'une sonde Augure, ont été détectées dans votre système <b>${targetSystem.name}</b> !`,
+                type: 'warning'
+            });
+            logAction(enemyId, `Une sonde ennemie a été détectée dans votre système <b>${targetSystem.name}</b> !`, 'alert', '⚠️');
+        });
+
+    } else {
+        showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert un système PNJ.`, 'info', 8000);
+        logAction(viewingPlayer.id, `Sonde de <b>${viewingPlayer.name}</b> a découvert un système inconnu.`, 'explore', '📡');
+        sourceSystem.probedConnections[direction] = { id: targetSystem.id, name: targetSystem.name, status: 'npc_contact', timestamp: Date.now() };
+    }
+
+    showNotification("Information enregistrée. Le système a été ajouté à vos cartes en tant que contact de sonde.", 'info', 8000);
+    saveData();
+    // The calling function will be responsible for UI updates like re-rendering the map
+    return true; // Indicate success
+}
 
 
 const handleExploration = async (direction) => {
@@ -179,11 +250,6 @@ const handleExploration = async (direction) => {
 
     if (hasEnemyPlanetInCurrent) {
         showNotification("<b>Blocus ennemi !</b> Vous ne pouvez pas explorer depuis ce système tant qu'une planète ennemie est présente.", 'error');
-        return;
-    }
-    const hasFriendlyPlanetInCurrent = currentSystem.planets.some(p => p.owner === viewingPlayer.id);
-    if (!hasFriendlyPlanetInCurrent && currentSystem.owner !== viewingPlayer.id) {
-        showNotification("Vous devez contrôler au moins une planète dans ce système pour pouvoir explorer plus loin.", 'warning');
         return;
     }
     
@@ -230,34 +296,34 @@ const handleExploration = async (direction) => {
             return;
         }
     
-if (outcome === 'rescan') {
-    const hasFreeProbe = viewingPlayer.freeProbes && viewingPlayer.freeProbes > 0;
-    if (!hasFreeProbe && viewingPlayer.requisitionPoints < 1) {
-        showNotification("Points de Réquisition ou Sondes Gratuites insuffisants pour relancer une sonde.", 'warning');
-        return;
-    }
-
-    let costMessage = "";
-    if (hasFreeProbe) {
-        viewingPlayer.freeProbes--;
-        costMessage = "en utilisant une <b>Sonde Gratuite</b>";
-    } else {
-        viewingPlayer.requisitionPoints--;
-        costMessage = "pour <b>1 PR</b>";
-    }
-    
-    logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a relancé une sonde vers le système <b>hostile</b> ${costMessage}.`, 'explore', '🛰️');
-    probedInfo.timestamp = Date.now();
-    saveData();
-
-    if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) {
-        renderPlayerDetail();
-    }
-    
-    showNotification(`Sonde relancée vers le système. Informations temporelles mises à jour.`, 'info');
-    updateExplorationArrows(currentSystem);
-    return;
-}
+		if (outcome === 'rescan') {
+		    const hasFreeProbe = viewingPlayer.freeProbes && viewingPlayer.freeProbes > 0;
+		    if (!hasFreeProbe && viewingPlayer.requisitionPoints < 1) {
+		        showNotification("Points de Réquisition ou Sondes Gratuites insuffisants pour relancer une sonde.", 'warning');
+		        return;
+		    }
+		
+		    let costMessage = "";
+		    if (hasFreeProbe) {
+		        viewingPlayer.freeProbes--;
+		        costMessage = "en utilisant une <b>Sonde Gratuite</b>";
+		    } else {
+		        viewingPlayer.requisitionPoints--;
+		        costMessage = "pour <b>1 PR</b>";
+		    }
+		    
+		    logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a relancé une sonde vers le système <b>hostile</b> ${costMessage}.`, 'explore', '🛰️');
+		    probedInfo.timestamp = Date.now();
+		    saveData();
+		
+		    if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) {
+		        renderPlayerDetail();
+		    }
+		    
+		    showNotification(`Sonde relancée vers le système. Informations temporelles mises à jour.`, 'info');
+		    updateExplorationArrows(currentSystem);
+		    return;
+		}
     
         if (outcome === 'establish') {
             currentSystem.connections[direction] = discoveredSystem.id;
@@ -319,66 +385,19 @@ if (outcome === 'rescan') {
     );
     
     if (explorationChoice === 'probe') {
-        // MODIFIÉ : Logique de coût pour la sonde
-        const hasFreeProbe = viewingPlayer.freeProbes && viewingPlayer.freeProbes > 0;
-        if (!hasFreeProbe && viewingPlayer.requisitionPoints < 1) {
-            showNotification("Points de Réquisition ou Sondes Gratuites insuffisants !", 'warning');
+        const probeSuccessful = await performProbe(currentSystem, discoveredSystem, direction, viewingPlayer);
+        if(probeSuccessful) {
+            if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
+            updateExplorationArrows(currentSystem);
+        }
+    } else if (explorationChoice === 'blind_jump') {
+        // MODIFICATION : Le contrôle de planète est maintenant vérifié ici.
+        const hasFriendlyPlanetInCurrent = currentSystem.planets.some(p => p.owner === viewingPlayer.id);
+        if (!hasFriendlyPlanetInCurrent && currentSystem.owner !== viewingPlayer.id) {
+            showNotification("Vous devez contrôler au moins une planète dans ce système pour pouvoir effectuer un saut à l'aveugle.", 'warning');
             return;
         }
 
-        let costMessage = "";
-        if (hasFreeProbe) {
-            viewingPlayer.freeProbes--;
-            costMessage = "en utilisant une <b>Sonde Gratuite</b>";
-        } else {
-            viewingPlayer.requisitionPoints--;
-            costMessage = "pour <b>1 PR</b>";
-        }
-        
-        logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a envoyé une sonde depuis <b>${currentSystem.name}</b> vers un système inconnu ${costMessage}.`, 'explore', '🛰️');
-        
-        if (!viewingPlayer.probedSystemIds) viewingPlayer.probedSystemIds = [];
-        if (!viewingPlayer.probedSystemIds.includes(discoveredSystem.id)) {
-            viewingPlayer.probedSystemIds.push(discoveredSystem.id);
-        }
-        
-        const hasEnemyPlanetInTarget = discoveredSystem.planets.some(
-            p => p.owner !== 'neutral' && p.owner !== viewingPlayer.id
-        );
-
-        if (hasEnemyPlanetInTarget) {
-            showNotification(`<b>Contact hostile détecté !</b> La sonde rapporte la présence d'une autre force de croisade.`, 'error', 8000);
-            logAction(viewingPlayer.id, `Sonde de <b>${viewingPlayer.name}</b> a détecté une présence hostile dans un système voisin !`, 'alert', '⚠️');
-            currentSystem.probedConnections[direction] = { id: discoveredSystem.id, status: 'player_contact', timestamp: Date.now() };
-
-            const oppositeDir = { up: 'down', down: 'up', left: 'right', right: 'left' }[direction];
-            if (!discoveredSystem.probedConnections) discoveredSystem.probedConnections = { up: null, down: null, left: null, right: null };
-            discoveredSystem.probedConnections[oppositeDir] = { id: currentSystem.id, status: 'probe_detected', timestamp: Date.now() };
-
-            const enemyPlayerIds = new Set(discoveredSystem.planets.map(p => p.owner).filter(o => o !== 'neutral' && o !== viewingPlayer.id));
-            enemyPlayerIds.forEach(enemyId => {
-                if (!campaignData.pendingNotifications) campaignData.pendingNotifications = [];
-                campaignData.pendingNotifications.push({
-                    playerId: enemyId,
-                    message: `<b>ALERTE:</b> Des lectures énergétiques inhabituelles, typiques d'une sonde Augure, ont été détectées dans votre système <b>${discoveredSystem.name}</b> !`,
-                    type: 'warning'
-                });
-                logAction(enemyId, `Une sonde ennemie a été détectée dans votre système <b>${discoveredSystem.name}</b> !`, 'alert', '⚠️');
-            });
-
-        } else { 
-            showNotification(`<b>Résultat de la sonde :</b><br>Nouveau contact ! Vous avez découvert un système PNJ.`, 'info', 8000);
-            logAction(viewingPlayer.id, `Sonde de <b>${viewingPlayer.name}</b> a découvert un système inconnu.`, 'explore', '📡');
-            currentSystem.probedConnections[direction] = { id: discoveredSystem.id, name: discoveredSystem.name, status: 'npc_contact', timestamp: Date.now() };
-        }
-
-        showNotification("Information enregistrée. Le système a été ajouté à vos cartes en tant que contact de sonde.", 'info', 8000);
-        saveData();
-        if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
-        if (!mapModal.classList.contains('hidden')) renderGalacticMap();
-        updateExplorationArrows(currentSystem);
-
-    } else if (explorationChoice === 'blind_jump') {
         showNotification("Saut à l'aveugle initié...", 'info', 3000);
         logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a initié un saut à l'aveugle depuis <b>${currentSystem.name}</b>.`, 'explore', '🚀');
 

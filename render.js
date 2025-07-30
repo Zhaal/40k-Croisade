@@ -543,7 +543,58 @@ const renderGalacticMap = () => {
         mapContainer.scrollLeft = galaxyCenterX * currentMapScale - mapContainer.clientWidth / 2;
         mapContainer.scrollTop = galaxyCenterY * currentMapScale - mapContainer.clientHeight / 2;
     }, 0);
+    
+    // Final call to initialize/hide the probe controls
+    updateMapProbeControls();
 };
+
+const updateMapProbeControls = () => {
+    const probeControls = document.getElementById('map-probe-controls');
+    if (!selectedSystemOnMapId) {
+        probeControls.classList.add('hidden');
+        probeControls.classList.remove('visible');
+        return;
+    }
+
+    const system = campaignData.systems.find(s => s.id === selectedSystemOnMapId);
+    const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
+    
+    // Conditions to show probe controls: system exists, is on the map, and the viewing player controls at least one planet there
+    const canProbeFromSystem = system && system.position && player;
+
+    if (!canProbeFromSystem) {
+        probeControls.classList.add('hidden');
+        probeControls.classList.remove('visible');
+        return;
+    }
+
+    probeControls.classList.remove('hidden');
+    probeControls.classList.add('visible');
+
+    const directions = ['up', 'down', 'left', 'right'];
+    directions.forEach(dir => {
+        const btn = document.getElementById(`map-probe-${dir}`);
+        let isEnabled = true;
+
+        // Disable if there's already any kind of connection
+        if (system.connections[dir] || (system.probedConnections && system.probedConnections[dir])) {
+            isEnabled = false;
+        }
+
+        // Disable if there's no system at the target location
+        const targetPos = { x: system.position.x, y: system.position.y };
+        if (dir === 'up') targetPos.y -= STEP_DISTANCE;
+        else if (dir === 'down') targetPos.y += STEP_DISTANCE;
+        else if (dir === 'left') targetPos.x -= STEP_DISTANCE;
+        else if (dir === 'right') targetPos.x += STEP_DISTANCE;
+        const targetSystem = campaignData.systems.find(s => s.position && s.position.x === targetPos.x && s.position.y === targetPos.y);
+        if (!targetSystem) {
+            isEnabled = false;
+        }
+
+        btn.disabled = !isEnabled;
+    });
+}
 
 
 const updateExplorationArrows = (currentSystem) => {

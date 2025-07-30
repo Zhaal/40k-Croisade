@@ -73,13 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleModalClose(modal) {
         closeModal(modal);
     
-        // Le contexte du joueur (mapViewingPlayerId) est réinitialisé uniquement
-        // si l'utilisateur ferme la fenêtre du système planétaire (worldModal),
-        // ce qui signifie qu'il retourne à la liste principale.
-        // Fermer la carte galactique (mapModal) ne réinitialise plus le contexte.
         if (modal === worldModal) {
-            mapViewingPlayerId = null; // Réinitialise l'ID du joueur consulté
-            renderActionLog(); // Met à jour l'historique pour afficher le journal de session global
+            mapViewingPlayerId = null; 
+            renderActionLog();
+        }
+        // NEW: Deselect system when closing the map
+        if (modal === mapModal) {
+            const previouslySelected = document.querySelector('.system-node.selected-for-action');
+            if(previouslySelected) previouslySelected.classList.remove('selected-for-action');
+            selectedSystemOnMapId = null; 
         }
     }
 
@@ -927,20 +929,47 @@ document.addEventListener('DOMContentLoaded', () => {
         isPanning = false;
         mapContainer.style.cursor = 'grab';
     });
-    mapContainer.addEventListener('click', (e) => {
-        if (wasDragged) return;
-        const systemNode = e.target.closest('.system-node');
 
-        if (systemNode && systemNode.classList.contains('probed-only')) {
-            showNotification("Ce système a seulement été sondé. Établissez une connexion depuis un système adjacent pour y voyager.", "info");
+    mapContainer.addEventListener('click', (e) => {
+        if (wasDragged) {
+            wasDragged = false; // Reset for next click
             return;
         }
-        
-        if (systemNode && systemNode.dataset.systemId) {
-            closeModal(mapModal);
-            openModal(worldModal);
-            setTimeout(() => renderPlanetarySystem(systemNode.dataset.systemId), 50);
+    
+        const systemNode = e.target.closest('.system-node');
+        const previouslySelectedNode = document.querySelector('.system-node.selected-for-action');
+    
+        // If clicking on the background or a different node
+        if (previouslySelectedNode) {
+            previouslySelectedNode.classList.remove('selected-for-action');
         }
+    
+        if (systemNode) {
+            const systemId = systemNode.dataset.systemId;
+            
+            // If clicking the already selected node (double-click behavior)
+            if (systemId === selectedSystemOnMapId) {
+                if (systemNode.classList.contains('probed-only')) {
+                    showNotification("Ce système a seulement été sondé. Établissez une connexion depuis un système adjacent pour y voyager.", "info");
+                    return;
+                }
+                if (systemId) {
+                    closeModal(mapModal);
+                    openModal(worldModal);
+                    setTimeout(() => renderPlanetarySystem(systemId), 50);
+                }
+                selectedSystemOnMapId = null; // Deselect after action
+            } else {
+                // Select a new node
+                systemNode.classList.add('selected-for-action');
+                selectedSystemOnMapId = systemId;
+            }
+        } else {
+            // Clicked on background, deselect
+            selectedSystemOnMapId = null;
+        }
+        
+        updateMapProbeControls();
     });
     
     document.getElementById('map-player-view-select').addEventListener('change', (e) => {
@@ -1001,10 +1030,10 @@ document.addEventListener('DOMContentLoaded', () => {
             generateGalaxy();
             const playerSystems = [];
     
+            // MODIFICATION : Réinitialisation complète des historiques
             campaignData.sessionLog = [];
-    
-            campaignData.players.forEach((player) => {
-                player.actionLog = []; 
+            campaignData.players.forEach(player => {
+                player.actionLog = [];
     
                 const newSystemId = crypto.randomUUID();
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
@@ -1038,8 +1067,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     actionLogHeader.addEventListener('click', () => {
+        const title = actionLogHeader.querySelector('h4');
+        actionLogContainer.classList.toggle('minimized');
         actionLogEntries.classList.toggle('hidden');
         toggleLogBtn.textContent = actionLogEntries.classList.contains('hidden') ? '+' : '_';
+        title.classList.toggle('hidden', actionLogEntries.classList.contains('hidden'));
     });
 
 
@@ -1185,21 +1217,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const system = campaignData.systems.find(s => s.planets.some(p => p.id === planetId));
         const planet = system.planets.find(p => p.id === planetId);
     
-        // --- DÉBUT DES MODIFICATIONS ---
-    
         const okBtn = document.getElementById('confirm-modal-ok-btn');
         const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
         const originalOkText = okBtn.textContent;
         const originalCancelText = cancelBtn.textContent;
     
         try {
-            // Change le texte des boutons pour ce dialogue spécifique
             okBtn.textContent = "Victoire";
             cancelBtn.textContent = "Défaite";
     
             const hasWon = await showConfirm("Résultat du Combat", `L'attaquant, <b>${attacker.name}</b>, a-t-il remporté la bataille contre les PNJ défendus par <b>${defender.name}</b> ?`);
             
-            // La logique existante est déplacée ici, à l'intérieur du bloc try
             if (hasWon) {
                 attacker.battles.wins = (attacker.battles.wins || 0) + 1;
                 attacker.requisitionPoints++;
@@ -1225,11 +1253,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification("Résultat de la bataille enregistré.", "success");
     
         } finally {
-            // Restaure le texte original des boutons pour les autres utilisations de la modale
             okBtn.textContent = originalOkText;
             cancelBtn.textContent = originalCancelText;
         }
-        // --- FIN DES MODIFICATIONS ---
     });
     
     function infectPlanet(planetId) {
@@ -1565,6 +1591,57 @@ document.addEventListener('DOMContentLoaded', () => {
         historyDateFilter.value = '';
         renderFullHistory();
     });
+
+    const initiateProbeFromMap = async (direction) => {
+        if (!selectedSystemOnMapId || !mapViewingPlayerId) return;
+
+        const sourceSystem = campaignData.systems.find(s => s.id === selectedSystemOnMapId);
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        
+        if (!sourceSystem || !viewingPlayer) {
+            showNotification("Erreur : Système source ou joueur introuvable.", 'error');
+            return;
+        }
+
+        // Perform prerequisite checks (supply line, enemy blockade)
+        const otherPlayerIds = campaignData.players.map(p => p.id).filter(id => id !== viewingPlayer.id);
+        const hasEnemyPlanetInCurrent = sourceSystem.planets.some(p => otherPlayerIds.includes(p.owner));
+        if (hasEnemyPlanetInCurrent) {
+            showNotification("<b>Blocus ennemi !</b> Vous ne pouvez pas sonder depuis ce système tant qu'une planète ennemie est présente.", 'error');
+            return;
+}
+
+
+// Garder les sondes hors controle de planete et sans ligne de ravitaillement
+// if (!hasSupplyLine(sourceSystem.id, viewingPlayer.id)) {
+//     showNotification("<b>Ligne de ravitaillement rompue !</b> Impossible de sonder depuis ce système.", 'error', 8000);
+//     return;
+// }
+    
+        const parentPos = sourceSystem.position;
+        const targetPos = { x: parentPos.x, y: parentPos.y };
+        if (direction === 'up') targetPos.y -= STEP_DISTANCE;
+        else if (direction === 'down') targetPos.y += STEP_DISTANCE;
+        else if (direction === 'left') targetPos.x -= STEP_DISTANCE;
+        else if (direction === 'right') targetPos.x += STEP_DISTANCE;
+        const targetSystem = campaignData.systems.find(s => s.position && s.position.x === targetPos.x && s.position.y === targetPos.y);
+    
+        // Call the refactored probe function from galaxy.js
+        const probeSuccessful = await performProbe(sourceSystem, targetSystem, direction, viewingPlayer);
+    
+        if (probeSuccessful) {
+            if (!playerDetailView.classList.contains('hidden')) renderPlayerDetail();
+            renderGalacticMap(); // Re-render to show the new dotted line
+            updateMapProbeControls();
+        }
+    }
+
+    // Add event listeners for the new map probe buttons
+    document.getElementById('map-probe-up').addEventListener('click', () => initiateProbeFromMap('up'));
+    document.getElementById('map-probe-down').addEventListener('click', () => initiateProbeFromMap('down'));
+    document.getElementById('map-probe-left').addEventListener('click', () => initiateProbeFromMap('left'));
+    document.getElementById('map-probe-right').addEventListener('click', () => initiateProbeFromMap('right'));
+
 
     //======================================================================
     //  INITIALISATION
