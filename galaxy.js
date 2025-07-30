@@ -326,6 +326,18 @@ const handleExploration = async (direction) => {
 		}
     
         if (outcome === 'establish') {
+            // ==========================================================
+            // DEBUT DE LA CORRECTION : Ajout de la vérification de contrôle
+            // ==========================================================
+            const hasFriendlyPlanetInCurrent = currentSystem.planets.some(p => p.owner === viewingPlayer.id);
+            if (!hasFriendlyPlanetInCurrent && currentSystem.owner !== viewingPlayer.id) {
+                showNotification("Vous devez contrôler au moins une planète dans ce système pour pouvoir établir un lien permanent.", 'warning');
+                return;
+            }
+            // ==========================================================
+            // FIN DE LA CORRECTION
+            // ==========================================================
+
             currentSystem.connections[direction] = discoveredSystem.id;
             discoveredSystem.connections[oppositeDirection] = currentSystem.id;
             currentSystem.probedConnections[direction] = null;

@@ -254,10 +254,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const player = campaignData.players[activePlayerIndex];
         const action = button.dataset.action;
         if (button.id === 'increase-supply-limit-btn') return;
-        
-        const [operation, stat] = action.split('-');
+    
+        // --- BLOC DE CODE CORRIGÉ ---
+        const parts = action.split('-');
+        const operation = parts[0];
+        const stat = parts.slice(1).join('-'); // Reconstruit le nom de la stat
+        // --- FIN DE LA CORRECTION ---
+    
         const change = operation === 'increase' ? 1 : -1;
-
+    
         if (stat === 'rp') {
             player.requisitionPoints = Math.max(0, player.requisitionPoints + change);
         } else if (stat === 'sombreroche') {
@@ -266,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             player.biomassPoints = Math.max(0, (player.biomassPoints || 0) + change);
         } else if (stat === 'contagion') {
             player.deathGuardData.contagionPoints = Math.max(0, (player.deathGuardData.contagionPoints || 0) + change);
-        } else if (stat === 'free-probes') { // MODIFIÉ : Ajout de la logique pour les sondes gratuites
+        } else if (stat === 'free-probes') {
             player.freeProbes = Math.max(0, (player.freeProbes || 0) + change);
         } else {
             const battleStat = stat === 'win' ? 'wins' : 'losses';
