@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mapModal = document.getElementById('map-modal');
     const mapContainer = document.getElementById('galactic-map-container');
     const npcCombatModal = document.getElementById('npc-combat-modal');
+    const pvpCombatModal = document.getElementById('pvp-combat-modal'); // NOUVEL ÉLÉMENT
     
     // NOUVEAUX ÉLÉMENTS POUR LE JOURNAL D'ACTIONS
     const actionLogContainer = document.getElementById('action-log-container');
@@ -660,30 +661,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 deadWorldContainer.classList.add('hidden');
             }
             
-            // Logique pour le bouton Combattre / Saboter
+            // --- MODIFICATION : Logique pour le bouton Combattre / Saboter / Attaquer ---
             const actionsContainer = document.getElementById('planet-actions-container');
             actionsContainer.innerHTML = ''; // Nettoyer les anciens boutons
-            if (planet.owner === 'neutral') {
-                // Bouton Saboter
-                const halveDefenseBtn = document.createElement('button');
-                halveDefenseBtn.type = 'button';
-                halveDefenseBtn.id = 'halve-defense-btn';
-                halveDefenseBtn.className = 'btn-secondary';
-                halveDefenseBtn.textContent = 'Saboter Défenses (1 RP)';
-                halveDefenseBtn.classList.toggle('hidden', planet.defense === 0);
-                halveDefenseBtn.addEventListener('click', halvePlanetDefense);
-                actionsContainer.appendChild(halveDefenseBtn);
-                
-                // Bouton Combattre
-                const fightBtn = document.createElement('button');
-                fightBtn.type = 'button';
-                fightBtn.id = 'fight-npc-btn';
-                fightBtn.className = 'btn-primary';
-                fightBtn.textContent = `Combattre (${planet.defense || 0} pts)`;
-                fightBtn.addEventListener('click', () => openNpcCombatModal(planet.id));
-                actionsContainer.appendChild(fightBtn);
 
+            const viewingPlayerId = mapViewingPlayerId;
+            const planetOwnerId = planet.owner;
+            const isOwnPlanet = viewingPlayerId === planetOwnerId;
+
+            if (!isOwnPlanet) {
+                if (planetOwnerId === 'neutral') {
+                    // --- Logique PNJ (existante) ---
+                    // Bouton Saboter
+                    const halveDefenseBtn = document.createElement('button');
+                    halveDefenseBtn.type = 'button';
+                    halveDefenseBtn.id = 'halve-defense-btn';
+                    halveDefenseBtn.className = 'btn-secondary';
+                    halveDefenseBtn.textContent = 'Saboter Défenses (1 RP)';
+                    halveDefenseBtn.classList.toggle('hidden', planet.defense === 0);
+                    halveDefenseBtn.addEventListener('click', halvePlanetDefense);
+                    actionsContainer.appendChild(halveDefenseBtn);
+                    
+                    // Bouton Combattre PNJ
+                    const fightBtn = document.createElement('button');
+                    fightBtn.type = 'button';
+                    fightBtn.id = 'fight-npc-btn';
+                    fightBtn.className = 'btn-primary';
+                    fightBtn.textContent = `Combattre PNJ (${planet.defense || 0} pts)`;
+                    fightBtn.addEventListener('click', () => openNpcCombatModal(planet.id));
+                    actionsContainer.appendChild(fightBtn);
+
+                } else {
+                    // --- NOUVELLE LOGIQUE : Planète d'un autre joueur ---
+                    const fightPlayerBtn = document.createElement('button');
+                    fightPlayerBtn.type = 'button';
+                    fightPlayerBtn.id = 'fight-player-btn';
+                    fightPlayerBtn.className = 'btn-danger';
+                    const defender = campaignData.players.find(p => p.id === planetOwnerId);
+                    fightPlayerBtn.textContent = `Attaquer ${defender ? defender.name : 'Joueur'}`;
+                    fightPlayerBtn.addEventListener('click', () => openPvpCombatModal(planet.id));
+                    actionsContainer.appendChild(fightPlayerBtn);
+                }
             }
+
 
             ownerSelect.dispatchEvent(new Event('change'));
             openModal(planetTypeModal);
@@ -1260,6 +1280,115 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             okBtn.textContent = originalOkText;
             cancelBtn.textContent = originalCancelText;
+        }
+    });
+
+    // --- NOUVELLES FONCTIONS POUR LE COMBAT JOUEUR VS JOUEUR ---
+
+    /**
+     * Ouvre la modale pour un combat Joueur contre Joueur.
+     * @param {string} planetId L'ID de la planète contestée.
+     */
+    function openPvpCombatModal(planetId) {
+        const attacker = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        const system = campaignData.systems.find(s => s.planets.some(p => p.id === planetId));
+        if (!attacker || !system) return;
+    
+        const planet = system.planets.find(p => p.id === planetId);
+        if (!planet) return;
+    
+        const defender = campaignData.players.find(p => p.id === planet.owner);
+        if (!defender) return;
+    
+        closeModal(planetTypeModal);
+    
+        document.getElementById('pvp-combat-attacker-name').textContent = attacker.name;
+        document.getElementById('pvp-combat-defender-name').textContent = defender.name;
+    
+        pvpCombatModal.dataset.planetId = planetId;
+        pvpCombatModal.dataset.attackerId = attacker.id;
+        pvpCombatModal.dataset.defenderId = defender.id;
+        openModal(pvpCombatModal);
+    }
+    
+    // Listener pour la nouvelle modale de combat PvP
+    document.getElementById('finish-pvp-combat-btn').addEventListener('click', async () => {
+        const { planetId, attackerId, defenderId } = pvpCombatModal.dataset;
+    
+        if (!planetId || !attackerId || !defenderId) return;
+    
+        const attacker = campaignData.players.find(p => p.id === attackerId);
+        const defender = campaignData.players.find(p => p.id === defenderId);
+        const system = campaignData.systems.find(s => s.planets.some(p => p.id === planetId));
+        const planet = system.planets.find(p => p.id === planetId);
+    
+        if (!attacker || !defender || !system || !planet) {
+            showNotification("Erreur critique, données de combat introuvables.", "error");
+            return;
+        }
+    
+        // Réutilise la modale de choix d'exploration pour la sélection du vainqueur/perdant
+        const blindJumpBtn = document.getElementById('exploration-choice-blind-jump-btn');
+        const probeBtn = document.getElementById('exploration-choice-probe-btn');
+        const originalBlindJumpText = blindJumpBtn.textContent;
+        const originalProbeText = probeBtn.textContent;
+        const originalProbeClass = probeBtn.className;
+    
+        try {
+            blindJumpBtn.textContent = `Victoire de l'attaquant (${attacker.name})`;
+            probeBtn.textContent = `Victoire du défenseur (${defender.name})`;
+            probeBtn.className = 'btn-primary'; // Les deux sont des résultats valides
+    
+            const outcome = await showExplorationChoice(
+                "Résultat de la Bataille", 
+                `Qui a remporté la bataille pour le contrôle de <b>${planet.name}</b> ?`
+            );
+    
+            if (outcome === 'cancel') {
+                return; // Pas de changements si annulé
+            }
+    
+            const attackerWon = outcome === 'blind_jump';
+    
+            // Les deux joueurs reçoivent +1 PR pour leur participation
+            attacker.requisitionPoints++;
+            defender.requisitionPoints++;
+    
+            if (attackerWon) {
+                attacker.battles.wins = (attacker.battles.wins || 0) + 1;
+                defender.battles.losses = (defender.battles.losses || 0) + 1;
+                
+                const oldOwnerName = defender.name;
+                planet.owner = attacker.id; // Changement de propriétaire
+    
+                logAction(attacker.id, `<b>Victoire !</b> Vous avez conquis la planète <b>${planet.name}</b> de <b>${oldOwnerName}</b>. +1 PR.`, 'conquest', '🏆');
+                logAction(defender.id, `<b>Défaite.</b> Vous avez perdu la planète <b>${planet.name}</b> face à <b>${attacker.name}</b>. +1 PR.`, 'info', '⚔️');
+                showNotification(`Victoire de ${attacker.name} ! La planète ${planet.name} est conquise.`, "success");
+    
+            } else { // Le défenseur a gagné
+                defender.battles.wins = (defender.battles.wins || 0) + 1;
+                attacker.battles.losses = (attacker.battles.losses || 0) + 1;
+    
+                logAction(defender.id, `<b>Victoire !</b> Vous avez défendu la planète <b>${planet.name}</b> contre <b>${attacker.name}</b>. +1 PR.`, 'conquest', '🛡️');
+                logAction(attacker.id, `<b>Défaite.</b> Votre assaut sur <b>${planet.name}</b> a été repoussé par <b>${defender.name}</b>. +1 PR.`, 'info', '⚔️');
+                showNotification(`Victoire de ${defender.name} ! La planète ${planet.name} a été défendue.`, "success");
+            }
+    
+            saveData();
+            closeModal(pvpCombatModal);
+            renderPlanetarySystem(system.id); // Rafraîchit la vue du système
+    
+            // Si le joueur actuellement affiché était impliqué, rafraîchir sa vue détaillée
+            const detailedPlayerId = campaignData.players[activePlayerIndex]?.id;
+            if (!playerDetailView.classList.contains('hidden') && (detailedPlayerId === attackerId || detailedPlayerId === defenderId)) {
+                renderPlayerDetail();
+            }
+    
+        } finally {
+            // Restaure l'état original des boutons de la modale de confirmation
+            blindJumpBtn.textContent = originalBlindJumpText;
+            probeBtn.textContent = originalProbeText;
+            probeBtn.className = originalProbeClass;
         }
     });
     

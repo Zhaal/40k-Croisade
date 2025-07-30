@@ -21,6 +21,7 @@ let worldModal;
 let playerListView;
 let playerDetailView;
 let plagueManagementModal;
+let pvpCombatModal; // NOUVEAU
 
 let activePlayerIndex = -1;
 let editingPlayerIndex = -1;
@@ -243,10 +244,10 @@ function showExplorationChoice(title, text) {
         const blindJumpListener = () => closeAndResolve('blind_jump');
         const probeListener = () => closeAndResolve('probe');
 
-        cancelBtn.addEventListener('click', cancelListener);
-        blindJumpBtn.addEventListener('click', blindJumpListener);
-        probeBtn.addEventListener('click', probeListener);
-        choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener);
+        cancelBtn.addEventListener('click', cancelListener, { once: true });
+        blindJumpBtn.addEventListener('click', blindJumpListener, { once: true });
+        probeBtn.addEventListener('click', probeListener, { once: true });
+        choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener, { once: true });
     });
 }
 
