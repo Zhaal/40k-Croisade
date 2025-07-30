@@ -88,7 +88,8 @@ const generateGalaxy = () => {
 };
 
 /**
- * CORRIGÉ : Vérifie s'il existe un chemin de systèmes contrôlés (via des liens permanents OU sondés) par le joueur jusqu'à son système d'origine.
+ * CORRIGÉ : Vérifie s'il existe un chemin de systèmes contrôlés (via des liens permanents ou des portails) par le joueur jusqu'à son système d'origine.
+ * Une ligne de ravitaillement ne peut pas passer par de simples connexions sondées.
  * @param {string} startSystemId - L'ID du système de départ de la vérification.
  * @param {string} playerId - L'ID du joueur effectuant la vérification.
  * @returns {boolean} - True si une ligne de ravitaillement existe, sinon false.
@@ -116,16 +117,7 @@ const hasSupplyLine = (startSystemId, playerId) => {
             if (id) allNeighborIds.add(id);
         });
 
-        // 2. Connexions sondées (si le joueur a entièrement découvert la destination)
-        if (currentSystem.probedConnections) {
-            Object.values(currentSystem.probedConnections).forEach(probeInfo => {
-                if (probeInfo && probeInfo.id && player.discoveredSystemIds.includes(probeInfo.id)) {
-                    allNeighborIds.add(probeInfo.id);
-                }
-            });
-        }
-
-        // 3. Liens de portail
+        // 2. Liens de portail
         (campaignData.gatewayLinks || []).forEach(link => {
             if (link.systemId1 === currentId) allNeighborIds.add(link.systemId2);
             if (link.systemId2 === currentId) allNeighborIds.add(link.systemId1);
@@ -327,11 +319,18 @@ const handleExploration = async (direction) => {
     
         if (outcome === 'establish') {
             // ==========================================================
-            // DEBUT DE LA CORRECTION : Ajout de la vérification de contrôle
+            // DEBUT DE LA CORRECTION : Re-vérification des conditions avant d'établir le lien
             // ==========================================================
+            // Condition 1 : Doit contrôler au moins une planète dans le système de départ.
             const hasFriendlyPlanetInCurrent = currentSystem.planets.some(p => p.owner === viewingPlayer.id);
             if (!hasFriendlyPlanetInCurrent && currentSystem.owner !== viewingPlayer.id) {
-                showNotification("Vous devez contrôler au moins une planète dans ce système pour pouvoir établir un lien permanent.", 'warning');
+                showNotification("Action impossible : vous devez contrôler au moins une planète dans ce système pour établir un lien.", 'warning', 8000);
+                return;
+            }
+            
+            // Condition 2 : Doit avoir une ligne de ravitaillement ininterrompue vers le système natal.
+            if (!hasSupplyLine(currentSystem.id, viewingPlayer.id)) {
+                showNotification("<b>Ligne de ravitaillement rompue !</b> Impossible d'établir un lien car ce système n'est plus connecté à votre bastion.", 'error', 8000);
                 return;
             }
             // ==========================================================
