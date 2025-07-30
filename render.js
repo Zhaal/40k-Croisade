@@ -559,7 +559,6 @@ const updateMapProbeControls = () => {
     const system = campaignData.systems.find(s => s.id === selectedSystemOnMapId);
     const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
     
-    // Conditions to show probe controls: system exists, is on the map, and the viewing player controls at least one planet there
     const canProbeFromSystem = system && system.position && player;
 
     if (!canProbeFromSystem) {
@@ -576,22 +575,26 @@ const updateMapProbeControls = () => {
         const btn = document.getElementById(`map-probe-${dir}`);
         let isEnabled = true;
 
-        // Disable if there's already any kind of connection
-        if (system.connections[dir] || (system.probedConnections && system.probedConnections[dir])) {
-            isEnabled = false;
-        }
-
-        // Disable if there's no system at the target location
         const targetPos = { x: system.position.x, y: system.position.y };
         if (dir === 'up') targetPos.y -= STEP_DISTANCE;
         else if (dir === 'down') targetPos.y += STEP_DISTANCE;
         else if (dir === 'left') targetPos.x -= STEP_DISTANCE;
         else if (dir === 'right') targetPos.x += STEP_DISTANCE;
+
         const targetSystem = campaignData.systems.find(s => s.position && s.position.x === targetPos.x && s.position.y === targetPos.y);
+
         if (!targetSystem) {
             isEnabled = false;
+        } else {
+            // Disable if the player has already fully discovered this system.
+            if (player.discoveredSystemIds && player.discoveredSystemIds.includes(targetSystem.id)) {
+                isEnabled = false;
+            }
+            // Disable if the player has an active probe result for this direction.
+            if (system.probedConnections && system.probedConnections[dir]) {
+                isEnabled = false;
+            }
         }
-
         btn.disabled = !isEnabled;
     });
 }
@@ -622,7 +625,6 @@ const updateExplorationArrows = (currentSystem) => {
         arrow.classList.toggle('hidden', isOffMap);
         if (isOffMap) return;
         
-        // MODIFICATION : Suppression de toutes les infobulles (attribut title)
         arrow.title = ''; 
 
         const connectedSystemId = currentSystem.connections[dir];
@@ -676,11 +678,19 @@ const updateExplorationArrows = (currentSystem) => {
             else if (dir === 'right') targetPos.x += STEP_DISTANCE;
 
             const targetSystem = campaignData.systems.find(s => s.position && s.position.x === targetPos.x && s.position.y === targetPos.y);
+
             if (!targetSystem) {
                 arrow.style.borderColor = '#333';
                 arrow.style.color = '#555';
                 arrow.style.cursor = 'not-allowed';
                 label = `<span class="arrow-symbol" style="opacity: 0.5;">${arrowSymbols[dir]}</span>`;
+            } else {
+                 const isUndiscoveredKnownRoute = currentSystem.connections[dir] === targetSystem.id;
+                 if (isUndiscoveredKnownRoute) {
+                    label = `<span class="arrow-symbol" style="font-size: 20px;">?</span><small>Route<br>Détectée</small>`;
+                    arrow.style.borderColor = colors.blue;
+                    arrow.style.color = colors.blue;
+                 }
             }
         }
         arrow.innerHTML = label;

@@ -1,17 +1,15 @@
-// galaxy.js
-
 //======================================================================
 //  GÉNÉRATION & LOGIQUE DE LA GALAXIE
 //======================================================================
 
 const getWeightedRandomPlanetType = () => {
     const types = [
-        { name: "Monde Ruche", weight: 35 },
+        { name: "Monde Ruche", weight: 38 },
         { name: "Agri-monde", weight: 25 },
         { name: "Monde Sauvage", weight: 15 },
         { name: "Monde Mort", weight: 10 },
         { name: "Monde Forge", weight: 10 },
-        { name: "Monde Saint (relique)", weight: 5 }
+        { name: "Monde Saint (relique)", weight: 2 }
     ];
 
     const totalWeight = types.reduce((sum, type) => sum + type.weight, 0);
@@ -88,8 +86,8 @@ const generateGalaxy = () => {
 };
 
 /**
- * CORRIGÉ : Vérifie s'il existe un chemin de systèmes contrôlés (via des liens permanents ou des portails) par le joueur jusqu'à son système d'origine.
- * Une ligne de ravitaillement ne peut pas passer par de simples connexions sondées.
+ * CORRIGÉ : Vérifie s'il existe un chemin de systèmes SÉCURISÉS (sans ennemis) contrôlés par le joueur jusqu'à son système d'origine.
+ * Une ligne de ravitaillement ne peut pas passer par des systèmes contestés ou par de simples connexions sondées.
  * @param {string} startSystemId - L'ID du système de départ de la vérification.
  * @param {string} playerId - L'ID du joueur effectuant la vérification.
  * @returns {boolean} - True si une ligne de ravitaillement existe, sinon false.
@@ -101,6 +99,19 @@ const hasSupplyLine = (startSystemId, playerId) => {
     const homeSystemId = player.systemId;
     if (startSystemId === homeSystemId) return true;
 
+    // --- DÉBUT DE LA CORRECTION ---
+    // Vérification initiale : le système de départ doit être sécurisé
+    const startSystem = campaignData.systems.find(s => s.id === startSystemId);
+    if (!startSystem) return false;
+
+    const isStartSystemControlled = startSystem.planets.some(p => p.owner === playerId);
+    const hasEnemyInStartSystem = startSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== playerId);
+
+    if (!isStartSystemControlled || hasEnemyInStartSystem) {
+        return false; // Impossible d'avoir une ligne de ravitaillement depuis un système non contrôlé ou contesté.
+    }
+    // --- FIN DE LA CORRECTION ---
+
     const queue = [startSystemId];
     const visited = new Set([startSystemId]);
 
@@ -109,32 +120,31 @@ const hasSupplyLine = (startSystemId, playerId) => {
         const currentSystem = campaignData.systems.find(s => s.id === currentId);
         if (!currentSystem) continue;
 
-        // Utilise un Set pour rassembler les voisins uniques de toutes les sources
         const allNeighborIds = new Set();
-
-        // 1. Connexions permanentes
         Object.values(currentSystem.connections).forEach(id => {
             if (id) allNeighborIds.add(id);
         });
-
-        // 2. Liens de portail
         (campaignData.gatewayLinks || []).forEach(link => {
             if (link.systemId1 === currentId) allNeighborIds.add(link.systemId2);
             if (link.systemId2 === currentId) allNeighborIds.add(link.systemId1);
         });
 
-        // Itère sur l'ensemble des voisins
         for (const neighborId of allNeighborIds) {
             if (visited.has(neighborId)) continue;
             
             const neighborSystem = campaignData.systems.find(s => s.id === neighborId);
             if (!neighborSystem) continue;
 
-            // Une ligne de ravitaillement ne peut passer que par des systèmes où le joueur a un pied-à-terre
-            const isControlledByPlayer = neighborSystem.planets.some(p => p.owner === playerId);
-            if (!isControlledByPlayer && neighborId !== homeSystemId) {
-                continue;
+            // --- DÉBUT DE LA CORRECTION ---
+            // Un maillon de la chaîne de ravitaillement doit être contrôlé ET non contesté.
+            const isNeighborControlled = neighborSystem.planets.some(p => p.owner === playerId);
+            const hasEnemyInNeighbor = neighborSystem.planets.some(p => p.owner !== 'neutral' && p.owner !== playerId);
+            
+            // On peut traverser le système natal même s'il est contesté (cas d'une invasion).
+            if (neighborId !== homeSystemId && (!isNeighborControlled || hasEnemyInNeighbor)) {
+                continue; // Ce maillon est invalide, on ne peut pas passer par là.
             }
+            // --- FIN DE LA CORRECTION ---
 
             if (neighborId === homeSystemId) {
                 return true; // Chemin trouvé !
@@ -375,12 +385,21 @@ const handleExploration = async (direction) => {
         return;
     }
 
-    if (connectedSystemId && !viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) { 
-        const confirmDiscovery = await showConfirm(
-            "Découverte de Route",
-            `Vos scanners indiquent une route de saut stable mais non cartographiée vers le système <b>${discoveredSystem.name}</b>. Voulez-vous suivre ce chemin et l'ajouter à vos cartes ?`
+    if (connectedSystemId && !viewingPlayer.discoveredSystemIds.includes(connectedSystemId)) {
+        const choice = await showRouteDiscoveryChoice(
+            "Route non cartographiée détectée",
+            `Vos scanners indiquent un couloir de navigation stable mais non cartographié vers le système <b>${discoveredSystem.name}</b>. Ce passage est déjà utilisé par d'autres flottes. Comment voulez-vous procéder ?`
         );
-        if (confirmDiscovery) {
+    
+        if (choice === 'probe') {
+            const probeSuccessful = await performProbe(currentSystem, discoveredSystem, direction, viewingPlayer);
+            if (probeSuccessful) {
+                if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) {
+                    renderPlayerDetail();
+                }
+                updateExplorationArrows(currentSystem);
+            }
+        } else if (choice === 'map') {
             viewingPlayer.discoveredSystemIds.push(connectedSystemId);
             logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a cartographié une route existante vers le système <b>${discoveredSystem.name}</b>.`, 'info', '🗺️');
             saveData();

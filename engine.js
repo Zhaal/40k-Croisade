@@ -37,7 +37,7 @@ let startX, scrollLeftStart;
 let startY, scrollTopStart;
 
 const STEP_DISTANCE = 250;
-const GALAXY_SIZE = 9;
+const GALAXY_SIZE = 4;
 
 //======================================================================
 //  SYSTÈME DE NOTIFICATION, CONFIRMATION, LOG & MODALES
@@ -250,6 +250,37 @@ function showExplorationChoice(title, text) {
         choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener, { once: true });
     });
 }
+
+function showRouteDiscoveryChoice(title, text) {
+    return new Promise(resolve => {
+        const choiceModal = document.getElementById('route-discovery-choice-modal');
+        const choiceTitle = document.getElementById('route-discovery-choice-title');
+        const choiceText = document.getElementById('route-discovery-choice-text');
+        const cancelBtn = document.getElementById('route-discovery-choice-cancel-btn');
+        const mapBtn = document.getElementById('route-discovery-choice-map-btn');
+        const probeBtn = document.getElementById('route-discovery-choice-probe-btn');
+
+        choiceTitle.textContent = title;
+        choiceText.innerHTML = text;
+        openModal(choiceModal);
+
+        const closeAndResolve = (value) => {
+            closeModal(choiceModal);
+            // No need to remove listeners if using { once: true }
+            resolve(value);
+        };
+
+        const cancelListener = () => closeAndResolve('cancel');
+        const mapListener = () => closeAndResolve('map');
+        const probeListener = () => closeAndResolve('probe');
+
+        cancelBtn.addEventListener('click', cancelListener, { once: true });
+        mapBtn.addEventListener('click', mapListener, { once: true });
+        probeBtn.addEventListener('click', probeListener, { once: true });
+        choiceModal.querySelector('.close-btn').addEventListener('click', cancelListener, { once: true });
+    });
+}
+
 
 function showProbeActionChoice(title, text, timerText) {
     return new Promise(resolve => {
