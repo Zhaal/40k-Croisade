@@ -113,6 +113,7 @@
                     <div class="info-box">
                         <label for="active-trial-select"><strong>Épreuve Active:</strong></label>
                         <select id="active-trial-select"></select>
+                        <button id="divine-call-btn" class="btn-secondary" style="margin-top: 5px; width: 100%;">Appel Divin (1 PR)</button>
                     </div>
                     <div class="info-box">
                         <strong>Points de Martyre:</strong>
@@ -135,7 +136,7 @@
                 <h3 style="text-align: center; color: var(--friendly-color);">Centre de Commandement de la Peste</h3>
                 <div class="sainthood-controls">
                     <div class="info-box">
-                        <strong title="Mise en Culture : Après une bataille où vous avez utilisé l'intention 'Première Vérification de la Souche', si vous avez réussi à Concrétiser une Peste, vous gagnez D3 Points de Contagion.&#10;---&#10;Bilan des Victimes : Si le nombre de figurines ennemies détruites par votre armée est supérieur ou égal au double de la caractéristique de Vulnérabilité de votre monde, vous gagnez D3 Points de Contagion.">Points de Contagion:</strong>
+                        <strong title="Mise en Culture : Après une bataille où vous avez réussi à Concrétiser une Peste, vous gagnez D3 PC.&#10;---&#10;Bilan des Victimes : Si le nombre de figurines ennemies détruites est ≥ au double de la Vulnérabilité de votre monde, vous gagnez D3 PC.">Points de Contagion:</strong>
                         <span id="contagion-points" class="stat-value"></span>
                         <button class="tally-btn" data-action="decrease-contagion">-</button>
                         <button class="tally-btn" data-action="increase-contagion">+</button>
@@ -154,8 +155,9 @@
                         <strong>Adaptabilité:</strong> <span id="plague-adaptability" class="stat-value">1</span> / 6
                     </div>
                 </div>
-                <div style="text-align: center; margin-top: 10px;">
-                    <button id="upgrade-plague-btn" class="btn-secondary">Améliorer la Peste (2-5 PC)</button>
+                <div style="text-align: center; margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
+                    <button id="upgrade-plague-btn" class="btn-secondary">Améliorer la Peste</button>
+                    <button id="adapt-toxins-btn" class="btn-secondary">Adapter les Toxines (1 PR)</button>
                 </div>
             </div>
 
@@ -294,6 +296,16 @@
                             <div class="input-group">
                                 <select id="battle-scar-select"><option>Choisir une cicatrice...</option></select>
                                 <button type="button" class="btn-secondary" id="add-battle-scar-btn">Ajouter</button>
+                                <button type="button" class="btn-danger hidden" id="degenerate-unit-btn">Dégénérescence (1 PR)</button>
+                            </div>
+                        </div>
+
+                        <div id="sororitas-upgrades-section" class="upgrade-control-group hidden">
+                            <label for="illuminate-by-pain-btn">Réquisition Spécifique</label>
+                            <div class="input-group">
+                                <button type="button" class="btn-primary" id="illuminate-by-pain-btn" title="Utilisez cette Réquisition après une bataille, avant qu'une unité ne fasse un test de Mise Hors de Combat. Choisissez cette unité et chaque Séquelle de Combat est 1 Honneur de Bataille de votre choix. Si cette unité est une Sainte Potentia, elle gagne également 2 points de Sainte et 1 point de Martyre.">
+                                    L'Illumination par la Douleur (1 PR)
+                                </button>
                             </div>
                         </div>
 
@@ -321,13 +333,12 @@
                             </div>
                         </div>
                         
-                        <div id="nurgle-boon-section" class="upgrade-control-group hidden">
-                            <label for="nurgle-boon-select">Bienfait de Nurgle (+1 PC)</label>
-                            <div class="input-group">
-                                <select id="nurgle-boon-select"><option>Choisir un bienfait...</option></select>
-                                <button type="button" class="btn-secondary" id="add-nurgle-boon-btn">Accorder</button>
-                            </div>
-                        </div>
+<div id="nurgle-boon-section" class="upgrade-control-group hidden">
+    <label for="nurgle-boon-select">Bienfait de Nurgle</label>
+    <div class="input-group">
+        <button type="button" class="btn-secondary" id="add-nurgle-boon-btn" style="width: 100%;">Lancer pour un Bienfait</button>
+    </div>
+</div>
 
                         <div id="legion-of-shadow-section" class="upgrade-control-group hidden">
                             <label for="legion-of-shadow-select">Optimisation de l'Ombre (+1 PR)</label>
@@ -398,6 +409,9 @@
             </div>
             <div id="planet-legend">
                 <h4>Légende des Planètes <span id="colonization-percentage"></span></h4>
+                <div id="system-view-probe-container" style="text-align: center; margin-bottom: 10px; color: var(--text-muted-color);">
+                    Sondes Gratuites : <strong id="system-view-free-probes" style="color: var(--friendly-color);">0</strong>
+                </div>
                 <div class="legend-item"><span class="legend-color" data-type="Monde Mort"></span> Monde Mort</div>
                 <div class="legend-item"><span class="legend-color" data-type="Monde Sauvage"></span> Monde Sauvage</div>
                 <div class="legend-item"><span class="legend-color" data-type="Agri-monde"></span> Agri-monde</div>
@@ -485,6 +499,9 @@
                 <div class="map-controls">
                     <label for="map-player-view-select">Point de vue :</label>
                     <select id="map-player-view-select"></select>
+                    <div id="map-free-probes-container" class="info-box" style="padding: 5px 10px; margin-left: 20px; border-radius: 5px; background-color: #1a1a1a;">
+                        <strong>Sondes Gratuites:</strong> <span id="map-view-free-probes" class="stat-value">0</span>
+                    </div>
                     <div id="map-probe-controls" class="hidden" style="margin-left: 20px; border-left: 2px solid var(--border-color); padding-left: 20px; gap: 10px;">
                         <span style="align-self: center;">Sonder depuis le système sélectionné:</span>
                         <button id="map-probe-up" class="btn-secondary" title="Sonder vers le Nord">↑</button>
@@ -715,7 +732,9 @@
     <script src="engine.js"></script> 
     <script src="rules.js"></script>
     <script src="galaxy.js"></script>
-    <script src="sororitas_rules.js"></script> 
+    <script src="Sororitas_module.js"></script> 
+    <script src="DeathGuard_module.js"></script>
+    <script src="tyranid_module.js"></script>
     <script src="render.js"></script>
     <script src="upgrades.js"></script>
     <script src="main.js"></script>

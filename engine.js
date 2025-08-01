@@ -542,22 +542,35 @@ const saveData = () => {
     }
 };
 
-const loadData = () => {
+// =====================================================================
+// CORRECTION : SÉPARATION DE LA LOGIQUE DE CHARGEMENT ET DE MIGRATION
+// =====================================================================
+
+/**
+ * Charge les données de la campagne uniquement depuis le localStorage.
+ */
+const loadDataFromStorage = () => {
     const data = localStorage.getItem('nexusCrusadeData');
     if (data) {
         try {
             campaignData = JSON.parse(data);
         } catch (error) {
-            console.error("Erreur lors du chargement des données : ", error);
-            showNotification("Les données de campagne sont corrompues et n'ont pas pu être chargées.", 'error');
-            return;
+            console.error("Erreur lors du chargement des données depuis le localStorage : ", error);
+            showNotification("Les données de campagne locales sont corrompues et n'ont pas pu être chargées.", 'error');
         }
     }
+};
 
+/**
+ * Vérifie et met à jour la structure de l'objet `campaignData` global
+ * pour assurer la compatibilité avec les versions plus récentes.
+ */
+const migrateData = () => {
     let dataWasModified = false;
+
+    // Initialisations de base si les clés manquent
     if (!campaignData.players) campaignData.players = [];
     if (!campaignData.systems) campaignData.systems = [];
-
     if (!campaignData.gatewayLinks) {
         campaignData.gatewayLinks = [];
         dataWasModified = true;
@@ -570,21 +583,19 @@ const loadData = () => {
         campaignData.pendingNotifications = [];
         dataWasModified = true;
     }
-
-    // NOUVELLE LOGIQUE DE MIGRATION POUR L'HISTORIQUE
-    if (campaignData.actionLog) { // Si l'ancienne structure globale existe
-        delete campaignData.actionLog; // On la supprime
+    if (campaignData.actionLog) { // Migration de l'ancien historique global
+        delete campaignData.actionLog;
         dataWasModified = true;
     }
-    if (campaignData.sessionLog === undefined) { // On ajoute la nouvelle structure de session
+    if (campaignData.sessionLog === undefined) {
         campaignData.sessionLog = [];
         dataWasModified = true;
     }
-    
+
+    // Ancienne fonction pour la compatibilité de `discoveredSystemIds`
     const oldGetReachableSystems = (startSystemId) => {
         const reachable = new Set();
         if (!startSystemId) return reachable;
-
         const playerSystem = campaignData.systems.find(s => s.id === startSystemId);
         if (!playerSystem || !playerSystem.position) {
             reachable.add(startSystemId);
@@ -607,12 +618,16 @@ const loadData = () => {
         return reachable;
     };
 
+    // Migration par joueur
     campaignData.players.forEach(player => {
-        if (player.actionLog === undefined) { // Ajoute le journal d'actions personnel s'il n'existe pas
+        if (player.actionLog === undefined) {
             player.actionLog = [];
             dataWasModified = true;
         }
-        // MODIFIÉ : Ajout de la migration pour les sondes gratuites
+        if (player.battles === undefined) {
+            player.battles = { wins: 0, losses: 0, npcGames: 0 };
+            dataWasModified = true;
+        }
         if (player.freeProbes === undefined) {
             player.freeProbes = 0;
             dataWasModified = true;
@@ -632,53 +647,32 @@ const loadData = () => {
             player.discoveredSystemIds = Array.from(visibleSystems);
             dataWasModified = true;
         }
-        if (player.sombrerochePoints === undefined) {
-            player.sombrerochePoints = 0;
+        // Migrations spécifiques aux factions
+        if (player.faction === 'Death Guard' && typeof player.deathGuardData === 'undefined') {
+            player.deathGuardData = {
+                contagionPoints: player.contagionPoints || 0,
+                pathogenPower: 1,
+                corruptedPlanetIds: [], 
+                plagueStats: { reproduction: 1, survival: 1, adaptability: 1 }
+            };
+            delete player.contagionPoints;
             dataWasModified = true;
         }
-        if (player.upgradeSupplyCost === undefined) {
-            player.upgradeSupplyCost = 0;
+        if (player.faction === 'Adepta Sororitas' && player.sainthood === undefined) {
+            initializeSororitasData(player); // Utilise la fonction d'initialisation
             dataWasModified = true;
         }
         if (player.faction === 'Tyranids' && player.biomassPoints === undefined) {
-            player.biomassPoints = 0;
-            dataWasModified = true;
-        }
-        if (player.faction === 'Death Guard') {
-            if (typeof player.deathGuardData === 'undefined') {
-                player.deathGuardData = {
-                    contagionPoints: player.contagionPoints || 0,
-                    pathogenPower: 1,
-                    corruptedPlanetIds: [], 
-                    plagueStats: { reproduction: 1, survival: 1, adaptability: 1 }
-                };
-                delete player.contagionPoints;
-                dataWasModified = true;
-            }
-        }
-        if (player.faction === 'Adepta Sororitas' && player.sainthood === undefined) {
-            player.sainthood = {
-                potentiaUnitId: null,
-                activeTrial: 'foi',
-                trials: { foi: 0, souffrance: 0, purete: 0, vertu: 0, vaillance: 0 },
-                martyrdomPoints: 0
-            };
+            initializeTyranidData(player); // Utilise la fonction d'initialisation
             dataWasModified = true;
         }
     });
 
+    // Migration par système
     campaignData.systems.forEach(system => {
         if (!system.probedConnections) {
             system.probedConnections = { up: null, down: null, left: null, right: null };
             dataWasModified = true;
-        } else {
-            for (const dir in system.probedConnections) {
-                const probeInfo = system.probedConnections[dir];
-                if (probeInfo && typeof probeInfo.timestamp === 'undefined') {
-                    probeInfo.timestamp = Date.now();
-                    dataWasModified = true;
-                }
-            }
         }
         if (!system.connections) {
             system.connections = { up: null, down: null, left: null, right: null };
@@ -687,7 +681,7 @@ const loadData = () => {
     });
 
     if (dataWasModified) {
-        saveData();
+        saveData(); // Sauvegarde les données migrées si des changements ont eu lieu
     }
 
     const lastVersion = localStorage.getItem('nexusCrusadeVersion');
@@ -717,6 +711,10 @@ const handleExport = () => {
     showNotification("Exportation de la campagne initiée.", 'success');
 };
 
+/**
+ * CORRIGÉ : Gère l'importation d'un fichier JSON.
+ * N'appelle plus `loadData` qui écrasait les données importées.
+ */
 const handleImport = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -728,7 +726,7 @@ const handleImport = (event) => {
             if (importedData && Array.isArray(importedData.players)) {
                 if (await showConfirm("Confirmation d'importation", "Importer ce fichier écrasera les données actuelles de la campagne. Êtes-vous sûr de vouloir continuer ?")) {
                     campaignData = importedData;
-                    loadData(); 
+                    migrateData(); // CORRECTION: Appelle la migration sur les données importées
                     saveData();
                     renderPlayerList();
                     switchView('list');
@@ -742,5 +740,5 @@ const handleImport = (event) => {
         }
     };
     reader.readAsText(file);
-    event.target.value = null;
+    event.target.value = null; // Permet de ré-importer le même fichier
 };

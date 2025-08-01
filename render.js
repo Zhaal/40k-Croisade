@@ -21,6 +21,9 @@ const switchView = (view) => {
         // CORRECTION : Réinitialise l'ID du joueur consulté et rafraîchit l'historique
         mapViewingPlayerId = null;
         renderActionLog();
+        
+        // AJOUT : Rafraîchit la liste des joueurs à chaque retour au menu principal.
+        renderPlayerList(); 
     }
 };
 
@@ -42,10 +45,17 @@ const renderPlayerList = () => {
         const onMapStatus = (playerSystem && playerSystem.position) ?
             '<span style="color: var(--friendly-color);">Connecté</span>' :
             '<span style="color: var(--warning-color);">Non connecté</span>';
+        
+        const totalGames = (player.battles.wins || 0) + (player.battles.losses || 0);
+        const npcGames = player.battles.npcGames || 0;
 
         card.innerHTML = `
             <h3 class="player-name-link" data-index="${index}">${player.name}</h3>
-            <p>${player.faction || 'Faction non spécifiée'}<br>Statut: ${onMapStatus}</p>
+            <p>
+                ${player.faction || 'Faction non spécifiée'}<br>
+                Statut: ${onMapStatus}<br>
+                Parties: ${totalGames} (PNJ: ${npcGames})
+            </p>
             <div class="player-card-actions">
                 <button class="btn-secondary edit-player-btn" data-index="${index}">Modifier</button>
                 <button class="btn-danger delete-player-btn" data-index="${index}">Supprimer</button>
@@ -207,7 +217,9 @@ const renderPlanetarySystem = (systemId) => {
         planetDiv.dataset.planetIndex = index;
         
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
-        if (viewingPlayer && viewingPlayer.faction === 'Death Guard' && viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id)) {
+        
+        // CORRECTION APPLIQUÉE ICI
+        if (viewingPlayer && viewingPlayer.faction === 'Death Guard' && viewingPlayer.deathGuardData && viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id)) {
             planetDiv.classList.add('corrupted-planet');
         } else {
             planetDiv.classList.remove('corrupted-planet');
@@ -265,6 +277,11 @@ const renderPlanetarySystem = (systemId) => {
         colonizationSpan.textContent = '';
     }
 
+    const freeProbesEl = document.getElementById('system-view-free-probes');
+    if (freeProbesEl && viewingPlayer) {
+        freeProbesEl.textContent = viewingPlayer.freeProbes || 0;
+    }
+
     // --- LOGIQUE POUR LE BOUTON "REJOINDRE LA CARTE" ---
     const modalContent = document.getElementById('world-modal').querySelector('.modal-content');
     const existingJoinButton = document.getElementById('join-map-btn');
@@ -314,7 +331,7 @@ const renderGalacticMap = () => {
     const mapContainer = document.getElementById('galactic-map-container');
     mapContainer.innerHTML = '';
     const playerViewSelect = document.getElementById('map-player-view-select');
-    const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+    let viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
 
     playerViewSelect.innerHTML = '';
     campaignData.players.forEach(player => {
@@ -328,7 +345,13 @@ const renderGalacticMap = () => {
         playerViewSelect.value = mapViewingPlayerId;
     } else if (campaignData.players.length > 0) {
         mapViewingPlayerId = campaignData.players[0].id;
+        viewingPlayer = campaignData.players[0];
         playerViewSelect.value = mapViewingPlayerId;
+    }
+    
+    const mapFreeProbesEl = document.getElementById('map-view-free-probes');
+    if (mapFreeProbesEl && viewingPlayer) {
+        mapFreeProbesEl.textContent = viewingPlayer.freeProbes || 0;
     }
 
     const visibleSystemIds = getReachableSystemsForPlayer(mapViewingPlayerId);
@@ -487,12 +510,23 @@ const renderGalacticMap = () => {
 
         if (isProbedOnly) {
             node.classList.add('probed-only');
-
-            // MODIFICATION : Vérifier si le système sondé est hostile et ajouter une classe
-            const hasEnemyPlanet = system.planets.some(
-                p => p.owner !== 'neutral' && p.owner !== mapViewingPlayerId
-            );
-            if (hasEnemyPlanet) {
+        
+            // CORRECTION: Utilise les données de sonde stockées au lieu des données en temps réel.
+            let wasHostileProbe = false;
+            for (const sourceSystem of campaignData.systems) {
+                if (viewingPlayer.discoveredSystemIds.includes(sourceSystem.id) && sourceSystem.probedConnections) {
+                    for (const dir in sourceSystem.probedConnections) {
+                        const probeInfo = sourceSystem.probedConnections[dir];
+                        if (probeInfo && probeInfo.id === system.id && probeInfo.status === 'player_contact') {
+                            wasHostileProbe = true;
+                            break;
+                        }
+                    }
+                }
+                if (wasHostileProbe) break;
+            }
+        
+            if (wasHostileProbe) {
                 node.classList.add('hostile-probe');
             }
             
@@ -695,87 +729,11 @@ const updateExplorationArrows = (currentSystem) => {
         }
         arrow.innerHTML = label;
     });
-};
-
-const renderSainthoodBox = (player) => {
-    if (!player || player.faction !== 'Adepta Sororitas') return;
-
-    const potentiaNameEl = document.getElementById('saint-potentia-name');
-    const selectSaintBtn = document.getElementById('select-saint-btn');
-    const changeSaintBtn = document.getElementById('change-saint-btn');
-    const activeTrialSelect = document.getElementById('active-trial-select');
-    const martyrdomPointsEl = document.getElementById('martyrdom-points');
-    const trialsGridEl = document.getElementById('trials-grid');
-    const rewardsDisplayEl = document.getElementById('saint-rewards-display');
-
-    // --- Sainte Potentia ---
-    const potentiaUnitId = player.sainthood.potentiaUnitId;
-    if (potentiaUnitId) {
-        const potentiaUnit = player.units.find(u => u.id === potentiaUnitId);
-        potentiaNameEl.textContent = potentiaUnit ? potentiaUnit.name : 'Unité introuvable';
-        selectSaintBtn.classList.add('hidden');
-        changeSaintBtn.classList.remove('hidden');
-    } else {
-        potentiaNameEl.textContent = 'Aucune';
-        selectSaintBtn.classList.remove('hidden');
-        changeSaintBtn.classList.add('hidden');
-    }
-
-    // --- Épreuve Active ---
-    activeTrialSelect.innerHTML = '';
-    sororitasCrusadeRules.trials.forEach(trial => {
-        const option = document.createElement('option');
-        option.value = trial.id;
-        option.textContent = trial.name;
-        if (trial.id === player.sainthood.activeTrial) {
-            option.selected = true;
-        }
-        activeTrialSelect.appendChild(option);
-    });
-
-    // --- Points de Martyre ---
-    martyrdomPointsEl.textContent = player.sainthood.martyrdomPoints || 0;
-
-    // --- Grille des Épreuves ---
-    trialsGridEl.innerHTML = '';
-    sororitasCrusadeRules.trials.forEach(trial => {
-        const points = player.sainthood.trials[trial.id] || 0;
-        const isCompleted = points >= 10;
-        const card = document.createElement('div');
-        card.className = 'trial-card';
-        if (isCompleted) {
-            card.classList.add('completed');
-        }
-
-        card.innerHTML = `
-            <h4>${trial.name}</h4>
-            <p>${trial.acts}</p>
-            <div style="display: flex; align-items: center; gap: 10px; margin-top: auto;">
-                <span>${points} / 10</span>
-                <progress value="${points}" max="10" style="flex-grow: 1;"></progress>
-                <button class="tally-btn" data-action="decrease-trial" data-trial="${trial.id}" title="Retirer 1 point">-</button>
-                <button class="tally-btn" data-action="increase-trial" data-trial="${trial.id}" title="Ajouter 1 point">+</button>
-            </div>
-        `;
-        trialsGridEl.appendChild(card);
-    });
-
-    // --- Récompenses ---
-    rewardsDisplayEl.innerHTML = '';
-    let completedRewards = [];
-    Object.entries(player.sainthood.trials).forEach(([trialId, points]) => {
-        if (points >= 10) {
-            const trialRule = sororitasCrusadeRules.trials.find(t => t.id === trialId);
-            if (trialRule) {
-                completedRewards.push(`<li><b>${trialRule.reward_name}:</b> ${trialRule.reward_desc}</li>`);
-            }
-        }
-    });
-
-    if (completedRewards.length > 0) {
-        rewardsDisplayEl.innerHTML = `<ul>${completedRewards.join('')}</ul>`;
-    } else {
-        rewardsDisplayEl.innerHTML = `<p>Les récompenses des Épreuves terminées (10+ points) apparaîtront ici.</p>`;
+    
+    // NOUVEL AJOUT : Met à jour le compteur de sondes gratuites en temps réel.
+    const freeProbesEl = document.getElementById('system-view-free-probes');
+    if (freeProbesEl && viewingPlayer) {
+        freeProbesEl.textContent = viewingPlayer.freeProbes || 0;
     }
 };
 

@@ -4,7 +4,6 @@
 //  LOGIQUE : GESTION DES AMÉLIORATIONS D'UNITÉ
 //======================================================================
 
-// MODIFIÉ : La fonction cherche désormais aussi dans les règles spécifiques aux factions
 const findUpgradeDescription = (upgradeName) => {
     if (!upgradeName) return null;
 
@@ -13,7 +12,9 @@ const findUpgradeDescription = (upgradeName) => {
     if (player && player.faction === 'Adepta Sororitas') {
         factionRules = sororitasCrusadeRules || {};
     }
-    // (On pourrait ajouter d'autres factions ici avec 'else if')
+    else if (player && player.faction === 'Death Guard') {
+        factionRules = deathGuardCrusadeRules || {};
+    }
 
     const allRules = [
         ...Object.values(crusadeRules.battleTraits).flat(),
@@ -22,9 +23,8 @@ const findUpgradeDescription = (upgradeName) => {
         ...crusadeRules.sombrerocheHonours,
         ...crusadeRules.sombrerocheRelics,
         ...crusadeRules.battleScars,
-        // Ajout des règles de faction
-        ...Object.values(factionRules.battleTraits || {}).flat(),
-        ...Object.values(factionRules.relics || {}).flat()
+        // CORRIGÉ : Ajout des traits de bataille spécifiques aux factions dans la recherche
+        ...Object.values(factionRules.battleTraits || {}).flat()
     ];
 
     const foundRule = allRules.find(rule => rule.name === upgradeName);
@@ -32,22 +32,26 @@ const findUpgradeDescription = (upgradeName) => {
 };
 
 
-// MODIFIÉ : Les sélecteurs sont maintenant remplis avec les options de faction
 const populateUpgradeSelectors = () => {
     const unitRole = document.getElementById('unit-role').value;
     const player = campaignData.players[activePlayerIndex];
     const isCharacter = unitRole === 'Personnage' || unitRole === 'Hero Epique';
 
-    // --- Traits de Bataille ---
     const battleTraitSelect = document.getElementById('battle-trait-select');
     battleTraitSelect.innerHTML = '<option value="">Choisir un trait...</option>';
-    const genericTraits = crusadeRules.battleTraits[unitRole] || [];
-    genericTraits.forEach(trait => {
-        battleTraitSelect.innerHTML += `<option value="${trait.name}">${trait.name}</option>`;
-    });
-
-    // --- AJOUT : Traits de Bataille Spécifiques aux Sororitas ---
-    if (player && player.faction === 'Adepta Sororitas') {
+    
+    // --- DÉBUT DE LA MODIFICATION ---
+    // Logique pour afficher les traits spécifiques à la faction ou les traits génériques
+    if (player && player.faction === 'Death Guard' && deathGuardCrusadeRules.battleTraits) {
+        Object.entries(deathGuardCrusadeRules.battleTraits).forEach(([type, traits]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = `Death Guard: ${type}`;
+            traits.forEach(trait => {
+                optgroup.innerHTML += `<option value="${trait.name}">${trait.name}</option>`;
+            });
+            battleTraitSelect.appendChild(optgroup);
+        });
+    } else if (player && player.faction === 'Adepta Sororitas') {
         Object.entries(sororitasCrusadeRules.battleTraits).forEach(([type, traits]) => {
             const optgroup = document.createElement('optgroup');
             optgroup.label = `Sororitas: ${type}`;
@@ -56,8 +60,13 @@ const populateUpgradeSelectors = () => {
             });
             battleTraitSelect.appendChild(optgroup);
         });
+    } else {
+        const genericTraits = crusadeRules.battleTraits[unitRole] || [];
+        genericTraits.forEach(trait => {
+            battleTraitSelect.innerHTML += `<option value="${trait.name}">${trait.name}</option>`;
+        });
     }
-
+    // --- FIN DE LA MODIFICATION ---
 
     const weaponModSelect = document.getElementById('weapon-mod-select');
     weaponModSelect.innerHTML = '<option value="">Choisir une modification...</option>';
@@ -65,11 +74,9 @@ const populateUpgradeSelectors = () => {
         weaponModSelect.innerHTML += `<option value="${mod.name}">${mod.name}</option>`;
     });
 
-    // --- Reliques ---
     const relicSelect = document.getElementById('relic-select');
     relicSelect.innerHTML = '<option value="">Choisir une relique...</option>';
     if (isCharacter) {
-        // Reliques génériques
         Object.entries(crusadeRules.relics).forEach(([type, relics]) => {
             const optgroup = document.createElement('optgroup');
             optgroup.label = `Générique: ${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
@@ -79,14 +86,23 @@ const populateUpgradeSelectors = () => {
             relicSelect.appendChild(optgroup);
         });
         
-        // --- AJOUT : Reliques Spécifiques aux Sororitas ---
         if (player && player.faction === 'Adepta Sororitas') {
             Object.entries(sororitasCrusadeRules.relics).forEach(([type, relics]) => {
                 const optgroup = document.createElement('optgroup');
                 optgroup.label = `Sororitas: ${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
                 relics.forEach(relic => {
-                    // Note: Le data-type pointe vers la structure de sororitasCrusadeRules
                     optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="sororitas.relics.${type}">${relic.name}</option>`;
+                });
+                relicSelect.appendChild(optgroup);
+            });
+        }
+        
+        if (player && player.faction === 'Death Guard') {
+            Object.entries(deathGuardCrusadeRules.relics).forEach(([type, relics]) => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `Death Guard: ${type.charAt(0).toUpperCase() + type.slice(1)} (+${relics[0].cost} PC)`;
+                relics.forEach(relic => {
+                    optgroup.innerHTML += `<option value="${relic.name}" data-cost="${relic.cost}" data-type="deathguard.relics.${type}">${relic.name}</option>`;
                 });
                 relicSelect.appendChild(optgroup);
             });
@@ -94,16 +110,25 @@ const populateUpgradeSelectors = () => {
     }
     relicSelect.disabled = !isCharacter;
 
-    // --- NOUVEAU BLOC CORRIGÉ ---
-    // --- Optimisations de Détachement ---
     const detachmentUpgradeSelect = document.getElementById('detachment-upgrade-select');
     detachmentUpgradeSelect.innerHTML = '<option value="">Choisir une optimisation...</option>';
 
-    if (player && player.faction && factionDetachments[player.faction]) {
-        const detachmentUpgrades = factionDetachments[player.faction];
+    let detachmentUpgrades = [];
+    if (player && player.faction) {
+        if (player.faction === 'Adepta Sororitas') {
+            detachmentUpgrades = sororitasDetachments || [];
+        } else if (player.faction === 'Death Guard') {
+            detachmentUpgrades = deathGuardDetachments || [];
+        } else if (player.faction === 'Tyranids') {
+            detachmentUpgrades = tyranidDetachments || [];
+        } else if (factionDetachments[player.faction]) {
+            detachmentUpgrades = factionDetachments[player.faction];
+        }
+    }
+
+    if (detachmentUpgrades.length > 0) {
         const groupedUpgrades = {};
 
-        // Regrouper les optimisations par leur détachement ('group')
         detachmentUpgrades.forEach(upgrade => {
             if (!groupedUpgrades[upgrade.group]) {
                 groupedUpgrades[upgrade.group] = [];
@@ -111,7 +136,6 @@ const populateUpgradeSelectors = () => {
             groupedUpgrades[upgrade.group].push(upgrade);
         });
 
-        // Créer un <optgroup> pour chaque détachement
         for (const groupName in groupedUpgrades) {
             const optgroup = document.createElement('optgroup');
             optgroup.label = groupName;
@@ -125,7 +149,6 @@ const populateUpgradeSelectors = () => {
             detachmentUpgradeSelect.appendChild(optgroup);
         }
     }
-    // Les optimisations de détachement ne sont généralement pas limitées aux personnages
     detachmentUpgradeSelect.disabled = !isCharacter;
 
 
@@ -153,21 +176,18 @@ const populateUpgradeSelectors = () => {
     }
     sombrerocheRelicSelect.disabled = !isCharacter;
 
-    // Logique pour les Bienfaits de Nurgle
     const nurgleBoonSection = document.getElementById('nurgle-boon-section');
 
+    // CORRIGÉ : Le bouton sert maintenant à lancer un dé pour un bienfait aléatoire, conformément aux règles
     if (player && player.faction === 'Death Guard' && isCharacter) {
         nurgleBoonSection.classList.remove('hidden');
-        const nurgleBoonSelect = document.getElementById('nurgle-boon-select');
-        nurgleBoonSelect.innerHTML = '<option value="">Choisir un bienfait...</option>';
-        deathGuardCrusadeRules.boonsOfNurgle.forEach(boon => {
-            nurgleBoonSelect.innerHTML += `<option value="${boon.name}">${boon.name} (Jet: ${boon.roll})</option>`;
-        });
+        const nurgleBoonBtn = document.getElementById('add-nurgle-boon-btn');
+        nurgleBoonBtn.textContent = 'Lancer pour un Bienfait';
+        nurgleBoonBtn.title = "Refuser un Honneur de Bataille standard pour recevoir un don aléatoire de Nurgle.";
     } else {
         nurgleBoonSection.classList.add('hidden');
     }
 
-    // Logique pour les Optimisations de la Légion de l'Ombre
     const legionOfShadowSection = document.getElementById('legion-of-shadow-section');
     if (player && player.faction === 'Chaos Daemons' && isCharacter) {
         legionOfShadowSection.classList.remove('hidden');
@@ -180,11 +200,17 @@ const populateUpgradeSelectors = () => {
         legionOfShadowSection.classList.add('hidden');
     }
 
+    const sororitasUpgradesSection = document.getElementById('sororitas-upgrades-section');
+    if (player && player.faction === 'Adepta Sororitas') {
+        sororitasUpgradesSection.classList.remove('hidden');
+    } else {
+        sororitasUpgradesSection.classList.add('hidden');
+    }
 };
 
 const addUpgradeToUnitData = (unit, textareaId, upgradeName, upgradeDesc, prefix = '') => {
     const textToAdd = `\n- ${prefix}${upgradeName}: ${upgradeDesc}`;
-    const key = textareaId.replace('unit-', ''); // 'honours' ou 'relic' ou 'scars'
+    const key = textareaId.replace('unit-', '');
     const dataKey = key === 'honours' ? 'battleHonours' : (key === 'scars' ? 'battleScars' : key);
 
     unit[dataKey] = (unit[dataKey] || '').trim() + textToAdd;
@@ -203,9 +229,9 @@ async function handleRpPurchase(upgradeName, rpCost, onConfirm) {
     
     if (await showConfirm("Confirmer Dépense de Réquisition", confirmText)) {
         player.requisitionPoints -= rpCost;
-        onConfirm(); // Cette fonction va maintenant modifier l'objet campaignData
+        onConfirm();
         document.getElementById('pr-points').textContent = player.requisitionPoints;
-        saveData(); // Sauvegarde les changements sur le joueur ET l'unité
+        saveData();
         showNotification(`${upgradeName} acheté !`, 'success');
     }
 }
@@ -215,13 +241,12 @@ document.getElementById('add-battle-trait-btn').addEventListener('click', () => 
     const traitName = select.value;
     if (!traitName) return;
 
-    // Recherche dans les traits génériques ET de faction
-    const trait = findUpgradeDescription(traitName);
-    if (!trait) return;
+    const traitDesc = findUpgradeDescription(traitName);
+    if (!traitDesc) return;
     
     handleRpPurchase(`Trait: ${traitName}`, 1, () => {
         const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
-        addUpgradeToUnitData(unit, 'unit-honours', traitName, trait);
+        addUpgradeToUnitData(unit, 'unit-honours', traitName, traitDesc);
         unit.crusadePoints = (unit.crusadePoints || 0) + 1;
         document.getElementById('unit-crusade-points').value = unit.crusadePoints;
         select.value = '';
@@ -254,7 +279,10 @@ document.getElementById('add-relic-btn').addEventListener('click', () => {
     let ruleSet;
     if (source === 'sororitas') {
         ruleSet = sororitasCrusadeRules[category][type];
-    } else {
+    } else if (source === 'deathguard') {
+        ruleSet = deathGuardCrusadeRules[category][type];
+    }
+    else {
         ruleSet = crusadeRules[category][type];
     }
 
@@ -279,7 +307,7 @@ document.getElementById('add-battle-scar-btn').addEventListener('click', () => {
     const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
 
     addUpgradeToUnitData(unit, 'unit-scars', scar.name, scar.desc);
-    saveData(); // Sauvegarde immédiate car il n'y a pas de coût
+    saveData();
     
     select.value = '';
     showNotification("Cicatrice de Bataille ajoutée.", 'info');
@@ -341,27 +369,9 @@ document.getElementById('add-sombreroche-relic-btn').addEventListener('click', a
     }
 });
 
-// Listener pour les Bienfaits de Nurgle
-document.getElementById('add-nurgle-boon-btn').addEventListener('click', () => {
-    const select = document.getElementById('nurgle-boon-select');
-    const boonName = select.value;
-    if (!boonName) return;
+// CORRIGÉ : Cette fonction est maintenant gérée par le module de la faction (DeathGuard_module.js)
+// document.getElementById('add-nurgle-boon-btn').addEventListener('click', () => { ... });
 
-    const boon = deathGuardCrusadeRules.boonsOfNurgle.find(b => b.name === boonName);
-    if (!boon) return;
-    
-    const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
-    addUpgradeToUnitData(unit, 'unit-honours', boon.name, boon.desc, "Bienfait de Nurgle: ");
-    
-    unit.crusadePoints = (unit.crusadePoints || 0) + 1;
-    document.getElementById('unit-crusade-points').value = unit.crusadePoints;
-
-    saveData();
-    showNotification(`Le Bienfait "${boon.name}" a été accordé.`, 'success');
-    select.value = '';
-});
-
-// Listener pour les Optimisations de la Légion de l'Ombre
 document.getElementById('add-legion-of-shadow-btn').addEventListener('click', () => {
     const select = document.getElementById('legion-of-shadow-select');
     const selectedOption = select.options[select.selectedIndex];

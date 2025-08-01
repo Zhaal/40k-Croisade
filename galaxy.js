@@ -298,34 +298,17 @@ const handleExploration = async (direction) => {
             return;
         }
     
-		if (outcome === 'rescan') {
-		    const hasFreeProbe = viewingPlayer.freeProbes && viewingPlayer.freeProbes > 0;
-		    if (!hasFreeProbe && viewingPlayer.requisitionPoints < 1) {
-		        showNotification("Points de Réquisition ou Sondes Gratuites insuffisants pour relancer une sonde.", 'warning');
-		        return;
-		    }
-		
-		    let costMessage = "";
-		    if (hasFreeProbe) {
-		        viewingPlayer.freeProbes--;
-		        costMessage = "en utilisant une <b>Sonde Gratuite</b>";
-		    } else {
-		        viewingPlayer.requisitionPoints--;
-		        costMessage = "pour <b>1 PR</b>";
-		    }
-		    
-		    logAction(viewingPlayer.id, `<b>${viewingPlayer.name}</b> a relancé une sonde vers le système <b>hostile</b> ${costMessage}.`, 'explore', '🛰️');
-		    probedInfo.timestamp = Date.now();
-		    saveData();
-		
-		    if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) {
-		        renderPlayerDetail();
-		    }
-		    
-		    showNotification(`Sonde relancée vers le système. Informations temporelles mises à jour.`, 'info');
-		    updateExplorationArrows(currentSystem);
-		    return;
-		}
+        if (outcome === 'rescan') {
+            const probeSuccessful = await performProbe(currentSystem, discoveredSystem, direction, viewingPlayer);
+            if (probeSuccessful) {
+                if (activePlayerIndex === campaignData.players.findIndex(p => p.id === viewingPlayer.id) && !playerDetailView.classList.contains('hidden')) {
+                    renderPlayerDetail();
+                }
+                updateExplorationArrows(currentSystem);
+                showNotification(`Données de la sonde réactualisées.`, 'success');
+            }
+            return;
+        }
     
         if (outcome === 'establish') {
             // ==========================================================

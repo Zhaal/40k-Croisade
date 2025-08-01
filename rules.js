@@ -2,39 +2,6 @@
 
 // NOUVEL AJOUT : Base de données des unités par faction et leur coût.
 const factionUnits = {
-    "Adepta Sororitas": [
-        { name: "Aestred Thurga et Agathae Dolan", cost: 85 },
-        { name: "Arco-flagellants", cost: 45 },
-        { name: "Castigator", cost: 160 },
-        { name: "Célestes Sacro-saintes", cost: 70 },
-        { name: "Chanoinesse", cost: 50 },
-        { name: "Chanoinesse à Réacteur Dorsal", cost: 75 },
-        { name: "Démonifuge", cost: 85 },
-        { name: "Dialogus", cost: 40 },
-        { name: "Dogmata", cost: 45 },
-        { name: "Escouade de Sœurs de Bataille", cost: 105 },
-        { name: "Escouade de Sœurs Novices", cost: 100 },
-        { name: "Escouade Dominion", cost: 115 },
-        { name: "Escouade Repentia", cost: 75 },
-        { name: "Escouade Retributor", cost: 115 },
-        { name: "Escouade Séraphine", cost: 80 },
-        { name: "Escouade Zéphyrine", cost: 80 },
-        { name: "Exo-harnais Parangon", cost: 210 },
-        { name: "Exorcist", cost: 210 },
-        { name: "Hospitalière", cost: 50 },
-        { name: "Imagifère", cost: 65 },
-        { name: "Immolator", cost: 115 },
-        { name: "Junith Eruita", cost: 80 },
-        { name: "Machines de Pénitence", cost: 75 },
-        { name: "Mortificatrices", cost: 70 },
-        { name: "Morvenn Vahl", cost: 170 },
-        { name: "Palatine", cost: 50 },
-        { name: "Prêtre du Ministorum", cost: 50 },
-        { name: "Rhino Sororitas", cost: 75 },
-        { name: "Sainte Célestine", cost: 160 },
-        { name: "Sanctificateurs", cost: 100 },
-        { name: "Triomphe de Sainte Katherine", cost: 235 }
-    ],
     "Adeptus Custodes": [
         { name: "Aleya", cost: 65 },
         { name: "Capitaine-rempart", cost: 130 },
@@ -402,57 +369,6 @@ const factionUnits = {
         { name: "Tzaangors Éclairés avec Grands Arcs Scelle-destin", cost: 50 },
         { name: "Vindicator du Chaos", cost: 185 }
     ],
-    "Tyranids": [
-        { name: "Assimilatrice Norne", cost: 275 },
-        { name: "Barbgaunts", cost: 55 },
-        { name: "Biovores", cost: 50 },
-        { name: "Bondisseurs de Von Ryan", cost: 70 },
-        { name: "Carnifex", cost: 115 },
-        { name: "Emissaire Norne", cost: 260 },
-        { name: "Exocrine", cost: 140 },
-        { name: "Gardes des Ruches", cost: 90 },
-        { name: "Gardes Tyranides", cost: 80 },
-        { name: "Gargouilles", cost: 85 },
-        { name: "Genestealers", cost: 75 },
-        { name: "Génocrate", cost: 80 },
-        { name: "Guerriers Tyranides avec Bio-armes de Mêlée", cost: 75 },
-        { name: "Guerriers Tyranides avec Bio-armes de Tir", cost: 65 },
-        { name: "Harpie", cost: 215 },
-        { name: "Haruspex", cost: 125 },
-        { name: "Hormagaunts", cost: 65 },
-        { name: "La Mort Subite", cost: 80 },
-        { name: "Le Maître des Essaims", cost: 220 },
-        { name: "Le Vieux Borgne", cost: 150 },
-        { name: "Lictor", cost: 60 },
-        { name: "Maleceptor", cost: 170 },
-        { name: "Mawloc", cost: 145 },
-        { name: "Neurogaunts", cost: 45 },
-        { name: "Neurolictor", cost: 80 },
-        { name: "Neurotyran", cost: 105 },
-        { name: "Nuées de Voraces", cost: 25 },
-        { name: "Parasite de Mortrex", cost: 80 },
-        { name: "Primat Tyranide Ailé", cost: 65 },
-        { name: "Psychophage", cost: 110 },
-        { name: "Pyrovores", cost: 40 },
-        { name: "Rodeurs", cost: 75 },
-        { name: "Spores Mines", cost: 55 },
-        { name: "Spores Mucolides", cost: 30 },
-        { name: "Sporokyste", cost: 145 },
-        { name: "Termagants", cost: 60 },
-        { name: "Tervigon", cost: 175 },
-        { name: "Toxicrène", cost: 150 },
-        { name: "Trygon", cost: 140 },
-        { name: "Tueur-hurleur", cost: 135 },
-        { name: "Tyran des Ruches", cost: 195 },
-        { name: "Tyran des Ruches Ailé", cost: 170 },
-        { name: "Tyrannocyte", cost: 105 },
-        { name: "Tyrannofex", cost: 200 },
-        { name: "Venomthropes", cost: 70 },
-        { name: "Virago des Ruches", cost: 200 },
-        { name: "Zoanthropes", cost: 100 },
-        { name: "Harridan", cost: 610 },
-        { name: "Hierophant", cost: 810 }
-    ],
     "World Eaters": [
         { name: "Angron", cost: 385 },
         { name: "Berzerks de Khorne", cost: 180 },
@@ -684,38 +600,6 @@ const factionUnits = {
         { name: "Lazarus", cost: 70 },
         { name: "Lion El'Jonson", cost: 315 },
         { name: "Sammael", cost: 115 }
-    ],
-    "Death Guard": [
-        { name: "Biologus Putréfacteur", cost: 45 },
-        { name: "Chenillé Crachepeste", cost: 195 },
-        { name: "Chirurgien de la Peste", cost: 50 },
-        { name: "Corrupteur Nidoreux", cost: 60 },
-        { name: "Délabreur Délétère", cost: 50 },
-        { name: "Drone Fétide", cost: 90 },
-        { name: "Drone Fétide avec Lance-peste Lourd", cost: 100 },
-        { name: "Essaimeur Répugnant", cost: 60 },
-        { name: "Exhausteur Pandémique", cost: 105 },
-        { name: "Intendant", cost: 40 },
-        { name: "Land Raider du Chaos", cost: 240 },
-        { name: "Marines de la Peste", cost: 95 },
-        { name: "Métabrutus", cost: 115 },
-        { name: "Mortarion", cost: 380 },
-        { name: "Porte-icône", cost: 45 },
-        { name: "Predator Annihilator du Chaos", cost: 135 },
-        { name: "Predator Destructor du Chaos", cost: 145 },
-        { name: "Prince Démon de Nurgle", cost: 195 },
-        { name: "Prince Démon de Nurgle ailé", cost: 195 },
-        { name: "Profanateur", cost: 165 },
-        { name: "Rejetons du Chaos de Nurgle", cost: 80 },
-        { name: "Rhino du Chaos", cost: 85 },
-        { name: "Seigneur de la Contagion", cost: 110 },
-        { name: "Seigneur de la Virulence", cost: 90 },
-        { name: "Seigneur des Véroles", cost: 75 },
-        { name: "Semi-chenillés Méphitiques", cost: 90 },
-        { name: "Terminators du Linceul", cost: 40 },
-        { name: "Terminators Rouillarques", cost: 115 },
-        { name: "Typhus", cost: 90 },
-        { name: "Véroleux", cost: 60 }
     ],
     "Deathwatch": [
         { name: "Capitaine du Guet Artemis", cost: 65 },
@@ -1004,18 +888,6 @@ const factionUnits = {
     ],
 };
 
-// NOUVEL AJOUT : Règles de croisade spécifiques aux Tyranides
-const tyranidCrusadeRules = {
-    biomorphologies: [
-        { name: "Glandes Surrénales Accélérées", desc: "Ajoutez 1\" à la caractéristique de Mouvement de cette unité. Si l'unité a l'aptitude AVANCE, ajoutez 1 à ses jets d'Avance.", biomassCost: 10, crusadePointCost: 1 },
-        { name: "Sacs à Toxines Virulents", desc: "Les armes de mêlée de cette unité (hors MONSTRE et VÉHICULE) gagnent l'aptitude [TOUCHES FATALES].", biomassCost: 15, crusadePointCost: 1 },
-        { name: "Carapace Chitineuse Renforcée", desc: "Améliorez de 1 la caractéristique de Sauvegarde de cette unité (jusqu'à un maximum de 3+).", biomassCost: 20, crusadePointCost: 1 },
-        { name: "Griffes et Dents Acérées", desc: "Améliorez de 1 la caractéristique de Pénétration d'Armure des armes de mêlée de cette unité.", biomassCost: 15, crusadePointCost: 1 },
-        { name: "Instincts de Prédateur Alpha", desc: "Une fois par bataille, cette unité peut être la cible du stratagème Intervention Héroïque pour 0 PC.", biomassCost: 10, crusadePointCost: 1 },
-        { name: "Camouflage Chéphalopodique", desc: "Les figurines de cette unité ont l'aptitude Discrétion.", biomassCost: 20, crusadePointCost: 1 },
-        { name: "Sang Acide", desc: "Chaque fois qu'une attaque de mêlée est allouée à une figurine de cette unité, après que l'unité attaquante a résolu ses attaques, pour chaque figurine détruite dans cette unité, jetez un D6. Sur 5+, l'unité attaquante subit 1 blessure mortelle.", biomassCost: 15, crusadePointCost: 1 }
-    ]
-};
 
 // NOUVEL AJOUT : Règles de croisade spécifiques aux Démons du Chaos (Légion de l'Ombre)
 const chaosDaemonsCrusadeRules = {
@@ -1025,46 +897,6 @@ const chaosDaemonsCrusadeRules = {
         { name: "Se Fondre dans les Ténèbres", desc: "À la fin de la phase de Combat, si l’unité du porteur a détruit une ou plusieurs unités ennemies à cette phase et n’est à Portée d’Engagement d’aucune unité ennemie, vous pouvez retirer l’unité du porteur du champ de bataille et la placer en Réserve Stratégique.", cost: 1, crusadePointCost: 1 },
         { name: "Malveillance Incarnée", desc: "Au début de la phase de Combat, choisissez 1 unité ennemie à Portée d’Engagement de l’unité du porteur et jetez 1D6 : sur 2-5, l’unité ennemie subit D3 blessures mortelles ; sur 6, l’unité ennemie subit 3 blessures mortelles.", cost: 1, crusadePointCost: 1 }
     ]
-};
-
-
-// NOUVEL AJOUT : Règles de croisade spécifiques à la Death Guard
-const deathGuardCrusadeRules = {
-    planetBaseStats: {
-        "Monde Mort":           { fecundity: 1, population: 1, vulnerability: 2, adequation: 10 },
-        "Monde Sauvage":        { fecundity: 3, population: 2, vulnerability: 4, adequation: 10 },
-        "Agri-monde":           { fecundity: 4, population: 2, vulnerability: 1, adequation: 10 },
-        "Monde Forge":          { fecundity: 1, population: 3, vulnerability: 3, adequation: 10 },
-        "Monde Ruche":          { fecundity: 2, population: 4, vulnerability: 2, adequation: 10 },
-        "Monde Saint (relique)":{ fecundity: 2, population: 1, vulnerability: 4, adequation: 10 }
-    },
-
-    plagueBlessings: {
-        2: { type: 'propriete', name: 'Pourriture', desc: 'À chaque attaque de cette figurine avec une Touche Critique, l\'ennemi subit 1 Blessure Mortelle.' },
-        3: { type: 'propriete', name: 'Hypervecteur', desc: 'À votre phase de Tir, après que cette figurine a tiré, choisissez 1 unité ennemie touchée. Jusqu\'à votre prochaine phase, cette unité est Affligée.' },
-        4: { type: 'propriete', name: 'Implantation Parasitaire', desc: 'Le rang de Touches Dévastatrices de cette figurine est amélioré de 1 (sur 5+ au lieu de 6+).' },
-        5: { type: 'propriete', name: 'Écoulement Ignoble', desc: 'À la phase de Combat, si cette figurine est détruite, choisissez 1 unité ennemie à 6" et lancez 1D6. Sur 4+, cette unité est Ébranlée.' },
-        '-2': { type: 'inconvenient', name: 'Force des Miasmes', desc: 'Soustraire 1 à la caractéristique de Mouvement de cette figurine.' },
-        '-3': { type: 'inconvenient', name: 'Incongruent', desc: 'Soustraire 1 à la caractéristique de CC et CT de cette figurine.' },
-        '-4': { type: 'inconvenient', name: 'Supprimé', desc: 'À chaque attaque de cette figurine, vous ne pouvez pas relancer le jet de Touche.' },
-        '-5': { type: 'inconvenient', name: 'Aucun', desc: 'Aucun inconvénient.' }
-    },
-
-    boonsOfNurgle: [
-        { roll: "11", name: "Vitalité Fébrile", desc: "Ajoutez 1 à la caractéristique de PV de cette figurine." },
-        { roll: "12", name: "Membres Sinueux", desc: "Ajoutez 1 aux jets d'Avance et de Charge pour cette figurine." },
-        { roll: "13", name: "Tentacules Grouillants", desc: "Ajoutez 1 à la caractéristique d'Attaques des armes de mêlée de cette figurine." },
-        { roll: "21", name: "Hideusement Enflé", desc: "Ajoutez 1 à la caractéristique d'Endurance de cette figurine." },
-        { roll: "22", name: "Insensibilité Lépreuse", desc: "Cette figurine a l'aptitude Insensible à la Douleur 5+." },
-        { roll: "23", name: "Voile de Mouches", desc: "Les figurines de l'unité de cette figurine ont l'aptitude Discrétion." },
-        { roll: "31", name: "Contact Putréfiant", desc: "Améliorez de 1 la caractéristique de PA des armes de mêlée de cette figurine." },
-        { roll: "32", name: "Pestevision", desc: "À chaque attaque de cette figurine qui cible une unité Affligée, vous pouvez relancer le jet de touche." },
-        { roll: "33", name: "Tourbillon de Miasmes", desc: "Ajoutez 6\" à la portée de l'aptitude Don de Contagion de cette figurine." }
-    ],
-
-    intents: {
-        SEMER_LES_GRAINES: { name: "Semer les Graines de la Corruption", cost: 1, desc: "Pour 1 Point de Contagion, une de vos unités peut tenter de contaminer une planète en fin de bataille."}
-    }
 };
 
 
@@ -1160,28 +992,6 @@ const crusadeRules = {
 
 // NOUVELLE STRUCTURE DE DONNÉES : Coûts des optimisations de détachement par faction
 const factionDetachments = {
-    "Adepta Sororitas": [
-        { group: "Armée de la Foi", name: "Aspect Divin", cost: 5 },
-        { group: "Armée de la Foi", name: "Épée de Sainte Ellynor", cost: 15 },
-        { group: "Armée de la Foi", name: "Litanies de la Foi", cost: 10 },
-        { group: "Armée de la Foi", name: "Triptyque de la Croisade Macharienne", cost: 20 },
-        { group: "Championnes de la Foi", name: "Amulette Sanctifiée", cost: 25 },
-        { group: "Championnes de la Foi", name: "Marque de la Dévotion", cost: 30 },
-        { group: "Championnes de la Foi", name: "Triptyque du Jugement", cost: 15 },
-        { group: "Championnes de la Foi", name: "Yeux de l'Oracle", cost: 10 },
-        { group: "Martyrs Sacrés", name: "Chapelet de Sacrifice", cost: 25 },
-        { group: "Martyrs Sacrés", name: "Exemple de Sainteté", cost: 10 },
-        { group: "Martyrs Sacrés", name: "La Force par la Souffrance", cost: 25 },
-        { group: "Martyrs Sacrés", name: "Manteau d'Ophelia", cost: 20 },
-        { group: "Ost Pénitent", name: "Catéchisme de Pénitence Divine", cost: 20 },
-        { group: "Ost Pénitent", name: "Psaume de Sentence Légitime", cost: 30 },
-        { group: "Ost Pénitent", name: "Refrain de Foi Pérenne", cost: 25 },
-        { group: "Ost Pénitent", name: "Verset de Sainte Piété", cost: 15 },
-        { group: "Porteuses de la Flamme", name: "Feu et Fureur", cost: 30 },
-        { group: "Porteuses de la Flamme", name: "Manuel de Sainte Griselda", cost: 20 },
-        { group: "Porteuses de la Flamme", name: "Rage Vertueuse", cost: 15 },
-        { group: "Porteuses de la Flamme", name: "Surplis de Fer de Sainte Istalela", cost: 10 }
-    ],
     "Adeptus Custodes": [
         { group: "Champions Auriques", name: "Exemple Galvanisant", cost: 10 },
         { group: "Champions Auriques", name: "Gladius Imperator", cost: 25 },
@@ -1400,36 +1210,6 @@ const factionDetachments = {
         { group: "Force Opérationnelle du Cercle Intérieur", name: "Champion de la Deathwing", cost: 15 },
         { group: "Force Opérationnelle du Cercle Intérieur", name: "L'Œil de l'Invisible", cost: 10 },
         { group: "Force Opérationnelle du Cercle Intérieur", name: "Volonté Singulière", cost: 20 }
-    ],
-    "Death Guard": [
-        { group: "Champions de la Contagion", name: "Cornucophagus", cost: 35 },
-        { group: "Champions de la Contagion", name: "Ingrédient Final", cost: 20 },
-        { group: "Champions de la Contagion", name: "Seringue de Nurgle", cost: 25 },
-        { group: "Champions de la Contagion", name: "Visions de Virulence", cost: 15 },
-        { group: "Élus du Seigneur de la Mort", name: "Heaume du Roi des Mouches", cost: 20 },
-        { group: "Élus du Seigneur de la Mort", name: "Talisman Maleputride", cost: 30 },
-        { group: "Élus du Seigneur de la Mort", name: "Vigueur Infecte", cost: 15 },
-        { group: "Élus du Seigneur de la Mort", name: "Visage de la Mort", cost: 10 },
-        { group: "Invocateurs d'Intendance", name: "Affrécolteur", cost: 10 },
-        { group: "Invocateurs d'Intendance", name: "Fléau du Fanal", cost: 20 },
-        { group: "Invocateurs d'Intendance", name: "Glas Entropique", cost: 15 },
-        { group: "Invocateurs d'Intendance", name: "Grimoire des Bienfaits Abondants", cost: 20 },
-        { group: "Marteau de Mortarion", name: "Familier Hurlever", cost: 15 },
-        { group: "Marteau de Mortarion", name: "Fléau de Gerbe-bile", cost: 10 },
-        { group: "Marteau de Mortarion", name: "Eil de l'Affliction", cost: 20 },
-        { group: "Marteau de Mortarion", name: "Vrilleseffluves", cost: 20 },
-        { group: "Ost Vermoulu", name: "Brume Vermineuse", cost: 15 },
-        { group: "Ost Vermoulu", name: "Essaim Revigorant", cost: 10 },
-        { group: "Ost Vermoulu", name: "Murmure d'insectes", cost: 20 },
-        { group: "Ost Vermoulu", name: "Voile de Peste", cost: 25 },
-        { group: "Vectorium de la Pourriture Titubante", name: "Biniou Gâté", cost: 25 },
-        { group: "Vectorium de la Pourriture Titubante", name: "Seigneur de la Vérole Ambulante", cost: 15 },
-        { group: "Vectorium de la Pourriture Titubante", name: "Talisman d'Éclosion", cost: 25 },
-        { group: "Vectorium de la Pourriture Titubante", name: "Tristesiphon", cost: 10 },
-        { group: "Vectorium Virulent", name: "Archi-contaminateur", cost: 25 },
-        { group: "Vectorium Virulent", name: "Arme-démon de Nurgle", cost: 10 },
-        { group: "Vectorium Virulent", name: "Fourneau des Pestes", cost: 25 },
-        { group: "Vectorium Virulent", name: "Régénération Révulsante", cost: 20 }
     ],
     "Deathwatch": [
         { group: "Force Opérationnelle Black Spear", name: "Balise Angelis", cost: 25 },
@@ -1718,40 +1498,6 @@ const factionDetachments = {
         { group: "Servitude du Malewarp", name: "Coiffe de Noctilithe", cost: 15 },
         { group: "Servitude du Malewarp", name: "Manifestation Renforcée", cost: 20 },
         { group: "Servitude du Malewarp", name: "Puissance des Arcanes", cost: 20 }
-    ],
-    "Tyranids": [
-        { group: "Assaut de Bioformes de Type Guerrier", name: "Adaptation Oculaire", cost: 20 },
-        { group: "Assaut de Bioformes de Type Guerrier", name: "Assimilation Sensorielle", cost: 20 },
-        { group: "Assaut de Bioformes de Type Guerrier", name: "Puissance Elevée", cost: 30 },
-        { group: "Assaut de Bioformes de Type Guerrier", name: "Tyran Synaptique", cost: 10 },
-        { group: "Attaque Souterraine", name: "Intellect d'Avant-garde", cost: 15 },
-        { group: "Attaque Souterraine", name: "Primat Trygon", cost: 20 },
-        { group: "Attaque Souterraine", name: "Sensibilité Sismique", cost: 20 },
-        { group: "Attaque Souterraine", name: "Stratégie Synaptique", cost: 15 },
-        { group: "Essaim d'Assimilation", name: "Biomorphologie Parasite", cost: 25 },
-        { group: "Essaim d'Assimilation", name: "Défense Instinctive", cost: 15 },
-        { group: "Essaim d'Assimilation", name: "Flux Biophagique", cost: 10 },
-        { group: "Essaim d'Assimilation", name: "Monstruosité Régénératrice", cost: 20 },
-        { group: "Essaim Inépuisable", name: "Camouflage Naturel", cost: 30 },
-        { group: "Essaim Inépuisable", name: "Faim Insatiable", cost: 20 },
-        { group: "Essaim Inépuisable", name: "Montées d'Adrénaline", cost: 15 },
-        { group: "Essaim Inépuisable", name: "Serres Perforantes", cost: 25 },
-        { group: "Flotte d'Invasion", name: "Biologie Adaptative", cost: 25 },
-        { group: "Flotte d'Invasion", name: "Parfaite Adaptation", cost: 15 },
-        { group: "Flotte d'Invasion", name: "Pilier Synaptique", cost: 20 },
-        { group: "Flotte d'Invasion", name: "Ruse Extraterrestre", cost: 30 },
-        { group: "Nexus Synaptique", name: "Contrôle Synaptique", cost: 20 },
-        { group: "Nexus Synaptique", name: "Le Mornecœur de Kharis", cost: 15 },
-        { group: "Nexus Synaptique", name: "Perturbation Psychoparasite", cost: 30 },
-        { group: "Nexus Synaptique", name: "Puissance de l'Esprit-ruche", cost: 10 },
-        { group: "Offensive d'Avant-garde", name: "Caméléonisme", cost: 15 },
-        { group: "Offensive d'Avant-garde", name: "Neuronodule", cost: 20 },
-        { group: "Offensive d'Avant-garde", name: "Terrains de Chasse", cost: 20 },
-        { group: "Offensive d'Avant-garde", name: "Traqueur", cost: 10 },
-        { group: "Ruée Broyeuse", name: "Némésis Monstrueuse", cost: 25 },
-        { group: "Ruée Broyeuse", name: "Nodules Nullificateurs", cost: 10 },
-        { group: "Ruée Broyeuse", name: "Présence Funeste", cost: 15 },
-        { group: "Ruée Broyeuse", name: "Réserves Surrénales", cost: 20 }
     ],
     "Aeldari": [
     { group: "Ost de Bataille", name: "Le Joyau du Phénix", cost: 25 },
