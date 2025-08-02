@@ -87,10 +87,25 @@ const renderPlayerDetail = () => {
     const biomassBox = document.getElementById('biomass-box');
     if (player.faction === 'Tyranids') {
         biomassBox.classList.remove('hidden');
-        document.getElementById('biomass-points').textContent = player.biomassPoints || 0;
+        document.getElementById('biomass-points').textContent = player.tyranidData.biomassPoints || 0;
     } else {
         biomassBox.classList.add('hidden');
     }
+
+    // ==========================================================
+    // DEBUT DE LA MODIFICATION TYRANIDE
+    // ==========================================================
+    // Affichage conditionnel de la boîte de dévoration Tyranide
+    const tyranidTracker = document.getElementById('tyranid-devour-tracker');
+    if (player.faction === 'Tyranids' && typeof renderTyranidDevourTracker === 'function') {
+        tyranidTracker.classList.remove('hidden');
+        renderTyranidDevourTracker(player);
+    } else {
+        if (tyranidTracker) tyranidTracker.classList.add('hidden');
+    }
+    // ==========================================================
+    // FIN DE LA MODIFICATION TYRANIDE
+    // ==========================================================
 
     // Affichage conditionnel de la boîte Death Guard
     const deathguardBox = document.getElementById('deathguard-box');
@@ -124,6 +139,7 @@ const renderPlayerDetail = () => {
 
     renderOrderOfBattle();
 };
+
 
 const updateSupplyDisplay = () => {
     if (activePlayerIndex === -1) return;
@@ -211,6 +227,30 @@ const renderPlanetarySystem = (systemId) => {
 
         const planetDiv = document.createElement('div');
         planetDiv.className = 'planet';
+        
+        // --- NOUVELLE LOGIQUE POUR LE VISUEL DE CIBLE TYRANIDE ---
+        let isTyranidTarget = false;
+        for (const p of campaignData.players) {
+            if (p.faction === 'Tyranids' && p.tyranidData?.devourTargets?.some(t => t.planetId === planet.id)) {
+                isTyranidTarget = true;
+                break;
+            }
+        }
+        if (isTyranidTarget) {
+            planetDiv.classList.add('tyranid-target');
+        }
+        // --- FIN DE LA NOUVELLE LOGIQUE ---
+        
+        const isDevoured = campaignData.players.some(p => 
+            p.faction === 'Tyranids' && 
+            p.tyranidData.devouredPlanetIds && 
+            p.tyranidData.devouredPlanetIds.includes(planet.id)
+        );
+
+        if (isDevoured) {
+            planetDiv.classList.add('devoured-planet');
+        }
+        
         planetDiv.dataset.type = planet.type;
         planetDiv.dataset.owner = planet.owner;
         planetDiv.dataset.systemId = systemId;
@@ -218,7 +258,6 @@ const renderPlanetarySystem = (systemId) => {
         
         const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
         
-        // CORRECTION APPLIQUÉE ICI
         if (viewingPlayer && viewingPlayer.faction === 'Death Guard' && viewingPlayer.deathGuardData && viewingPlayer.deathGuardData.corruptedPlanetIds.includes(planet.id)) {
             planetDiv.classList.add('corrupted-planet');
         } else {
@@ -237,7 +276,11 @@ const renderPlanetarySystem = (systemId) => {
         let planetTitle = `${planet.name} - ${planet.type}`;
 
         if (planet.owner === 'neutral') {
-            planetTitle += ` (Défense PNJ: ${planet.defense || 0} pts)`;
+             if (isDevoured) {
+                planetTitle = `${planet.name} - Monde Stérile`;
+            } else {
+                planetTitle += ` (Défense PNJ: ${planet.defense || 0} pts)`;
+            }
         } else {
             const ownerPlayer = campaignData.players.find(p => p.id === planet.owner);
             if (ownerPlayer) {
@@ -798,3 +841,77 @@ const renderActionLog = () => {
         });
     }
 };
+
+/**
+ * Remplit l'onglet des règles de campagne adaptées dans la modale de la carte.
+ */
+function renderCampaignRulesTab() {
+    const infoPanel = document.getElementById('info-content-panel');
+    infoPanel.innerHTML = ''; // Vider le contenu précédent
+    const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
+
+    if (!player || !campaignRuleDifferences) {
+        infoPanel.innerHTML = `<p>Aucune donnée de règle de campagne à afficher.</p>`;
+        return;
+    }
+    
+    // Pour l'instant, on se concentre sur la Death Guard, mais la structure est prête pour d'autres factions.
+    let factionKey;
+    if (player.faction === 'Death Guard') {
+        factionKey = 'deathGuard';
+    } 
+    // Ajoutez d'autres 'else if' ici pour d'autres factions à l'avenir
+    // else if (player.faction === 'Tyranids') {
+    //     factionKey = 'tyranids';
+    // }
+
+    const rulesData = campaignRuleDifferences[factionKey];
+
+    if (!rulesData) {
+        infoPanel.innerHTML = `<div class="info-panel" style="border: none; box-shadow: none; background: transparent; color: var(--text-color); max-width: 100%;">
+            <div class="info-body" style="color: var(--text-color);">
+             <h4 style="color: var(--primary-color); text-align:center;">Pas de règles de campagne adaptées pour cette faction.</h4>
+             <p style="text-align:center;">Cette faction utilise les règles de base du programme.</p>
+            </div>
+        </div>`;
+        return;
+    }
+
+    let tableHTML = `
+        <div class="info-panel" style="border: none; box-shadow: none; background: transparent; color: var(--text-color); max-width: 100%;">
+            <div class="info-body" style="color: var(--text-color);">
+                <h3 style="color: var(--primary-color); text-align: center;">${rulesData.title}</h3>
+                <p style="text-align: center; font-style: italic;">${rulesData.introduction}</p>
+                <hr>
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 2px solid var(--primary-color);">
+                            <th style="padding: 8px; width: 15%;">Règle</th>
+                            <th style="padding: 8px; width: 28%;">Implémentation Programme</th>
+                            <th style="padding: 8px; width: 28%;">Règle Officielle</th>
+                            <th style="padding: 8px; width: 29%;">Analyse & Comparaison</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    rulesData.rules.forEach(rule => {
+        tableHTML += `
+            <tr style="border-bottom: 1px solid var(--border-color); vertical-align: top;">
+                <td style="padding: 8px;"><strong>${rule.ruleName}</strong></td>
+                <td style="padding: 8px; font-size: 0.9em;">${rule.programImplementation}</td>
+                <td style="padding: 8px; font-size: 0.9em;">${rule.officialRule}</td>
+                <td style="padding: 8px; font-size: 0.9em; font-style: italic; color: var(--text-muted-color);">${rule.comparison}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    infoPanel.innerHTML = tableHTML;
+}

@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal === worldModal) {
             mapViewingPlayerId = null; 
             renderActionLog();
-            // AJOUT : Rafraîchit la liste des joueurs en fermant la vue du système.
             renderPlayerList();
         }
         if (modal === mapModal) {
@@ -333,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
         const player = campaignData.players[activePlayerIndex];
         
-        // CORRECTION: Logique de visibilité du bouton Dégénérescence
         const degenerateBtn = document.getElementById('degenerate-unit-btn');
         if (player && player.faction === 'Death Guard') {
             degenerateBtn.classList.remove('hidden');
@@ -472,146 +470,222 @@ document.addEventListener('DOMContentLoaded', () => {
 
     unitForm.addEventListener('change', updateAndSaveUnitDataFromForm);
     
-    planetarySystemDiv.addEventListener('click', (e) => {
+    planetarySystemDiv.addEventListener('click', async (e) => { 
         const planetElement = e.target.closest('.planet');
         if (planetElement) {
             const { systemId, planetIndex } = planetElement.dataset;
             const system = campaignData.systems.find(s => s.id === systemId);
             const planet = system.planets[planetIndex];
-
-            const adminControls = document.getElementById('admin-controls');
-            const adminSectionDetails = document.getElementById('admin-section');
-            const adminPasswordInput = document.getElementById('admin-password');
-            const unlockBtn = document.getElementById('unlock-admin-btn');
-            const lockBtn = document.getElementById('lock-admin-btn');
-            const adminPasswordGroup = adminPasswordInput.parentElement;
-
-            adminControls.classList.add('hidden');
-            adminPasswordInput.value = '';
-            if (adminSectionDetails) {
-                adminSectionDetails.open = false;
-            }
-            adminPasswordGroup.classList.remove('hidden');
-            unlockBtn.classList.remove('hidden');
-            lockBtn.classList.add('hidden');
-
-
-            document.getElementById('planet-system-id').value = systemId;
-            document.getElementById('planet-index').value = planetIndex;
-            document.getElementById('planet-name-input').value = planet.name;
-            document.getElementById('planet-type-select').value = planet.type;
-
-            const ownerSelect = document.getElementById('planet-owner-select');
-            ownerSelect.innerHTML = '<option value="neutral">Neutre (PNJ)</option>';
-            campaignData.players.forEach(player => {
-                ownerSelect.innerHTML += `<option value="${player.id}">${player.name}</option>`;
-            });
-            ownerSelect.value = planet.owner;
-            document.getElementById('planet-defense-input').value = planet.defense || 0;
-            document.getElementById('planet-type-modal-title').textContent = `Détails de ${planet.name} (${planet.type})`;
-
-            const deadWorldContainer = document.getElementById('dead-world-link-container');
-            const deadWorldSelect = document.getElementById('dead-world-link-select');
-            const linkButton = document.getElementById('link-dead-world-btn');
-
-            deadWorldSelect.innerHTML = '';
-            linkButton.disabled = false;
-            linkButton.textContent = 'Activer le Portail';
-
-            if (planet.type === 'Monde Mort' && planet.owner !== 'neutral') {
-                const ownerId = planet.owner;
-                const isSourceSystemLinked = (campaignData.gatewayLinks || []).some(link =>
-                    link.systemId1 === systemId || link.systemId2 === systemId
-                );
-
-                if (isSourceSystemLinked) {
-                    deadWorldSelect.innerHTML = '<option disabled>Portail déjà actif depuis ce système.</option>';
-                    linkButton.disabled = true;
-                } else {
-                    const potentialDestinations = [];
-                    campaignData.systems.forEach(s => {
-                        if (!s.position || s.id === systemId) return;
-                        const isDestinationSystemLinked = (campaignData.gatewayLinks || []).some(link =>
-                            link.systemId1 === s.id || link.systemId2 === s.id
-                        );
-                        if (isDestinationSystemLinked) return;
-                        const hasQualifyingPlanet = s.planets.some(p => p.type === 'Monde Mort' && p.owner === ownerId);
-                        if (hasQualifyingPlanet) {
-                            const destPlanet = s.planets.find(p => p.type === 'Monde Mort' && p.owner === ownerId);
-                            potentialDestinations.push({
-                                systemId: s.id,
-                                systemName: s.name,
-                                planetName: destPlanet.name
-                            });
-                        }
-                    });
-
-                    if (potentialDestinations.length > 0) {
-                        potentialDestinations.forEach(dest => {
-                            const option = document.createElement('option');
-                            option.value = dest.systemId;
-                            option.textContent = `${dest.systemName} (${dest.planetName})`;
-                            deadWorldSelect.appendChild(option);
-                        });
-                    } else {
-                        deadWorldSelect.innerHTML = '<option disabled>Aucun Monde Mort non-lié disponible.</option>';
-                        linkButton.disabled = true;
-                    }
-                }
-                deadWorldContainer.classList.remove('hidden');
-            } else {
-                deadWorldContainer.classList.add('hidden');
-            }
             
-            const actionsContainer = document.getElementById('planet-actions-container');
-            actionsContainer.innerHTML = '';
+            const isDevoured = planet.name.includes('(Dévorée)');
 
-            const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
-            const planetOwnerId = planet.owner;
-            const isOwnPlanet = viewingPlayer.id === planetOwnerId;
-
-            if (!isOwnPlanet) {
-                if (planetOwnerId === 'neutral') {
-                    const halveDefenseBtn = document.createElement('button');
-                    halveDefenseBtn.type = 'button';
-                    halveDefenseBtn.id = 'halve-defense-btn';
-                    halveDefenseBtn.className = 'btn-secondary';
-                    halveDefenseBtn.textContent = 'Saboter Défenses (1 RP)';
-                    halveDefenseBtn.classList.toggle('hidden', planet.defense === 0);
-                    halveDefenseBtn.addEventListener('click', halvePlanetDefense);
-                    actionsContainer.appendChild(halveDefenseBtn);
-                    
-                    const fightBtn = document.createElement('button');
-                    fightBtn.type = 'button';
-                    fightBtn.id = 'fight-npc-btn';
-                    fightBtn.className = 'btn-primary';
-                    fightBtn.textContent = `Combattre PNJ (${planet.defense || 0} pts)`;
-                    fightBtn.addEventListener('click', () => openNpcCombatModal(planet.id));
-                    actionsContainer.appendChild(fightBtn);
-
-                } else {
-                    const fightPlayerBtn = document.createElement('button');
-                    fightPlayerBtn.type = 'button';
-                    fightPlayerBtn.id = 'fight-player-btn';
-                    fightPlayerBtn.className = 'btn-danger';
-                    const defender = campaignData.players.find(p => p.id === planetOwnerId);
-                    fightPlayerBtn.textContent = `Attaquer ${defender ? defender.name : 'Joueur'}`;
-                    fightPlayerBtn.addEventListener('click', () => openPvpCombatModal(planet.id));
-                    actionsContainer.appendChild(fightPlayerBtn);
-                }
+            if (isDevoured) {
+                showNotification("Cette planète est un rocher stérile, dévoré par l'essaim. Elle ne peut plus être colonisée.", 'info');
+                return;
             }
 
-            updatePlanetModalForDeathGuard(planet, viewingPlayer);
-
-            ownerSelect.dispatchEvent(new Event('change'));
-            openModal(planetTypeModal);
+            // ====================== DÉBUT DE LA CORRECTION ======================
+            // Le bloc `if` spécial pour les Tyranides est supprimé.
+            // Tous les clics passent désormais par openPlanetModalAndCombat.
+            openPlanetModalAndCombat(planet, systemId, planetIndex);
+            // ====================== FIN DE LA CORRECTION ======================
+            
+            return; 
         }
     });
+
+    // ====================== DÉBUT DE LA CORRECTION ======================
+    function openPlanetModalAndCombat(planet, systemId, planetIndex, attackIntent = 'conquer') {
+        // La logique est modifiée pour TOUJOURS ouvrir la fenêtre de détails.
+        // Les boutons dans cette fenêtre déclencheront ensuite le combat.
+        openPlanetDetailsModal(planet, systemId, planetIndex);
+    }
+    // ====================== FIN DE LA CORRECTION ======================
+
+    // ====================== DÉBUT DU NOUVEL AJOUT ======================
+    function updatePlanetModalForTyranids(planet, viewingPlayer, system) {
+        const actionsContainer = document.getElementById('planet-actions-container');
+        // Ne vide plus le conteneur ici pour permettre à d'autres factions d'ajouter leurs boutons
+
+        if (!viewingPlayer || viewingPlayer.id === planet.owner) {
+            return; // Ne rien faire si c'est la planète du joueur
+        }
+    
+        // Si aucun bouton d'assaut n'existe, on en crée un
+        if (!actionsContainer.querySelector('.btn-primary')) {
+            const attackButton = document.createElement('button');
+            attackButton.className = 'btn-primary';
+            attackButton.textContent = 'Lancer l\'Assaut';
+            attackButton.style.width = '100%';
+            attackButton.onclick = () => {
+                if (planet.owner === 'neutral') {
+                    openNpcCombatModal(planet.id, 'conquer');
+                } else {
+                    openPvpCombatModal(planet.id, 'conquer');
+                }
+            };
+            actionsContainer.appendChild(attackButton);
+        }
+
+        // Ajout des boutons spécifiques aux Tyranids
+        if (viewingPlayer.faction === 'Tyranids') {
+            const conquerButton = actionsContainer.querySelector('.btn-primary');
+            if (conquerButton) {
+                conquerButton.textContent = 'Conquérir la Planète'; // Renommer le bouton d'assaut existant
+            }
+            
+            const devourButton = document.createElement('button');
+            devourButton.className = 'btn-danger';
+            devourButton.textContent = 'Dévorer la Planète';
+            devourButton.style.width = '100%';
+            devourButton.style.marginTop = '10px';
+            devourButton.onclick = () => {
+                const existingTarget = (viewingPlayer.tyranidData.devourTargets || []).find(t => t.planetId === planet.id);
+                if (existingTarget) {
+                    showNotification(`Cette planète est déjà une cible de l'essaim. Gagnez des batailles pour la dévorer.`, 'info');
+                } else {
+                    const isPlayerOwned = planet.owner !== 'neutral';
+                    const newTarget = {
+                        planetId: planet.id,
+                        systemId: system.id,
+                        planetName: planet.name,
+                        systemName: system.name,
+                        worldType: planet.type,
+                        winsNeeded: isPlayerOwned ? 3 : 1,
+                        winsAchieved: 0,
+                        currentStage: 'invasion'
+                    };
+    
+                    if (!viewingPlayer.tyranidData.devourTargets) {
+                        viewingPlayer.tyranidData.devourTargets = [];
+                    }
+                    viewingPlayer.tyranidData.devourTargets.push(newTarget);
+                    logAction(viewingPlayer.id, `L'essaim a commencé à dévorer la planète <b>${planet.name}</b>.`, 'combat', '☣️');
+                    saveData();
+                    if (!playerDetailView.classList.contains('hidden')) {
+                        renderTyranidDevourTracker(viewingPlayer);
+                    }
+                    showNotification(`La dévoration de ${planet.name} a commencé ! Gagnez la bataille pour progresser.`, 'success');
+                }
+    
+                // Lancer le combat après avoir marqué la planète comme cible
+                if (planet.owner === 'neutral') {
+                    openNpcCombatModal(planet.id, 'devour');
+                } else {
+                    openPvpCombatModal(planet.id, 'devour');
+                }
+            };
+            actionsContainer.appendChild(devourButton);
+        }
+    }
+    // ====================== FIN DU NOUVEL AJOUT ======================
+
+    function openPlanetDetailsModal(planet, systemId, planetIndex) {
+        const adminControls = document.getElementById('admin-controls');
+        const adminSectionDetails = document.getElementById('admin-section');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const unlockBtn = document.getElementById('unlock-admin-btn');
+        const lockBtn = document.getElementById('lock-admin-btn');
+        const adminPasswordGroup = adminPasswordInput.parentElement;
+
+        adminControls.classList.add('hidden');
+        adminPasswordInput.value = '';
+        if (adminSectionDetails) {
+            adminSectionDetails.open = false;
+        }
+        adminPasswordGroup.classList.remove('hidden');
+        unlockBtn.classList.remove('hidden');
+        lockBtn.classList.add('hidden');
+
+        document.getElementById('planet-system-id').value = systemId;
+        document.getElementById('planet-index').value = planetIndex;
+        document.getElementById('planet-name-input').value = planet.name;
+        document.getElementById('planet-type-select').value = planet.type;
+
+        const ownerSelect = document.getElementById('planet-owner-select');
+        ownerSelect.innerHTML = '<option value="neutral">Neutre (PNJ)</option>';
+        campaignData.players.forEach(player => {
+            ownerSelect.innerHTML += `<option value="${player.id}">${player.name}</option>`;
+        });
+        ownerSelect.value = planet.owner;
+        document.getElementById('planet-defense-input').value = planet.defense || 0;
+        document.getElementById('planet-type-modal-title').textContent = `Détails de ${planet.name} (${planet.type})`;
+
+        const deadWorldContainer = document.getElementById('dead-world-link-container');
+        const deadWorldSelect = document.getElementById('dead-world-link-select');
+        const linkButton = document.getElementById('link-dead-world-btn');
+
+        deadWorldSelect.innerHTML = '';
+        linkButton.disabled = false;
+        linkButton.textContent = 'Activer le Portail';
+
+        if (planet.type === 'Monde Mort' && planet.owner !== 'neutral') {
+            const ownerId = planet.owner;
+            const isSourceSystemLinked = (campaignData.gatewayLinks || []).some(link =>
+                link.systemId1 === systemId || link.systemId2 === systemId
+            );
+
+            if (isSourceSystemLinked) {
+                deadWorldSelect.innerHTML = '<option disabled>Portail déjà actif depuis ce système.</option>';
+                linkButton.disabled = true;
+            } else {
+                const potentialDestinations = [];
+                campaignData.systems.forEach(s => {
+                    if (!s.position || s.id === systemId) return;
+                    const isDestinationSystemLinked = (campaignData.gatewayLinks || []).some(link =>
+                        link.systemId1 === s.id || link.systemId2 === s.id
+                    );
+                    if (isDestinationSystemLinked) return;
+                    const hasQualifyingPlanet = s.planets.some(p => p.type === 'Monde Mort' && p.owner === ownerId);
+                    if (hasQualifyingPlanet) {
+                        const destPlanet = s.planets.find(p => p.type === 'Monde Mort' && p.owner === ownerId);
+                        potentialDestinations.push({
+                            systemId: s.id,
+                            systemName: s.name,
+                            planetName: destPlanet.name
+                        });
+                    }
+                });
+
+                if (potentialDestinations.length > 0) {
+                    potentialDestinations.forEach(dest => {
+                        const option = document.createElement('option');
+                        option.value = dest.systemId;
+                        option.textContent = `${dest.systemName} (${dest.planetName})`;
+                        deadWorldSelect.appendChild(option);
+                    });
+                } else {
+                    deadWorldSelect.innerHTML = '<option disabled>Aucun Monde Mort non-lié disponible.</option>';
+                    linkButton.disabled = true;
+                }
+            }
+            deadWorldContainer.classList.remove('hidden');
+        } else {
+            deadWorldContainer.classList.add('hidden');
+        }
+        
+        const actionsContainer = document.getElementById('planet-actions-container');
+        actionsContainer.innerHTML = ''; 
+        const viewingPlayer = campaignData.players.find(p => p.id === mapViewingPlayerId);
+        
+        // ====================== DÉBUT DE LA CORRECTION ======================
+        updatePlanetModalForDeathGuard(planet, viewingPlayer);
+
+        // Appel de la nouvelle fonction pour les Tyranids (et les boutons d'assaut généraux)
+        const system = campaignData.systems.find(s => s.id === systemId);
+        updatePlanetModalForTyranids(planet, viewingPlayer, system);
+        // ====================== FIN DE LA CORRECTION ======================
+        
+        ownerSelect.dispatchEvent(new Event('change'));
+        openModal(planetTypeModal);
+    }
+    
 
     worldModal.addEventListener('click', (e) => {
         if (e.target.id === 'show-map-btn') {
             openModal(mapModal);
             currentMapScale = 1;
+        renderCampaignRulesTab(); 
             setTimeout(renderGalacticMap, 50);
         } else if (e.target.id === 'show-history-btn') {
             openFullHistoryModal();
@@ -744,6 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if (!campaignData.gatewayLinks) campaignData.gatewayLinks = [];
             campaignData.gatewayLinks.push({ systemId1: sourceSystemId, systemId2: targetSystemId });
             logAction(viewingPlayer.id, `Un portail de <b>Monde Mort</b> a été activé entre <b>${sourceSystem.name}</b> et <b>${targetSystem.name}</b>.`, 'info', '🌀');
             saveData();
@@ -1017,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    function openNpcCombatModal(planetId) {
+    function openNpcCombatModal(planetId, attackIntent = 'conquer') {
         const attacker = campaignData.players.find(p => p.id === mapViewingPlayerId);
         if (!attacker) return;
     
@@ -1037,6 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     
         npcCombatModal.dataset.planetId = planetId;
+        npcCombatModal.dataset.attackIntent = attackIntent;
         openModal(npcCombatModal);
     }
     
@@ -1044,6 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const attacker = campaignData.players.find(p => p.id === mapViewingPlayerId);
         const defenderId = document.getElementById('npc-combat-defender-select').value;
         const planetId = npcCombatModal.dataset.planetId;
+        const attackIntent = npcCombatModal.dataset.attackIntent; 
     
         if (!attacker || !defenderId || !planetId) {
             showNotification("Veuillez sélectionner un défenseur.", "warning");
@@ -1065,16 +1142,54 @@ document.addEventListener('DOMContentLoaded', () => {
     
             const hasWon = await showConfirm("Résultat du Combat", `L'attaquant, <b>${attacker.name}</b>, a-t-il remporté la bataille contre les PNJ défendus par <b>${defender.name}</b> ?`);
             
-            if (hasWon) {
-                attacker.battles.wins = (attacker.battles.wins || 0) + 1;
-                attacker.requisitionPoints++;
-                planet.owner = attacker.id;
-                planet.defense = 0;
-                logAction(attacker.id, `<b>Victoire !</b> A conquis la planète PNJ <b>${planet.name}</b> (défendue par ${defender.name}). +1 PR.`, 'conquest', '🏆');
-            } else {
-                attacker.battles.losses = (attacker.battles.losses || 0) + 1;
-                attacker.requisitionPoints++;
-                logAction(attacker.id, `<b>Défaite</b> contre les PNJ sur <b>${planet.name}</b> (défendus par ${defender.name}). +1 PR.`, 'info', '⚔️');
+            // MODIFIÉ : Nouvelle logique Tyranide
+            if (attacker.faction === 'Tyranids' && attackIntent === 'devour') {
+                const target = attacker.tyranidData.devourTargets.find(t => t.planetId === planetId);
+                if (target) {
+                    if (hasWon) {
+                        attacker.battles.wins = (attacker.battles.wins || 0) + 1;
+                        attacker.requisitionPoints++;
+                        target.winsAchieved++;
+
+                        if (target.winsAchieved >= target.winsNeeded) {
+                            // DÉVORAISON COMPLÈTE
+                            const rewards = tyranidCrusadeRules.worldTypeRewards[target.worldType] || { npcBiomass: 1, rp: 0 };
+                            const biomassGained = rewards.npcBiomass;
+                            const rpGained = rewards.rp;
+
+                            attacker.tyranidData.biomassPoints += biomassGained;
+                            attacker.requisitionPoints += rpGained;
+
+                            planet.owner = 'neutral';
+                            planet.name = `${planet.name.replace(' (Dévorée)', '')} (Dévorée)`;
+                            planet.defense = 0;
+
+                            attacker.tyranidData.devouredPlanetIds.push(planet.id);
+                            attacker.tyranidData.devourTargets = attacker.tyranidData.devourTargets.filter(t => t.planetId !== planetId);
+                            
+                            logAction(attacker.id, `<b>DÉVORATION RÉUSSIE !</b> La planète PNJ <b>${planet.name}</b> est stérile. Gain : ${biomassGained} Biomasse, ${rpGained} PR.`, 'conquest', '☣️');
+                            
+                            // Déclenche la phase de Biogenèse
+                            await showBiogenesisModal(attacker);
+                        }
+                    } else {
+                        attacker.battles.losses = (attacker.battles.losses || 0) + 1;
+                        attacker.requisitionPoints++;
+                        logAction(attacker.id, `<b>Échec.</b> L'assaut pour dévorer <b>${planet.name}</b> a été repoussé. +1 PR.`, 'info', '⚔️');
+                    }
+                }
+            } else { // --- Logique de conquête normale ---
+                if (hasWon) {
+                    attacker.battles.wins = (attacker.battles.wins || 0) + 1;
+                    attacker.requisitionPoints++;
+                    planet.owner = attacker.id;
+                    planet.defense = 0;
+                    logAction(attacker.id, `<b>Victoire !</b> A conquis la planète PNJ <b>${planet.name}</b> (défendue par ${defender.name}). +1 PR.`, 'conquest', '🏆');
+                } else {
+                    attacker.battles.losses = (attacker.battles.losses || 0) + 1;
+                    attacker.requisitionPoints++;
+                    logAction(attacker.id, `<b>Défaite</b> contre les PNJ sur <b>${planet.name}</b> (défendus par ${defender.name}). +1 PR.`, 'info', '⚔️');
+                }
             }
         
             defender.freeProbes = (defender.freeProbes || 0) + 1;
@@ -1085,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal(npcCombatModal);
             renderPlanetarySystem(system.id);
             
-            if (!playerDetailView.classList.contains('hidden') && activePlayerIndex === campaignData.players.findIndex(p => p.id === attacker.id)) {
+            if (!playerDetailView.classList.contains('hidden')) {
                 renderPlayerDetail();
             }
             showNotification("Résultat de la bataille enregistré.", "success");
@@ -1096,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function openPvpCombatModal(planetId) {
+    function openPvpCombatModal(planetId, attackIntent = 'conquer') {
         const attacker = campaignData.players.find(p => p.id === mapViewingPlayerId);
         const system = campaignData.systems.find(s => s.planets.some(p => p.id === planetId));
         if (!attacker || !system) return;
@@ -1115,11 +1230,12 @@ document.addEventListener('DOMContentLoaded', () => {
         pvpCombatModal.dataset.planetId = planetId;
         pvpCombatModal.dataset.attackerId = attacker.id;
         pvpCombatModal.dataset.defenderId = defender.id;
+        pvpCombatModal.dataset.attackIntent = attackIntent;
         openModal(pvpCombatModal);
     }
     
     document.getElementById('finish-pvp-combat-btn').addEventListener('click', async () => {
-        const { planetId, attackerId, defenderId } = pvpCombatModal.dataset;
+        const { planetId, attackerId, defenderId, attackIntent } = pvpCombatModal.dataset;
     
         if (!planetId || !attackerId || !defenderId) return;
     
@@ -1157,33 +1273,75 @@ document.addEventListener('DOMContentLoaded', () => {
     
             attacker.requisitionPoints++;
             defender.requisitionPoints++;
-    
-            if (attackerWon) {
-                attacker.battles.wins = (attacker.battles.wins || 0) + 1;
-                defender.battles.losses = (defender.battles.losses || 0) + 1;
-                
-                const oldOwnerName = defender.name;
-                planet.owner = attacker.id;
-    
-                logAction(attacker.id, `<b>Victoire !</b> Vous avez conquis la planète <b>${planet.name}</b> de <b>${oldOwnerName}</b>. +1 PR.`, 'conquest', '🏆');
-                logAction(defender.id, `<b>Défaite.</b> Vous avez perdu la planète <b>${planet.name}</b> face à <b>${attacker.name}</b>. +1 PR.`, 'info', '⚔️');
-                showNotification(`Victoire de ${attacker.name} ! La planète ${planet.name} est conquise.`, "success");
-    
-            } else {
-                defender.battles.wins = (defender.battles.wins || 0) + 1;
-                attacker.battles.losses = (attacker.battles.losses || 0) + 1;
-    
-                logAction(defender.id, `<b>Victoire !</b> Vous avez défendu la planète <b>${planet.name}</b> contre <b>${attacker.name}</b>. +1 PR.`, 'conquest', '🛡️');
-                logAction(attacker.id, `<b>Défaite.</b> Votre assaut sur <b>${planet.name}</b> a été repoussé par <b>${defender.name}</b>. +1 PR.`, 'info', '⚔️');
-                showNotification(`Victoire de ${defender.name} ! La planète ${planet.name} a été défendue.`, "success");
+            
+            // MODIFIÉ : Nouvelle logique de dévoration Tyranide
+            if (attacker.faction === 'Tyranids' && attackIntent === 'devour' && attackerWon) {
+                const target = attacker.tyranidData.devourTargets.find(t => t.planetId === planetId);
+                if (target) {
+                    attacker.battles.wins = (attacker.battles.wins || 0) + 1;
+                    defender.battles.losses = (defender.battles.losses || 0) + 1;
+                    target.winsAchieved++;
+
+                    const previousStage = tyranidCrusadeRules.devourStages[target.currentStage];
+
+                    if (target.winsAchieved >= target.winsNeeded) {
+                        // DÉVORAISON COMPLÈTE
+                        const rewards = tyranidCrusadeRules.worldTypeRewards[target.worldType] || { playerBiomass: 1, rp: 0 };
+                        const biomassGained = rewards.playerBiomass;
+                        const rpGained = rewards.rp;
+
+                        attacker.tyranidData.biomassPoints += biomassGained;
+                        attacker.requisitionPoints += rpGained;
+
+                        planet.owner = 'neutral';
+                        planet.name = `${planet.name.replace(' (Dévorée)', '')} (Dévorée)`;
+                        
+                        attacker.tyranidData.devouredPlanetIds.push(planet.id);
+                        attacker.tyranidData.devourTargets = attacker.tyranidData.devourTargets.filter(t => t.planetId !== planetId);
+                        
+                        logAction(attacker.id, `<b>DÉVORATION TERMINÉE !</b> La planète <b>${planet.name}</b> de <b>${defender.name}</b> est stérile. Gain: ${biomassGained} Biomasse, ${rpGained} PR.`, 'conquest', '☣️');
+                        logAction(defender.id, `<b>PLANÈTE PERDUE !</b> Votre planète <b>${planet.name}</b> a été dévorée par <b>${attacker.name}</b>. +1 PR.`, 'alert', '💀');
+                        
+                        await showBiogenesisModal(attacker);
+
+                    } else {
+                        // PROGRESSION VERS L'ÉTAPE SUIVANTE
+                        let nextStageKey = '';
+                        if (target.currentStage === 'invasion') nextStageKey = 'predation';
+                        if (target.currentStage === 'predation') nextStageKey = 'consommation';
+                        target.currentStage = nextStageKey;
+                        const nextStageInfo = tyranidCrusadeRules.devourStages[nextStageKey];
+
+                        logAction(attacker.id, `<b>Progression !</b> L'étape d'<b>${previousStage.name}</b> est terminée sur <b>${planet.name}</b>. Début : <b>${nextStageInfo.name}</b>. +1 PR.`, 'combat', '▶️');
+                        logAction(defender.id, `<b>Défaite.</b> Vous avez repoussé l'essaim sur <b>${planet.name}</b>, mais il progresse... +1 PR.`, 'info', '⚔️');
+                    }
+                }
+            } else { // --- Logique de conquête normale OU défaite du Tyranide ---
+                if (attackerWon) {
+                    attacker.battles.wins = (attacker.battles.wins || 0) + 1;
+                    defender.battles.losses = (defender.battles.losses || 0) + 1;
+                    
+                    const oldOwnerName = defender.name;
+                    planet.owner = attacker.id;
+                    logAction(attacker.id, `<b>Victoire !</b> Vous avez conquis la planète <b>${planet.name}</b> de <b>${oldOwnerName}</b>. +1 PR.`, 'conquest', '🏆');
+                    logAction(defender.id, `<b>Défaite.</b> Vous avez perdu la planète <b>${planet.name}</b> face à <b>${attacker.name}</b>. +1 PR.`, 'info', '⚔️');
+                    showNotification(`Victoire de ${attacker.name} ! La planète ${planet.name} est conquise.`, "success");
+        
+                } else { 
+                    defender.battles.wins = (defender.battles.wins || 0) + 1;
+                    attacker.battles.losses = (attacker.battles.losses || 0) + 1;
+        
+                    logAction(defender.id, `<b>Victoire !</b> Vous avez défendu la planète <b>${planet.name}</b> contre <b>${attacker.name}</b>. +1 PR.`, 'conquest', '🛡️');
+                    logAction(attacker.id, `<b>Défaite.</b> Votre assaut sur <b>${planet.name}</b> a été repoussé par <b>${defender.name}</b>. +1 PR.`, 'info', '⚔️');
+                    showNotification(`Victoire de ${defender.name} ! La planète ${planet.name} a été défendue.`, "success");
+                }
             }
     
             saveData();
             closeModal(pvpCombatModal);
             renderPlanetarySystem(system.id);
     
-            const detailedPlayerId = campaignData.players[activePlayerIndex]?.id;
-            if (!playerDetailView.classList.contains('hidden') && (detailedPlayerId === attackerId || detailedPlayerId === defenderId)) {
+            if (!playerDetailView.classList.contains('hidden')) {
                 renderPlayerDetail();
             }
     
@@ -1219,7 +1377,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (filterDate) {
             logsToDisplay = viewingPlayer.actionLog.filter(entry => {
-                return entry.timestamp.startsWith(filterDate);
+                const entryDate = new Date(entry.timestamp).toISOString().slice(0, 10);
+                return entryDate === filterDate;
             });
         }
 
@@ -1298,7 +1457,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //  INITIALISATION
     //======================================================================
     
-    // CORRECTION: Séquence d'initialisation mise à jour
     loadDataFromStorage();
     migrateData();
     
@@ -1359,7 +1517,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NOUVEAU BLOC DE CODE POUR L'AUTOMATISATION DE 'L'ILLUMINATION PAR LA DOULEUR'
     document.getElementById('illuminate-by-pain-btn').addEventListener('click', async () => {
         if (activePlayerIndex < 0 || editingUnitIndex < 0) return;
 
@@ -1379,20 +1536,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (confirmed) {
             player.requisitionPoints -= cost;
-            unit.battleScars = ""; // Efface les séquelles
-            document.getElementById('unit-scars').value = ""; // Met à jour l'interface
+            unit.battleScars = ""; 
+            document.getElementById('unit-scars').value = ""; 
 
             let logMessage = `A utilisé 'L'Illumination par la Douleur' sur <b>${unit.name}</b> pour 1 PR.`;
             let notificationMessage = "Séquelles effacées ! N'oubliez pas de choisir un Honneur de Bataille.";
 
-            // Vérifie si l'unité est la Sainte Potentia
             if (unit.id === player.sainthood.potentiaUnitId) {
                 const activeTrialId = player.sainthood.activeTrial;
                 
-                // Ajoute 2 points de Sainte à l'épreuve active
                 player.sainthood.trials[activeTrialId] = Math.min(10, (player.sainthood.trials[activeTrialId] || 0) + 2);
                 
-                // Ajoute 1 point de Martyre (et déclenche l'effet sur l'épreuve de Souffrance)
                 player.sainthood.martyrdomPoints = (player.sainthood.martyrdomPoints || 0) + 1;
                 player.sainthood.trials.souffrance = Math.min(10, (player.sainthood.trials.souffrance || 0) + 3);
 
@@ -1402,7 +1556,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             logAction(player.id, logMessage, 'info', '⚜️');
             saveData();
-            renderPlayerDetail(); // Met à jour toute la fiche joueur
+            renderPlayerDetail();
             showNotification(notificationMessage, 'success', 7000);
         }
     });

@@ -458,6 +458,7 @@ label {
     border-radius: 50%;
     border: 1px solid var(--border-color);
     overflow: hidden;
+    transition: background 0.5s, box-shadow 0.5s;
 }
 
 .sun {
@@ -573,6 +574,14 @@ label {
 .planet[data-type="Monde Ruche"], .legend-color[data-type="Monde Ruche"] { background: radial-gradient(circle, #f0e68c, #eac100); color: #111; }
 .planet[data-type="Monde Saint (relique)"], .legend-color[data-type="Monde Saint (relique)"] { background: radial-gradient(circle, #9370db, #4b0082); }
 
+/* NOUVEAU : Style pour une planète dévorée/stérile */
+.planet.devoured-planet {
+    background: radial-gradient(circle, #5a5a5a, #2b2b2b);
+    border: 2px solid #333 !important;
+    box-shadow: none !important;
+    animation: none !important;
+    cursor: not-allowed;
+}
 
 /* --- Style pour les flèches d'exploration --- */
 .explore-arrow {
@@ -976,7 +985,7 @@ label {
 /* --- NOUVEAU : Infobulle personnalisée --- */
 #custom-tooltip {
     position: fixed;
-    z-index: 1001; /* Doit être au-dessus des modales (z-index: 100) */
+    z-index: 1002; /* Doit être au-dessus des modales (z-index: 100) */
     background-color: var(--background-color);
     color: var(--text-color);
     padding: 12px;
@@ -989,6 +998,10 @@ label {
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+#unit-choice-modal {
+    z-index: 1001; /* Au-dessus de la modale de Biogenèse (1000) */
 }
 
 #custom-tooltip strong {
@@ -1055,6 +1068,19 @@ label {
     box-shadow: 0 0 15px #7CFC00, 0 0 25px #3a910c;
     animation: pulse-corrupted 2.2s infinite ease-in-out;
 }
+
+/* NOUVEAUX STYLES POUR LA PRÉDATION TYRANIDE SUR UNE PLANÈTE */
+@keyframes pulse-tyranid-planet {
+    0% { box-shadow: 0 0 12px #8A2BE2, 0 0 4px #fff; }
+    50% { box-shadow: 0 0 28px #9400D3, 0 0 12px #f0f; }
+    100% { box-shadow: 0 0 12px #8A2BE2, 0 0 4px #fff; }
+}
+
+.planet.tyranid-target {
+    border: 3px solid #9400D3 !important;
+    animation: pulse-tyranid-planet 1.5s infinite ease-in-out !important;
+}
+/* FIN DES NOUVEAUX STYLES */
 
 @keyframes pulse-corrupted {
     0% { box-shadow: 0 0 15px #7CFC00; }

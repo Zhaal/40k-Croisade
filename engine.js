@@ -317,6 +317,54 @@ function showProbeActionChoice(title, text, timerText) {
     });
 }
 
+function showUnitChoiceModal(title, text, unitList) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('unit-choice-modal');
+        const modalTitle = document.getElementById('unit-choice-modal-title');
+        const modalText = document.getElementById('unit-choice-modal-text');
+        const select = document.getElementById('unit-choice-select');
+        const okBtn = document.getElementById('unit-choice-ok-btn');
+        const cancelBtn = document.getElementById('unit-choice-cancel-btn');
+        const closeBtn = modal.querySelector('.close-btn');
+
+        modalTitle.textContent = title;
+        modalText.innerHTML = text;
+        
+        // Vider et remplir la liste déroulante
+        select.innerHTML = '';
+        if (unitList && unitList.length > 0) {
+            unitList.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit.id; // Utiliser l'ID unique de l'unité
+                option.textContent = `${unit.name} (XP: ${unit.xp || 0})`;
+                select.appendChild(option);
+            });
+            okBtn.disabled = false;
+        } else {
+            select.innerHTML = '<option disabled>Aucune cible éligible trouvée.</option>';
+            okBtn.disabled = true;
+        }
+        
+        openModal(modal);
+
+        const closeAndResolve = (value) => {
+            closeModal(modal);
+            // Nettoyer les écouteurs d'événements pour éviter les doublons
+            okBtn.removeEventListener('click', okListener);
+            cancelBtn.removeEventListener('click', cancelListener);
+            closeBtn.removeEventListener('click', cancelListener);
+            resolve(value);
+        };
+
+        const okListener = () => closeAndResolve(select.value);
+        const cancelListener = () => closeAndResolve(null);
+
+        okBtn.addEventListener('click', okListener, { once: true });
+        cancelBtn.addEventListener('click', cancelListener, { once: true });
+        closeBtn.addEventListener('click', cancelListener, { once: true });
+    });
+}
+
 const openModal = (modal) => modal.classList.remove('hidden');
 const closeModal = (modal) => modal.classList.add('hidden');
 
@@ -662,10 +710,23 @@ const migrateData = () => {
             initializeSororitasData(player); // Utilise la fonction d'initialisation
             dataWasModified = true;
         }
-        if (player.faction === 'Tyranids' && player.biomassPoints === undefined) {
-            initializeTyranidData(player); // Utilise la fonction d'initialisation
+        // ====================== DÉBUT DE LA CORRECTION TYRANIDE ======================
+        if (player.faction === 'Tyranids' && player.tyranidData === undefined) {
+            // Sauvegarde de l'ancienne valeur si elle existe
+            const oldBiomass = player.biomassPoints || 0; 
+            
+            // Initialisation de la nouvelle structure de données complète
+            initializeTyranidData(player); 
+            
+            // Restauration de l'ancienne valeur dans la nouvelle structure
+            player.tyranidData.biomassPoints = oldBiomass;
+            
+            // Suppression de l'ancienne clé pour garder les données propres
+            delete player.biomassPoints; 
+            
             dataWasModified = true;
         }
+        // ====================== FIN DE LA CORRECTION TYRANIDE ======================
     });
 
     // Migration par système

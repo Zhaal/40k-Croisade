@@ -15,6 +15,15 @@ const findUpgradeDescription = (upgradeName) => {
     else if (player && player.faction === 'Death Guard') {
         factionRules = deathGuardCrusadeRules || {};
     }
+    // ==========================================================
+    // DEBUT DE LA MODIFICATION TYRANIDE
+    // ==========================================================
+    else if (player && player.faction === 'Tyranids') {
+        factionRules = tyranidCrusadeRules || {};
+    }
+    // ==========================================================
+    // FIN DE LA MODIFICATION TYRANIDE
+    // ==========================================================
 
     const allRules = [
         ...Object.values(crusadeRules.battleTraits).flat(),
@@ -24,7 +33,16 @@ const findUpgradeDescription = (upgradeName) => {
         ...crusadeRules.sombrerocheRelics,
         ...crusadeRules.battleScars,
         // CORRIGÉ : Ajout des traits de bataille spécifiques aux factions dans la recherche
-        ...Object.values(factionRules.battleTraits || {}).flat()
+        ...Object.values(factionRules.battleTraits || {}).flat(),
+        // ==========================================================
+        // DEBUT DE LA MODIFICATION TYRANIDE
+        // ==========================================================
+        // Ajout des reliques et séquelles de faction à la recherche
+        ...Object.values(factionRules.relics || {}).flat(),
+        ...Object.values(factionRules.battleScars || {}).flat()
+        // ==========================================================
+        // FIN DE LA MODIFICATION TYRANIDE
+        // ==========================================================
     ];
 
     const foundRule = allRules.find(rule => rule.name === upgradeName);
@@ -42,7 +60,24 @@ const populateUpgradeSelectors = () => {
     
     // --- DÉBUT DE LA MODIFICATION ---
     // Logique pour afficher les traits spécifiques à la faction ou les traits génériques
-    if (player && player.faction === 'Death Guard' && deathGuardCrusadeRules.battleTraits) {
+    if (player && player.faction === 'Tyranids' && tyranidCrusadeRules.battleTraits) {
+        // Traits pour unités non-SYNAPSE
+        const nonSynapseGroup = document.createElement('optgroup');
+        nonSynapseGroup.label = `Tyranid: Non-SYNAPSE (D66)`;
+        tyranidCrusadeRules.battleTraits.nonSynapse.forEach(trait => {
+            nonSynapseGroup.innerHTML += `<option value="${trait.name}">${trait.roll}: ${trait.name}</option>`;
+        });
+        battleTraitSelect.appendChild(nonSynapseGroup);
+
+        // Traits pour unités SYNAPSE
+        const synapseGroup = document.createElement('optgroup');
+        synapseGroup.label = `Tyranid: SYNAPSE (D6)`;
+        tyranidCrusadeRules.battleTraits.synapse.forEach(trait => {
+            synapseGroup.innerHTML += `<option value="${trait.name}">${trait.roll}: ${trait.name}</option>`;
+        });
+        battleTraitSelect.appendChild(synapseGroup);
+
+    } else if (player && player.faction === 'Death Guard' && deathGuardCrusadeRules.battleTraits) {
         Object.entries(deathGuardCrusadeRules.battleTraits).forEach(([type, traits]) => {
             const optgroup = document.createElement('optgroup');
             optgroup.label = `Death Guard: ${type}`;
@@ -107,6 +142,24 @@ const populateUpgradeSelectors = () => {
                 relicSelect.appendChild(optgroup);
             });
         }
+
+        // ==========================================================
+        // DEBUT DE LA MODIFICATION TYRANIDE
+        // ==========================================================
+        if (player && player.faction === 'Tyranids') {
+            Object.entries(tyranidCrusadeRules.relics).forEach(([type, relics]) => {
+                const optgroup = document.createElement('optgroup');
+                const cost = type === 'legendaire' ? 3 : (type === 'antique' ? 2 : 1);
+                optgroup.label = `Tyranid: ${type.charAt(0).toUpperCase() + type.slice(1)} (+${cost} PC)`;
+                relics.forEach(relic => {
+                    optgroup.innerHTML += `<option value="${relic.name}" data-cost="${cost}" data-type="tyranid.relics.${type}">${relic.name}</option>`;
+                });
+                relicSelect.appendChild(optgroup);
+            });
+        }
+        // ==========================================================
+        // FIN DE LA MODIFICATION TYRANIDE
+        // ==========================================================
     }
     relicSelect.disabled = !isCharacter;
 
@@ -154,9 +207,33 @@ const populateUpgradeSelectors = () => {
 
     const battleScarSelect = document.getElementById('battle-scar-select');
     battleScarSelect.innerHTML = '<option value="">Choisir une cicatrice...</option>';
-    crusadeRules.battleScars.forEach(scar => {
-        battleScarSelect.innerHTML += `<option value="${scar.name}">${scar.name}</option>`;
-    });
+
+    // ==========================================================
+    // DEBUT DE LA MODIFICATION TYRANIDE
+    // ==========================================================
+    if (player && player.faction === 'Tyranids' && tyranidCrusadeRules.battleScars) {
+        const nonSynapseGroup = document.createElement('optgroup');
+        nonSynapseGroup.label = `Tyranid: Non-SYNAPSE (D6)`;
+        tyranidCrusadeRules.battleScars.nonSynapse.forEach(scar => {
+             nonSynapseGroup.innerHTML += `<option value="${scar.name}">${scar.roll}: ${scar.name}</option>`;
+        });
+        battleScarSelect.appendChild(nonSynapseGroup);
+        
+        const synapseGroup = document.createElement('optgroup');
+        synapseGroup.label = `Tyranid: SYNAPSE (D6)`;
+        tyranidCrusadeRules.battleScars.synapse.forEach(scar => {
+             synapseGroup.innerHTML += `<option value="${scar.name}">${scar.roll}: ${scar.name}</option>`;
+        });
+        battleScarSelect.appendChild(synapseGroup);
+
+    } else {
+        crusadeRules.battleScars.forEach(scar => {
+            battleScarSelect.innerHTML += `<option value="${scar.name}">${scar.name}</option>`;
+        });
+    }
+    // ==========================================================
+    // FIN DE LA MODIFICATION TYRANIDE
+    // ==========================================================
 
     const sombrerocheHonourSelect = document.getElementById('sombreroche-honour-select');
     sombrerocheHonourSelect.innerHTML = '<option value="">Choisir un honneur...</option>';
@@ -282,6 +359,15 @@ document.getElementById('add-relic-btn').addEventListener('click', () => {
     } else if (source === 'deathguard') {
         ruleSet = deathGuardCrusadeRules[category][type];
     }
+    // ==========================================================
+    // DEBUT DE LA MODIFICATION TYRANIDE
+    // ==========================================================
+    else if (source === 'tyranid') {
+        ruleSet = tyranidCrusadeRules[category][type];
+    }
+    // ==========================================================
+    // FIN DE LA MODIFICATION TYRANIDE
+    // ==========================================================
     else {
         ruleSet = crusadeRules[category][type];
     }
@@ -303,15 +389,16 @@ document.getElementById('add-battle-scar-btn').addEventListener('click', () => {
     const scarName = select.value;
     if (!scarName) return;
 
-    const scar = crusadeRules.battleScars.find(s => s.name === scarName);
+    const scarDesc = findUpgradeDescription(scarName);
     const unit = campaignData.players[activePlayerIndex].units[editingUnitIndex];
 
-    addUpgradeToUnitData(unit, 'unit-scars', scar.name, scar.desc);
+    addUpgradeToUnitData(unit, 'unit-scars', scarName, scarDesc);
     saveData();
     
     select.value = '';
     showNotification("Cicatrice de Bataille ajoutée.", 'info');
 });
+
 
 document.getElementById('add-sombreroche-honour-btn').addEventListener('click', async () => {
     const select = document.getElementById('sombreroche-honour-select');
