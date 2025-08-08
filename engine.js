@@ -150,18 +150,31 @@ function showConfirm(title, text) {
         confirmModalText.innerHTML = text;
         openModal(confirmModal);
 
-        const closeAndResolve = (value) => {
+        function closeAndResolve(value) {
+            confirmModalOkBtn.removeEventListener('click', okListener);
+            confirmModalCancelBtn.removeEventListener('click', cancelListener);
+            confirmModal.querySelector('.close-btn').removeEventListener('click', closeBtnListener);
+            confirmModal.removeEventListener('click', outsideClickListener);
+            document.removeEventListener('keydown', keydownListener);
             closeModal(confirmModal);
             resolve(value);
-        };
+        }
 
-        const okListener = () => closeAndResolve(true);
-        const cancelListener = () => closeAndResolve(false);
-        const closeBtnListener = () => closeAndResolve(false);
+        function okListener() { closeAndResolve(true); }
+        function cancelListener() { closeAndResolve(false); }
+        function closeBtnListener() { closeAndResolve(false); }
+        function outsideClickListener(e) {
+            if (e.target === confirmModal) closeAndResolve(false);
+        }
+        function keydownListener(e) {
+            if (e.key === 'Escape') closeAndResolve(false);
+        }
 
         confirmModalOkBtn.addEventListener('click', okListener, { once: true });
         confirmModalCancelBtn.addEventListener('click', cancelListener, { once: true });
         confirmModal.querySelector('.close-btn').addEventListener('click', closeBtnListener, { once: true });
+        confirmModal.addEventListener('click', outsideClickListener);
+        document.addEventListener('keydown', keydownListener);
     });
 }
 
