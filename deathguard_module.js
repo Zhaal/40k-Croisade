@@ -111,15 +111,15 @@ const deathGuardCrusadeRules = {
 
     // CORRIGÉ : Les effets des bienfaits ont été ajustés pour correspondre au texte.
     boonsOfNurgle: [
-        { roll: "11", name: "Vitalité Fétide", desc: "Ajoutez 1 à la caractéristique de Points de vie (W) de cette figurine." },
+        { roll: "11", name: "Vitalité Fébrile", desc: "Ajoutez 1 à la caractéristique de Mouvement (M) des figurines de l'unité de cette figurine." },
         { roll: "12", name: "Membres Sinueux", desc: "Ajoutez 1 aux jets d'Avance et de Charge pour le porteur de cette figurine." },
         { roll: "13", name: "Tentacules Grouillants", desc: "Ajoutez 1 à la caractéristique d'Attaques (A) des armes de mêlée dont cette figurine est équipée." },
         { roll: "21", name: "Hideusement Enflé", desc: "Ajoutez 2 à la caractéristique de Points de vie (W) de cette figurine." },
         { roll: "22", name: "Insensibilité Lépreuse", desc: "Cette figurine a l'aptitude Insensible à la Douleur 5+." },
         { roll: "23", name: "Voile de Mouches", desc: "Les figurines de l'unité de cette figurine ont l'aptitude Discrétion." },
         { roll: "31", name: "Contact Putréfiant", desc: "Améliorez de 1 la caractéristique de Pénétration d'armure (AP) des armes de mêlée dont cette figurine est équipée." },
-        { roll: "32", name: "Pestevision", desc: "À chaque attaque de cette figurine qui cible une unité affectée, vous pouvez relancer le jet de touche." },
-        { roll: "33", name: "Tourbillon de Miasmes", desc: "Ajoutez 8\" à la portée de contagion de cette figurine." }
+        { roll: "32", name: "Pestevision", desc: "À chaque attaque de cette figurine qui cible une unité Affligée, vous pouvez relancer le jet de touche." },
+        { roll: "33", name: "Tourbillon de Miasmes", desc: "Ajoutez 6\" à la portée de contagion de cette figurine." }
     ],
 
     // NOUVEAU : Ajout des Intentions manquantes.
@@ -665,33 +665,58 @@ function initializeDeathGuardGameplay() {
     async function handleRollNurgleBoon(unit) {
         if (!unit) return;
         const player = campaignData.players[activePlayerIndex];
-    
+        const boons = deathGuardCrusadeRules.boonsOfNurgle;
+
+        // Vérifie la limite globale de bienfaits (3 pour toute la force)
+        const totalBoons = player.units.reduce((sum, u) => {
+            const honours = u.battleHonours || [];
+            return sum + honours.filter(h => boons.some(b => b.name === h)).length;
+        }, 0);
+        if (totalBoons >= 3) {
+            showNotification("Votre force de Croisade possède déjà trois Bienfaits de Nurgle.", 'warning');
+            return;
+        }
+
+        // Vérifie la limite par figurine
+        const unitBoons = (unit.battleHonours || []).filter(h => boons.some(b => b.name === h));
+        if (unitBoons.length >= 3) {
+            showNotification("Cette figurine a déjà trois Bienfaits de Nurgle.", 'warning');
+            return;
+        }
+
         const confirmed = await showConfirm(
             "Bienfait de Nurgle",
             `Refuser l'Honneur de Bataille standard pour lancer un dé sur la table des Bienfaits de Nurgle pour <b>${unit.name}</b> ?`
         );
-    
-        if (confirmed) {
-            const boons = deathGuardCrusadeRules.boonsOfNurgle;
-            let randomBoon;
-            let attempts = 0;
-            // Boucle pour éviter de donner un bienfait déjà possédé
-            do {
-                const roll1 = Math.floor(Math.random() * 3) + 1;
-                const roll2 = Math.floor(Math.random() * 3) + 1;
-                const finalRoll = `${roll1}${roll2}`;
-                randomBoon = boons.find(b => b.roll === finalRoll);
-                attempts++;
-            } while (unit.battleHonours && unit.battleHonours.includes(randomBoon.name) && attempts < 20);
-    
-            addUpgradeToUnitData(unit, 'unit-honours', randomBoon.name, randomBoon.desc, "Bienfait de Nurgle: ");
-            unit.crusadePoints = (unit.crusadePoints || 0) + 1;
-            document.getElementById('unit-crusade-points').value = unit.crusadePoints;
-    
-            logAction(player.id, `<b>${unit.name}</b> a reçu le bienfait de Nurgle : <i>${randomBoon.name}</i>.`, 'info', '☣️');
+
+        if (!confirmed) return;
+
+        const roll1 = Math.floor(Math.random() * 3) + 1;
+        const roll2 = Math.floor(Math.random() * 3) + 1;
+        const finalRoll = `${roll1}${roll2}`;
+        const randomBoon = boons.find(b => b.roll === finalRoll);
+
+        if (unitBoons.includes(randomBoon.name)) {
+            const oldName = unit.name;
+            unit.name = "Rejetons du Chaos de Nurgle";
+            unit.power = 80;
+            unit.role = "Bête";
+            logAction(player.id, `<b>${oldName}</b> a obtenu un Bienfait de Nurgle déjà possédé et dégénère en une unité de <b>Rejetons du Chaos</b>.`, 'info', '☣️');
             saveData();
-            showNotification(`${unit.name} a reçu le bienfait : ${randomBoon.name} !`, 'success');
+            renderPlayerDetail();
+            closeModal(document.getElementById('unit-modal'));
+            showNotification(`${oldName} dégénère en Rejetons du Chaos !`, 'warning');
+            return;
         }
+
+        addUpgradeToUnitData(unit, 'unit-honours', randomBoon.name, randomBoon.desc, "Bienfait de Nurgle: ");
+        unit.crusadePoints = (unit.crusadePoints || 0) + 1;
+        document.getElementById('unit-crusade-points').value = unit.crusadePoints;
+
+        logAction(player.id, `<b>${unit.name}</b> a reçu le bienfait de Nurgle : <i>${randomBoon.name}</i>.`, 'info', '☣️');
+        saveData();
+        renderPlayerDetail();
+        showNotification(`${unit.name} a reçu le bienfait : ${randomBoon.name} !`, 'success');
     }
 
     // Attacher la nouvelle fonction au bouton (via un écouteur d'événements global pour la modale d'unité)
