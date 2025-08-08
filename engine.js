@@ -713,8 +713,11 @@ const migrateData = () => {
             player.deathGuardData = {
                 contagionPoints: player.contagionPoints || 0,
                 pathogenPower: 1,
-                corruptedPlanetIds: [], 
-                plagueStats: { reproduction: 1, survival: 1, adaptability: 1 }
+                corruptedPlanetIds: [],
+                plagueStats: { reproduction: 1, survival: 1, adaptability: 1 },
+                pathogenProperties: [],
+                pathogenDrawbacks: [],
+                nurgleBlessings: []
             };
             delete player.contagionPoints;
             dataWasModified = true;
