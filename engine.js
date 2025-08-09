@@ -819,3 +819,24 @@ const handleImport = (event) => {
     reader.readAsText(file);
     event.target.value = null; // Permet de ré-importer le même fichier
 };
+
+
+/**
+ * Envoie les données de la campagne vers un serveur pour une sauvegarde en ligne.
+ */
+const handleOnlineBackup = async () => {
+    try {
+        const response = await fetch('https://example.com/api/backup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(campaignData)
+        });
+        if (!response.ok) {
+            throw new Error('Réponse réseau non satisfaisante');
+        }
+        showNotification("Sauvegarde en ligne réussie !", 'success');
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde en ligne :', error);
+        showNotification("Erreur de sauvegarde en ligne.", 'error');
+    }
+};
