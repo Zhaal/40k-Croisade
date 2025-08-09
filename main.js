@@ -159,14 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
             player.name = name;
             player.faction = document.getElementById('player-faction-input').value.trim();
         } else {
-            const newPlayerId = crypto.randomUUID();
-            const newSystemId = crypto.randomUUID();
+            const newPlayerId = generateId();
+            const newSystemId = generateId();
             const faction = document.getElementById('player-faction-input').value.trim();
             const DEFENSE_VALUES = [500, 1000, 1500, 2000];
             const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
             const numPlanets = 5;
             const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
-                id: crypto.randomUUID(),
+                id: generateId(),
                 type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(),
                 name: planetNames[i] || `Planète ${i + 1}`,
                 owner: i === 0 ? newPlayerId : "neutral",
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const existingUnit = player.units[editingUnitIndex];
             player.units[editingUnitIndex] = { ...existingUnit, ...unitData };
         } else {
-            unitData.id = crypto.randomUUID();
+            unitData.id = generateId();
             unitData.detachmentUpgrades = [];
             player.units.push(unitData);
             logAction(player.id, `Nouvelle unité ajoutée à l'ordre de bataille : <b>${unitData.name}</b>.`, 'info', '➕');
@@ -987,12 +987,12 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignData.players.forEach(player => {
                 player.actionLog = [];
     
-                const newSystemId = crypto.randomUUID();
+                const newSystemId = generateId();
                 const DEFENSE_VALUES = [500, 1000, 1500, 2000];
                 const planetNames = ["Prima", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"];
                 const numPlanets = 5;
                 const newPlanets = Array.from({ length: numPlanets }, (_, i) => ({
-                    id: crypto.randomUUID(),
+                    id: generateId(),
                     type: i === 0 ? "Monde Sauvage" : getWeightedRandomPlanetType(),
                     name: planetNames[i] || `Planète ${i + 1}`,
                     owner: i === 0 ? player.id : "neutral",

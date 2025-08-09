@@ -45,7 +45,7 @@ const generateRandomNPCSystem = (usedNames) => {
     const planets = [];
     for (let i = 0; i < numPlanets; i++) {
         planets.push({
-            id: crypto.randomUUID(), // Chaque planète a un ID unique
+            id: generateId(), // Chaque planète a un ID unique
             type: getWeightedRandomPlanetType(),
             name: `${planetNames[i] || `Planète ${i + 1}`}`,
             owner: "neutral",
@@ -53,7 +53,7 @@ const generateRandomNPCSystem = (usedNames) => {
         });
     }
     return {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name: getUniqueSystemName(usedNames),
         owner: 'npc',
         planets: planets,
