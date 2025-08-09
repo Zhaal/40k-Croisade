@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapContainer = document.getElementById('galactic-map-container');
     const npcCombatModal = document.getElementById('npc-combat-modal');
     const pvpCombatModal = document.getElementById('pvp-combat-modal');
+    const campaignRulesModal = document.getElementById('campaign-rules-modal');
     
     const actionLogContainer = document.getElementById('action-log-container');
     const actionLogHeader = document.getElementById('action-log-header');
@@ -129,6 +130,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 showNotification("Erreur : ce joueur n'a pas de système assigné.", 'error');
             }
+        } else if (target.matches('.rules-btn')) {
+            const playerIndex = parseInt(target.dataset.index);
+            const player = campaignData.players[playerIndex];
+            renderCampaignRules(player.id);
+            openModal(campaignRulesModal);
         } else if (target.matches('.delete-player-btn')) {
             const index = parseInt(target.dataset.index);
             const playerToDelete = campaignData.players[index];
@@ -687,7 +693,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'show-map-btn') {
             openModal(mapModal);
             currentMapScale = 1;
-        renderCampaignRulesTab(); 
             setTimeout(renderGalacticMap, 50);
         } else if (e.target.id === 'show-history-btn') {
             openFullHistoryModal();
@@ -943,18 +948,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         displayPendingNotifications();
         renderActionLog();
-    });
-
-    document.querySelector('.map-modal-tabs').addEventListener('click', (e) => {
-        if (e.target.classList.contains('tab-link')) {
-            const targetTab = e.target.dataset.tab;
-
-            document.querySelectorAll('#map-modal .tab-link').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('#map-modal .map-modal-content-panel').forEach(panel => panel.classList.add('hidden'));
-            
-            e.target.classList.add('active');
-            document.getElementById(targetTab).classList.remove('hidden');
-        }
     });
 
     document.getElementById('unit-name').addEventListener('change', (e) => {

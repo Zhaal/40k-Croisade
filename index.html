@@ -493,11 +493,6 @@
             <span class="close-btn">&times;</span>
             <h3 class="crusade-card-title">Carte Galactique</h3>
 
-            <div class="map-modal-tabs">
-                <button class="tab-link active" data-tab="map-content-panel">Carte</button>
-                <button class="tab-link" data-tab="info-content-panel">Regles Adapter pour la campagne</button>
-            </div>
-
             <div id="map-content-panel" class="map-modal-content-panel active">
                 <div class="map-controls">
                     <label for="map-player-view-select">Point de vue :</label>
@@ -516,9 +511,14 @@
                 <div id="galactic-map-container">
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div id="info-content-panel" class="map-modal-content-panel hidden">
-                </div>
+    <div id="campaign-rules-modal" class="modal hidden">
+        <div class="modal-content large">
+            <span class="close-btn">&times;</span>
+            <h3 class="crusade-card-title">Comparaison des Règles</h3>
+            <div id="campaign-rules-content"></div>
         </div>
     </div>
 
