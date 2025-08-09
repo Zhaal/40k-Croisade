@@ -834,21 +834,40 @@ const handleImport = (event) => {
 
 
 /**
- * Envoie les données de la campagne vers un serveur pour une sauvegarde en ligne.
+ * Copie les données de la campagne dans le presse-papiers.
  */
 const handleOnlineBackup = async () => {
     try {
-        const response = await fetch('https://example.com/api/backup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(campaignData)
-        });
-        if (!response.ok) {
-            throw new Error('Réponse réseau non satisfaisante');
-        }
-        showNotification("Sauvegarde en ligne réussie !", 'success');
+        const dataStr = JSON.stringify(campaignData, null, 2);
+        await navigator.clipboard.writeText(dataStr);
+        showNotification("Données de la campagne copiées dans le presse-papiers !", 'success');
     } catch (error) {
-        console.error('Erreur lors de la sauvegarde en ligne :', error);
-        showNotification("Erreur de sauvegarde en ligne.", 'error');
+        console.error('Erreur lors de la copie dans le presse-papiers :', error);
+        showNotification("Erreur lors de la copie des données.", 'error');
+    }
+};
+
+const handleLoadFromClipboard = async () => {
+    const pasteData = prompt("Veuillez coller vos données de sauvegarde ici :");
+    if (pasteData === null || pasteData.trim() === "") {
+        return;
+    }
+
+    try {
+        const importedData = JSON.parse(pasteData);
+        if (importedData && Array.isArray(importedData.players)) {
+            if (await showConfirm("Confirmation d'importation", "Importer ces données écrasera les données actuelles de la campagne. Êtes-vous sûr de vouloir continuer ?")) {
+                campaignData = importedData;
+                migrateData();
+                saveData();
+                renderPlayerList();
+                switchView('list');
+                showNotification("Importation depuis le presse-papiers réussie !", 'success');
+            }
+        } else {
+            showNotification("Les données collées ne sont pas valides.", 'error');
+        }
+    } catch (error) {
+        showNotification("Erreur lors de la lecture des données : " + error.message, 'error');
     }
 };
