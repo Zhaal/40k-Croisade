@@ -1006,7 +1006,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 playerSystems.push(newSystem);
                 player.systemId = newSystemId;
-                player.discoveredSystemIds = [newSystemId]; 
+                player.discoveredSystemIds = [newSystemId];
+                player.probedSystemIds = [];
             });
     
             campaignData.systems.push(...playerSystems);
