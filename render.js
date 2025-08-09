@@ -60,7 +60,6 @@ const renderPlayerList = () => {
                 <button class="btn-secondary edit-player-btn" data-index="${index}">Modifier</button>
                 <button class="btn-danger delete-player-btn" data-index="${index}">Supprimer</button>
                 <button class="btn-secondary world-btn" data-index="${index}">JOUER</button>
-                <button class="btn-secondary rules-btn" data-index="${index}">Comparer</button>
             </div>
         `;
         playerListDiv.appendChild(card);
@@ -844,25 +843,27 @@ const renderActionLog = () => {
 };
 
 /**
- * Affiche la comparaison entre les règles officielles et leur implémentation.
- * @param {string} playerId - ID du joueur pour lequel afficher les données.
+ * Remplit l'onglet des règles de campagne adaptées dans la modale de la carte.
  */
-function renderCampaignRules(playerId) {
-    const infoPanel = document.getElementById('campaign-rules-content');
-    infoPanel.innerHTML = '';
-    const player = campaignData.players.find(p => p.id === playerId);
+function renderCampaignRulesTab() {
+    const infoPanel = document.getElementById('info-content-panel');
+    infoPanel.innerHTML = ''; // Vider le contenu précédent
+    const player = campaignData.players.find(p => p.id === mapViewingPlayerId);
 
     if (!player || !campaignRuleDifferences) {
         infoPanel.innerHTML = `<p>Aucune donnée de règle de campagne à afficher.</p>`;
         return;
     }
-
+    
     // Pour l'instant, on se concentre sur la Death Guard, mais la structure est prête pour d'autres factions.
     let factionKey;
     if (player.faction === 'Death Guard') {
         factionKey = 'deathGuard';
-    }
+    } 
     // Ajoutez d'autres 'else if' ici pour d'autres factions à l'avenir
+    // else if (player.faction === 'Tyranids') {
+    //     factionKey = 'tyranids';
+    // }
 
     const rulesData = campaignRuleDifferences[factionKey];
 
@@ -911,6 +912,6 @@ function renderCampaignRules(playerId) {
             </div>
         </div>
     `;
-
+    
     infoPanel.innerHTML = tableHTML;
 }

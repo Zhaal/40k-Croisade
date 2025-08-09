@@ -17,13 +17,11 @@
             <div class="campaign-controls">
                 <button id="export-btn">Exporter la Campagne (JSON)</button>
                 <button id="import-btn">Importer la Campagne (JSON)</button>
-                <button id="online-backup-btn">Copier la Sauvegarde</button>
-                <button id="load-from-clipboard-btn">Charger depuis le Presse-papiers</button>
                 <input type="file" id="import-file" accept=".json" style="display: none;">
             </div>
             <p class="storage-warning">
               ⚠️ **Attention :** Toutes les données sont sauvegardées localement dans votre navigateur.
-                Utilisez l'export ou la sauvegarde en ligne pour créer des sauvegardes !
+                Utilisez l'export pour créer des sauvegardes !
             </p>
             <div class="management-controls">
                 <button id="reset-campaign-btn" class="btn-danger">Explosion du Warp (Réinitialiser)</button>
@@ -51,7 +49,7 @@
                 <div class="info-box"><strong>Faction de Croisade:</strong> <input type="text" id="crusade-faction" placeholder="Ex: Imperium"></div>
                 <div class="info-box">
                     <strong>Points de Réquisition:</strong>
-                    <span id="pr-points" class="stat-value"></span> PR
+                    <span id="pr-points" class="stat-value"></span> RP
                     <button class="tally-btn" data-action="decrease-rp">-</button>
                     <button class="tally-btn" data-action="increase-rp">+</button>
                 </div>
@@ -79,7 +77,7 @@
                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
                         <input type="number" id="supply-limit" min="0" style="width: 80px; display: inline-block;">
                         <span>PL</span>
-                        <button id="increase-supply-limit-btn" class="tally-btn" title="Augmenter la limite de 200 PL pour 1 PR" style="margin-left: auto;">+200</button>
+                        <button id="increase-supply-limit-btn" class="tally-btn" title="Augmenter la limite de 200 PL pour 1 RP" style="margin-left: auto;">+200</button>
                     </div>
                 </div>
                 <div class="info-box">
@@ -112,7 +110,7 @@
                         <strong>Sainte Potentia Actuelle:</strong>
                         <span id="saint-potentia-name">Aucune</span>
                         <button id="select-saint-btn" class="btn-secondary">Choisir</button>
-                        <button id="change-saint-btn" class="btn-danger">Changer (1 PR)</button>
+                        <button id="change-saint-btn" class="btn-danger">Changer (1 RP)</button>
                     </div>
                     <div class="info-box">
                         <label for="active-trial-select"><strong>Épreuve Active:</strong></label>
@@ -147,7 +145,7 @@
                     </div>
                     <div class="info-box">
                         <strong>Puissance du Pathogène:</strong>
-                        <span id="pathogen-power" class="stat-value">1</span> / 5
+                        <span id="pathogen-power" class="stat-value">1</span> / 7
                     </div>
                     <div class="info-box">
                         <strong>Taux de Reproduction:</strong> <span id="plague-reproduction" class="stat-value">1</span> / 6
@@ -471,7 +469,7 @@
                             </div>
                             <hr>
                             <button type="submit" class="btn-primary">Valider les Changements</button>
-                            <button type="button" id="randomize-planet-btn" class="btn-secondary" style="margin-left: 10px;">Randomiser Planète (2 PR)</button>
+                            <button type="button" id="randomize-planet-btn" class="btn-secondary" style="margin-left: 10px;">Randomiser Planète (2 RP)</button>
                         </div>
                     </div>
                 </details>
@@ -494,6 +492,11 @@
             <span class="close-btn">&times;</span>
             <h3 class="crusade-card-title">Carte Galactique</h3>
 
+            <div class="map-modal-tabs">
+                <button class="tab-link active" data-tab="map-content-panel">Carte</button>
+                <button class="tab-link" data-tab="info-content-panel">Regles Adapter pour la campagne</button>
+            </div>
+
             <div id="map-content-panel" class="map-modal-content-panel active">
                 <div class="map-controls">
                     <label for="map-player-view-select">Point de vue :</label>
@@ -512,14 +515,9 @@
                 <div id="galactic-map-container">
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div id="campaign-rules-modal" class="modal hidden">
-        <div class="modal-content large">
-            <span class="close-btn">&times;</span>
-            <h3 class="crusade-card-title">Comparaison des Règles</h3>
-            <div id="campaign-rules-content"></div>
+            <div id="info-content-panel" class="map-modal-content-panel hidden">
+                </div>
         </div>
     </div>
 
@@ -596,7 +594,7 @@
                 <button id="exploration-choice-cancel-btn" class="btn-secondary">Annuler</button>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button id="exploration-choice-blind-jump-btn" class="btn-primary">Saut à l'aveugle</button>
-                    <button id="exploration-choice-probe-btn" class="btn-primary">Envoyer la sonde (1 PR)</button>
+                    <button id="exploration-choice-probe-btn" class="btn-primary">Envoyer la sonde (1 RP)</button>
                 </div>
             </div>
         </div>
@@ -611,7 +609,7 @@
                 <button id="route-discovery-choice-cancel-btn" class="btn-secondary">Annuler</button>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button id="route-discovery-choice-map-btn" class="btn-primary">Cartographier la Route</button>
-                    <button id="route-discovery-choice-probe-btn" class="btn-primary">Envoyer la sonde (1 PR)</button>
+                    <button id="route-discovery-choice-probe-btn" class="btn-primary">Envoyer la sonde (1 RP)</button>
                 </div>
             </div>
         </div>
@@ -624,7 +622,7 @@
             <p id="probe-action-text" style="line-height: 1.6;"></p>
             <p id="probe-action-timer" style="line-height: 1.6; color: var(--text-muted-color); font-style: italic;"></p>
             <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap;">
-                <button id="probe-action-rescan-btn" class="btn-secondary">Relancer une sonde (1 PR)</button>
+                <button id="probe-action-rescan-btn" class="btn-secondary">Relancer une sonde (1 RP)</button>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button id="probe-action-cancel-btn" class="btn-secondary">Annuler</button>
                     <button id="probe-action-establish-btn" class="btn-primary">Établir le lien</button>

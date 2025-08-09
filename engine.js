@@ -4,18 +4,6 @@
 
 const APP_VERSION = "0.1.4"; // Version avec historique d'actions par joueur
 
-// Génère un identifiant unique compatible anciens navigateurs
-function generateId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
 //======================================================================
 //  ÉTAT DE L'APPLICATION (STATE)
 //======================================================================
@@ -162,31 +150,18 @@ function showConfirm(title, text) {
         confirmModalText.innerHTML = text;
         openModal(confirmModal);
 
-        function closeAndResolve(value) {
-            confirmModalOkBtn.removeEventListener('click', okListener);
-            confirmModalCancelBtn.removeEventListener('click', cancelListener);
-            confirmModal.querySelector('.close-btn').removeEventListener('click', closeBtnListener);
-            confirmModal.removeEventListener('click', outsideClickListener);
-            document.removeEventListener('keydown', keydownListener);
+        const closeAndResolve = (value) => {
             closeModal(confirmModal);
             resolve(value);
-        }
+        };
 
-        function okListener() { closeAndResolve(true); }
-        function cancelListener() { closeAndResolve(false); }
-        function closeBtnListener() { closeAndResolve(false); }
-        function outsideClickListener(e) {
-            if (e.target === confirmModal) closeAndResolve(false);
-        }
-        function keydownListener(e) {
-            if (e.key === 'Escape') closeAndResolve(false);
-        }
+        const okListener = () => closeAndResolve(true);
+        const cancelListener = () => closeAndResolve(false);
+        const closeBtnListener = () => closeAndResolve(false);
 
         confirmModalOkBtn.addEventListener('click', okListener, { once: true });
         confirmModalCancelBtn.addEventListener('click', cancelListener, { once: true });
         confirmModal.querySelector('.close-btn').addEventListener('click', closeBtnListener, { once: true });
-        confirmModal.addEventListener('click', outsideClickListener);
-        document.addEventListener('keydown', keydownListener);
     });
 }
 
@@ -725,11 +700,8 @@ const migrateData = () => {
             player.deathGuardData = {
                 contagionPoints: player.contagionPoints || 0,
                 pathogenPower: 1,
-                corruptedPlanetIds: [],
-                plagueStats: { reproduction: 1, survival: 1, adaptability: 1 },
-                pathogenProperties: [],
-                pathogenDrawbacks: [],
-                nurgleBlessings: []
+                corruptedPlanetIds: [], 
+                plagueStats: { reproduction: 1, survival: 1, adaptability: 1 }
             };
             delete player.contagionPoints;
             dataWasModified = true;
@@ -830,44 +802,4 @@ const handleImport = (event) => {
     };
     reader.readAsText(file);
     event.target.value = null; // Permet de ré-importer le même fichier
-};
-
-
-/**
- * Copie les données de la campagne dans le presse-papiers.
- */
-const handleOnlineBackup = async () => {
-    try {
-        const dataStr = JSON.stringify(campaignData, null, 2);
-        await navigator.clipboard.writeText(dataStr);
-        showNotification("Données de la campagne copiées dans le presse-papiers !", 'success');
-    } catch (error) {
-        console.error('Erreur lors de la copie dans le presse-papiers :', error);
-        showNotification("Erreur lors de la copie des données.", 'error');
-    }
-};
-
-const handleLoadFromClipboard = async () => {
-    const pasteData = prompt("Veuillez coller vos données de sauvegarde ici :");
-    if (pasteData === null || pasteData.trim() === "") {
-        return;
-    }
-
-    try {
-        const importedData = JSON.parse(pasteData);
-        if (importedData && Array.isArray(importedData.players)) {
-            if (await showConfirm("Confirmation d'importation", "Importer ces données écrasera les données actuelles de la campagne. Êtes-vous sûr de vouloir continuer ?")) {
-                campaignData = importedData;
-                migrateData();
-                saveData();
-                renderPlayerList();
-                switchView('list');
-                showNotification("Importation depuis le presse-papiers réussie !", 'success');
-            }
-        } else {
-            showNotification("Les données collées ne sont pas valides.", 'error');
-        }
-    } catch (error) {
-        showNotification("Erreur lors de la lecture des données : " + error.message, 'error');
-    }
 };
